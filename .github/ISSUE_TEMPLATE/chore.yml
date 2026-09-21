@@ -14,3 +14,5 @@ body:
       label: 完成の条件
       value: |
         - [ ] 
+    validations:
+      required: true
