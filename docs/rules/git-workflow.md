@@ -31,7 +31,8 @@
 ## マージ（PR）
 
 - マージは **PR 経由のみ**。PR はテンプレートに沿って書き、説明に `Closes #Issue番号` を入れる（マージすると Issue が自動で閉じる）
-- PR を作ると、GitHub Copilot が自動でレビューする（push するたびに再レビュー）。指摘を読んで、直すか、直さない理由を返してからマージする。人の承認は必須ではなく、**セルフマージ可**
+- PR を出す前に、`docs/rules/self-review.md` のセルフレビューを済ませる。結果は PR の「確認したこと」に書く
+- GitHub Copilot のレビューは回数に上限があるので、自動では付けていない。要所の PR だけ手で頼む（頼み方は `docs/rules/self-review.md`）。人の承認は必須ではなく、**セルフマージ可**
 - マージ方法は squash merge だけ（PR の中のコミットを1つにまとめて main に入れる。GitHub 側でほかの方法は選べない）。main の履歴には PR の題名が残るので、**PR の題名は日本語で、何をしたかが分かるように書く**
 - マージしたブランチは GitHub 側で自動で消える。手元のブランチは `git switch main && git pull && git branch -d <ブランチ名>` で片付ける。同じブランチで作業を続けない
 - main が進んで PR が古くなったら、PR の画面の「Update branch」で main を取り込める

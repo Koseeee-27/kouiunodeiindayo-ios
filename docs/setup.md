@@ -68,7 +68,7 @@
 |---|---|---|
 | Claude Code | `CLAUDE.md`（`AGENTS.md` を取り込む） | `.mcp.json`（初回に、使ってよいかの確認が出る） |
 | Codex | `AGENTS.md` を自動で読む | `.codex/config.toml`（初回起動時の確認で、このリポジトリを信頼済みにすると有効になる） |
-| Antigravity | `AGENTS.md` を自動で読む。`.agents/rules/project.md` が追加のルールを取り込む | `.agents/mcp_config.json` |
+| Antigravity | `AGENTS.md` を自動で読む。`.agents/rules/project.md` が追加のルールを取り込む。`/self-review` は `.agents/workflows/` に置いてある（この置き場所は公式の資料で確認できていない。呼び出せなければ、Antigravity の画面から workflow として登録し直す） | `.agents/mcp_config.json` |
 
 - Codex は、ファイルの取り込み（`@`）をしない。`docs/rules/swift.md` と `docs/architecture.md` は、`AGENTS.md` の指示に従って AI が自分で読む形になる。読んでいないようなら、最初に読むよう頼む
 - MCP の設定は、ツールごとに3つのファイルに同じ内容を書いている。変えるときは3つとも直す

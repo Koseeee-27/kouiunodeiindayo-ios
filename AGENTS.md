@@ -33,6 +33,7 @@
 | 言語を問わないコーディング原則 | `docs/rules/coding-style.md` |
 | ブランチ・PR・コミットの決まり | `docs/rules/git-workflow.md` |
 | push 前の確認手順（ビルド・テスト・実機） | `docs/rules/verification.md` |
+| PR を出す前のセルフレビューの手順と、レビューの観点 | `docs/rules/self-review.md` |
 | 開発タスク（何を・誰が・どこまで進んだか） | GitHub の Issues（ここが正。Notion のタスク管理には Issue の URL を貼るだけ） |
 | 実装計画（Issue を、どのファイルをどんな手順で作るかに落としたもの） | `docs/plans/` |
 | なぜ作るか（企画書）、見た目（デザイン要件書） | チームの Notion ポータル（このリポジトリには置かない） |
@@ -64,7 +65,8 @@
 実装計画  → docs/plans/<機能名>.plan.md （どのファイルを・どんな手順で・確認方法）
 実装      → Issue ごとにブランチを切って、コード（計画に従う）
 検証      → docs/rules/verification.md の手順（ビルド → テスト → 実機確認）
-PR        → 説明に「Closes #Issue番号」を書く。Copilot が自動でレビューする
+レビュー  → docs/rules/self-review.md の手順（別の会話の AI に差分を見せて、直す。最大3周）
+PR        → 説明に「Closes #Issue番号」を書く。要所の PR だけ、Copilot か相方にレビューを頼む
 マージ    → squash merge（PR のコミットを1つにまとめて main に入れる）。Issue は自動で閉じる
 ```
 
