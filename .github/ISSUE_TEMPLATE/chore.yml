@@ -1,0 +1,18 @@
+name: 作業
+description: 設定・環境・ドキュメントなど、機能でもバグでもないもの
+labels: ["作業"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: やること
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完成の条件
+      value: |
+        - [ ] 
+    validations:
+      required: true

@@ -10,15 +10,15 @@ Claude Code で使えるエージェントと、いつ・どう使うかのル�
 | エージェント | 役割 | 使うとき |
 |---|---|---|
 | planner | 実装計画の作成 | 新機能・大きめの変更の前 |
-| code-reviewer | コードレビュー | コードを書いた・変更した直後 |
+| code-reviewer | コードレビュー | PR を出す前のセルフレビュー（self-review スキルから呼ぶ） |
 
 ## 自動起動の条件
 
 ユーザーが指示しなくても、以下の場面では該当エージェントを使う：
 
 1. 複数ファイルにまたがる機能の実装依頼 → **planner** で計画を作り `docs/plans/` に保存してから実装する
-2. コードを書き終えた・大きく変更した → **code-reviewer** でレビューする
-3. コミット・push の前 → **verification-loop** スキル（手順の正本は `docs/rules/verification.md`）を通す
+2. コミット・push の前 → **verification-loop** スキル（手順の正本は `docs/rules/verification.md`）を通す
+3. PR を作る前 → **self-review** スキル（手順の正本は `docs/rules/self-review.md`）を回す。レビューは **code-reviewer** エージェントに任せ、実装した会話の中で自分ではレビューしない
 
 ## サブエージェントへの依頼のしかた
 

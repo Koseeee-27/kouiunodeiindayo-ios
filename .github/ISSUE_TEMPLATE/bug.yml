@@ -1,0 +1,38 @@
+name: バグ
+description: 動きがおかしい、落ちる、表示が崩れる
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        作成したあと、右側の **Labels** で次を付ける（フォームからは自動で付かない）。
+        - 急ぐなら優先度：`MVP`／`デモまで`／`余裕があれば`
+        - カメラ・スワイプの手触り・効果音・写真の保存に関わるなら：`実機確認が要る`
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きたか
+      description: 期待していた動きと、実際の動き
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 起こし方
+      value: |
+        1. 
+        2. 
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: どこで起きたか
+      placeholder: 例）実機 iPhone 15 Pro（iOS 27.0）／シミュレータ iPhone 17
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: スクリーンショット・ログ
+      description: あれば貼る

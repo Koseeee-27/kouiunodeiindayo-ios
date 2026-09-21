@@ -1,0 +1,51 @@
+name: 機能の実装
+description: 要件定義にある機能を作る・直すとき
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        作成したあと、右側の **Labels** で次を付ける（フォームからは自動で付かない）。
+        - 優先度：`MVP`／`デモまで`／`余裕があれば`（docs/requirements.md の優先度に合わせる）
+        - カメラ・スワイプの手触り・効果音・写真の保存に関わるなら：`実機確認が要る`
+  - type: input
+    id: feature-number
+    attributes:
+      label: 対応する機能
+      description: docs/requirements.md の機能番号と名前
+      placeholder: 例）機能4 ジャンルを付ける
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: やること
+      description: どの画面の、何を作るか。画面の要素と操作は docs/screen-design.md が正なので、ここには写さず、該当の項を書く
+      placeholder: 例）仕分け画面のカードを、4方向のスワイプで仕分けられるようにする（docs/screen-design.md「仕分け」）
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完成の条件
+      description: 何ができたら閉じてよいか
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: 実機での確認
+      description: カメラ・スワイプの手触り・効果音・写真の保存に関わるなら「要る」
+      options:
+        - 要る
+        - 要らない
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: メモ
+      description: 先に終わっている必要がある Issue、実装計画（docs/plans/）へのリンク、気をつけることなど
