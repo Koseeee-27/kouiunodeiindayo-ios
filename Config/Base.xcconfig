@@ -1,0 +1,18 @@
+// 全員共通のビルド設定。プロジェクトの Debug / Release の両方に、このファイルを割り当てる（docs/setup.md）。
+
+// 個人ごとの値の既定値。Local.xcconfig があれば、下の #include? で上書きされる。
+// Local.xcconfig が無くても、シミュレータ向けのビルドは通るようにしておく。
+BUNDLE_ID_PREFIX = com.example.unset
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = $(BUNDLE_ID_PREFIX).kouiunodeiindayo
+
+// iPhone のみ・縦画面のみ・iOS 26 以上（docs/adr/0004-min-ios-and-tools.md）
+IPHONEOS_DEPLOYMENT_TARGET = 26.0
+TARGETED_DEVICE_FAMILY = 1
+INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait
+
+// カメラを使う理由の文言（文言の正は docs/screen-design.md のカメラの項）
+INFOPLIST_KEY_NSCameraUsageDescription = ご飯の写真を撮って記録するために、カメラを使います。

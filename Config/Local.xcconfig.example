@@ -1,0 +1,8 @@
+// 個人ごとの署名設定。このファイルを Local.xcconfig という名前でコピーして、自分の値に書き換える。
+// Local.xcconfig は git に入れない（.gitignore 済み）。手順は docs/setup.md。
+
+// 自分の Team ID（英数字10桁）。調べ方は docs/setup.md の「3. 署名の設定」
+DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// Bundle ID の接頭辞。人ごとに変える（同じ値だと、無料の Apple ID では署名が衝突する）。一度決めたら変えない
+BUNDLE_ID_PREFIX = com.example.yourname

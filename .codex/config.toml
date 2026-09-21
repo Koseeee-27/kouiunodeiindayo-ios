@@ -1,0 +1,9 @@
+# Codex 用のプロジェクト設定。このリポジトリを「信頼済み」にしたときだけ読み込まれる。
+# ルールの正本は AGENTS.md（Codex は自動で読む）。ここには MCP の設定だけを書く。
+
+[mcp_servers.XcodeBuildMCP]
+command = "npx"
+args = ["-y", "xcodebuildmcp@latest", "mcp"]
+
+[mcp_servers.XcodeBuildMCP.env]
+XCODEBUILDMCP_SENTRY_DISABLED = "true"
