@@ -34,7 +34,7 @@
 - PR を出す前に、`docs/rules/self-review.md` のセルフレビューを済ませる。結果は PR の「確認したこと」に書く
 - GitHub Copilot のレビューは回数に上限があるので、自動では付けていない。要所の PR だけ手で頼む（頼み方は `docs/rules/self-review.md`）。人の承認は必須ではなく、**セルフマージ可**
 - マージ方法は squash merge だけ（PR の中のコミットを1つにまとめて main に入れる。GitHub 側でほかの方法は選べない）。main の履歴には PR の題名が残るので、**PR の題名は日本語で、何をしたかが分かるように書く**
-- マージしたブランチは GitHub 側で自動で消える。手元のブランチは `git switch main && git pull && git branch -d <ブランチ名>` で片付ける。同じブランチで作業を続けない
+- マージしたブランチは GitHub 側で自動で消える。手元のブランチは、GitHub でマージ済みなのを確かめてから `git switch main && git pull && git branch -D <ブランチ名>` で片付ける（squash merge はコミットをまとめ直して main に入れるので、git からは未マージに見え、小文字の `-d` では消せない）。同じブランチで作業を続けない
 - main が進んで PR が古くなったら、PR の画面の「Update branch」で main を取り込める
 - **ビルドが通らない PR はマージしない**。エラーは修正してから
 - **force push やチェックのスキップで誤魔化さない**。落ちた原因を直す
