@@ -24,7 +24,7 @@ enum SampleData {
             (.systemRed, .food, true, 0),
             (.systemTeal, .drink, false, 1),
             (.systemPink, .dessert, true, 2),
-            (.systemGray, .noGenre, false, 3)
+            (.systemGray, .noGenre, false, 3),
         ]
         for sample in samples {
             let takenAt = Date.now.addingTimeInterval(-oneDay * Double(sample.daysAgo))

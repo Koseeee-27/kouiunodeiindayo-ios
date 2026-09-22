@@ -1,7 +1,7 @@
 #!/bin/sh
 # clone したあとに1回だけ実行する git の設定（docs/setup.md）。
 # 1. Xcode が project.pbxproj に書き戻す個人の Team ID（DEVELOPMENT_TEAM）を、ステージ時に自動で取り除く filter
-# 2. それでも混ざっていたらコミットを止める pre-commit hook
+# 2. pre-commit hook（それでも Team ID が混ざっていたらコミットを止める。コミット対象の Swift ファイルを swift-format で整形する）
 # どちらも git の設定は clone ごとに持つもので、リポジトリには入らない。
 
 set -e

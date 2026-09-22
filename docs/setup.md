@@ -9,6 +9,7 @@
 - **Bundle ID**：アプリを見分ける名前（例：`com.example.taro.appname`）
 - **xcconfig**：Xcode のビルド設定を書いておけるテキストファイル
 - **MCP**：AI ツールに外部の道具（ここではビルド）を使わせるための仕組み
+- **hook**：git がコミットなどの節目に自動で実行するスクリプト。このリポジトリでは `.githooks/` に置いてある
 
 ## 1. 必要なもの
 
@@ -31,11 +32,13 @@
    ```
 
 3. Xcode → Settings → Accounts で、自分の Apple ID を追加する
-4. リポジトリのフォルダで、git の設定を1回だけ実行する。Xcode が `project.pbxproj` に書き戻す自分の Team ID を、コミットに入れないための設定（下の「3. 署名の設定」の注意を参照）
+4. リポジトリのフォルダで、git の設定を1回だけ実行する。Xcode が `project.pbxproj` に書き戻す自分の Team ID を、コミットに入れないための設定（下の「3. 署名の設定」の注意を参照）と、コミット時に Swift ファイルを自動で整形する設定（`docs/rules/swift.md`）
 
    ```bash
    sh scripts/setup-git.sh
    ```
+
+   コミット前に手で整形したいときは、Xcode でファイルを開いて Editor → Structure → Format File with swift-format（Ctrl + Shift + I）。設定（`.swift-format`）はリポジトリのものが使われる
 
 ## 3. 署名の設定（人ごとに1回）
 

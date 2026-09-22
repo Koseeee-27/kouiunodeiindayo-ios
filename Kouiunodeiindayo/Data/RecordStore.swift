@@ -74,7 +74,8 @@ struct RecordStore {
         do {
             try photoStorage.deletePhotos(id: id, fileName: photoFileName)
         } catch {
-            Self.logger.error("写真ファイルを消せなかった: \(photoFileName, privacy: .public) \(error.localizedDescription, privacy: .public)")
+            Self.logger.error(
+                "写真ファイルを消せなかった: \(photoFileName, privacy: .public) \(error.localizedDescription, privacy: .public)")
         }
     }
 }

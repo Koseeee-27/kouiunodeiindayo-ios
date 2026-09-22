@@ -39,7 +39,9 @@ struct PhotoStorage {
             do {
                 try FileManager.default.removeItem(at: photoURL)
             } catch let removeError {
-                Self.logger.error("サムネイルの書き込みに失敗したあと、写真を消せなかった: \(photoFileName, privacy: .public) \(removeError.localizedDescription, privacy: .public)")
+                Self.logger.error(
+                    "サムネイルの書き込みに失敗したあと、写真を消せなかった: \(photoFileName, privacy: .public) \(removeError.localizedDescription, privacy: .public)"
+                )
             }
             throw error
         }

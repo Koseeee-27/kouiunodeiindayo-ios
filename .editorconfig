@@ -1,0 +1,20 @@
+# エディタ共通の書式設定（nvim・VS Code・GitHub が読む。Xcode は読まない）。
+# Swift の整形の本体は swift-format（設定は .swift-format）。ここは文字コード・改行・インデント幅だけ。
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,xcstrings}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.pbxproj]
+indent_style = tab
