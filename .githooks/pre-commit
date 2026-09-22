@@ -1,9 +1,12 @@
 #!/bin/sh
-# コミット直前の検査。個人の Team ID（DEVELOPMENT_TEAM）が project.pbxproj に混ざっていたら止める。
-# ふだんは .gitattributes の filter がステージ時に取り除くので、ここに来るのは filter が未設定のとき。
-# 有効にするには scripts/setup-git.sh を1回実行する（docs/setup.md）。
+# コミット直前の検査と整形。有効にするには scripts/setup-git.sh を1回実行する（docs/setup.md）。
+# 1. 個人の Team ID（DEVELOPMENT_TEAM）が project.pbxproj に混ざっていたら止める。
+#    ふだんは .gitattributes の filter がステージ時に取り除くので、ここに来るのは filter が未設定のとき。
+# 2. コミット対象の Swift ファイルを swift-format（Xcode 同梱）で整形して、ステージし直す。設定は .swift-format。
 
 status=0
+
+# 1. Team ID の検査
 for file in $(git diff --cached --name-only --diff-filter=AM | grep '\.pbxproj$'); do
   if git show ":$file" | grep -q 'DEVELOPMENT_TEAM = [A-Za-z0-9]'; then
     echo "error: $file に DEVELOPMENT_TEAM（個人の Team ID）が入っています。コミットしないでください。" >&2
@@ -11,4 +14,27 @@ for file in $(git diff --cached --name-only --diff-filter=AM | grep '\.pbxproj$'
     status=1
   fi
 done
+
+# 2. Swift の整形
+staged_swift=$(git diff --cached --name-only --diff-filter=AM | grep '\.swift$')
+if [ -n "$staged_swift" ]; then
+  if ! command -v swift >/dev/null 2>&1; then
+    echo "warning: swift コマンドが見つからないので、整形せずにコミットします（Xcode の準備は docs/setup.md）。" >&2
+  else
+    # ファイルの一部だけをステージしているときは、未ステージの変更まで混ぜないよう整形せず、規約チェックの結果だけ出す
+    unstaged=$(git diff --name-only)
+    echo "$staged_swift" | while IFS= read -r file; do
+      if echo "$unstaged" | grep -qx "$file"; then
+        echo "warning: $file は一部だけステージされているので整形しませんでした。" >&2
+        swift format lint --configuration .swift-format "$file" >&2 || true
+      elif swift format --in-place --configuration .swift-format "$file"; then
+        git add "$file"
+      else
+        echo "error: $file を整形できませんでした（文法エラーの可能性）。直してからコミットしてください。" >&2
+        exit 1
+      fi
+    done || status=1
+  fi
+fi
+
 exit $status
