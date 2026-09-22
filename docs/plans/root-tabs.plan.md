@@ -18,14 +18,14 @@
   - **カメラは横スワイプでは出さない。バーのボタンだけ**。MVP のカメラは iPhone 標準のカメラ画面（`UIImagePickerController`）で、下から出るモーダル（画面を覆う一時的な画面）にしかできない。横に滑らせて出す手段が無い。ワークスペースの `open-issues.md` の未決事項「横スワイプでカメラを全画面に出せるか」は「出せない。ボタンだけ」で決着。Issue #11 にコメントを書く
   - タブの状態は2つに分ける。`page: RootTab`（ページャーの現在位置。`.home` か `.list` だけ入る）と `isCameraShown: Bool`（カメラのボタンが押されているか）。バーで選択中に見せるのは `isCameraShown ? .camera : page`。カメラのボタンを押すと `isCameraShown = true`、ホーム・一覧のボタンを押すと `isCameraShown = false` にしてから `page` を書き換える（`withAnimation`）。ページャーの `selection` は `page` に直接結ぶので、ホームで一覧を押すとページがめくれ、スワイプした結果はバーに反映される
   - この骨組みでは、カメラの仮ビューはページャーの上に重ねる（`ZStack`）だけで、バーは隠さない。本物の標準カメラは画面全体を覆うのでバーは自然に隠れる。カメラの仮ビューから戻る手段（キャンセル→ホーム）は #15 で作る
-  - 開いたときの画面は `enum LaunchScreen: String { camera, home }`（`App/LaunchScreen.swift`）に持たせる。キー `"launchScreen"` の文字列はこの enum の `static let storageKey` に1か所だけ書く。設定画面（機能25）はこの enum を使って書き込む
-  - `RootView` の最初の状態は `init(launchScreen:)` で決める。引数を省くと `UserDefaults` の `launchScreen` を読む。`isCameraShown` は宣言時に初期値を持たせず、`init` で `State(initialValue:)` を渡す（`docs/rules/swift.md` の「宣言時に初期値を持つ `@State` に `init` で代入しない」に反しない書き方）。`page` は宣言時に `.home` を入れ、`init` では触らない。`.onAppear` で切り替える方法は、最初の1フレームがホームになってからカメラに変わるので採らない
+  - 開いたときの画面は `enum StartTab: String { camera, home }`（`App/StartTab.swift`。「起動画面」と紛らわしいので `LaunchScreen` から改名した）に持たせる。キー `"launchScreen"` の文字列はこの enum の `static let storageKey` に1か所だけ書く。設定画面（機能25）はこの enum を使って書き込む
+  - `RootView` の最初の状態は `init(startTab:)` で決める。引数を省くと `UserDefaults` の `launchScreen` を読む。`isCameraShown` は宣言時に初期値を持たせず、`init` で `State(initialValue:)` を渡す（`docs/rules/swift.md` の「宣言時に初期値を持つ `@State` に `init` で代入しない」に反しない書き方）。`page` は宣言時に `.home` を入れ、`init` では触らない。`.onAppear` で切り替える方法は、最初の1フレームがホームになってからカメラに変わるので採らない
   - 仮ビューは「画面名の文字だけ」。型名は `HomeView` / `RecordListView` / `CameraView` / `SortView` / `RecordDetailView`（`docs/architecture.md` の「`〜View`」と「SwiftUI の型と同じ名前を付けない」に従う）
   - `DataLayerDebugView`（記録の件数・サンプル追加・すべて消す）は**消す**。シミュレータで記録を作る手段は、カメラの Issue（#15）で「シミュレータのときは写真ライブラリから選ぶ」逃げ道を入れて確保する（#15 にコメント済み）
 
 ## ステップ
 
-1. `Kouiunodeiindayo/App/LaunchScreen.swift` — `enum LaunchScreen: String { case camera, home }`。`static let storageKey = "launchScreen"`、`static var stored: LaunchScreen`（`UserDefaults.standard.string(forKey:)` を読み、無い・知らない文字列なら `.camera`）／確認：ビルド
+1. `Kouiunodeiindayo/App/StartTab.swift` — `enum StartTab: String { case camera, home }`。`static let storageKey = "launchScreen"`、`static var stored: StartTab`（`UserDefaults.standard.string(forKey:)` を読み、無い・知らない文字列なら `.camera`）／確認：ビルド
 2. `Kouiunodeiindayo/App/RootTab.swift` — `enum RootTab: CaseIterable { case camera, home, list }`（この順。バーの並び順に使う）。`title`（「カメラ」「ホーム」「一覧」）と `systemImage`（`camera` / `house` / `square.grid.2x2`）の計算プロパティ／確認：ビルド
 3. `Kouiunodeiindayo/Features/Home/HomeView.swift`、`Features/List/RecordListView.swift`、`Features/Camera/CameraView.swift`、`Features/Sort/SortView.swift`、`Features/Detail/RecordDetailView.swift` — それぞれ `Text("ホーム")` など画面名だけの `struct` と `#Preview`／確認：各プレビューが出る
 4. `Kouiunodeiindayo/App/RootTabBar.swift` — `struct RootTabBar: View`。引数は `selected: RootTab` と `onSelect: (RootTab) -> Void`
@@ -34,12 +34,12 @@
    - 各ボタンに `accessibilityLabel(title)`、選択中には `.accessibilityAddTraits(.isSelected)`
    - `#Preview` で3つの選択状態を並べる／確認：プレビューで並び順と選択の見た目
 5. `Kouiunodeiindayo/App/RootView.swift` — 書き直す（`DataLayerDebugView` は消す）
-   - `@State private var page: RootTab = .home`、`@State private var isCameraShown: Bool`（初期値なし）。`init(launchScreen: LaunchScreen = .stored)` で `_isCameraShown = State(initialValue: launchScreen == .camera)`
+   - `@State private var page: RootTab = .home`、`@State private var isCameraShown: Bool`（初期値なし）。`init(startTab: StartTab = .stored)` で `_isCameraShown = State(initialValue: startTab == .camera)`
    - 中身：`ZStack` に、`TabView(selection: $page) { HomeView().tag(RootTab.home); RecordListView().tag(RootTab.list) }.tabViewStyle(.page(indexDisplayMode: .never))` と、`if isCameraShown { CameraView() }` を重ねる
    - `.safeAreaInset(edge: .bottom) { RootTabBar(selected: isCameraShown ? .camera : page, onSelect: select) }`。`safeAreaInset` にするのは、あとで本物のホーム・一覧のスクロールがバーの下まで伸びつつ、末尾がバーに隠れないようにするため
    - `select(_ tab: RootTab)`：`withAnimation` の中で、`.camera` なら `isCameraShown = true`、それ以外なら `isCameraShown = false; page = tab`
-   - `#Preview("カメラから開く")` は `RootView(launchScreen: .camera)`、`#Preview("ホームから開く")` は `RootView(launchScreen: .home)`。どちらも `.modelContainer(SampleData.makePreviewContainer())` と `.environment(\.photoStorage, SampleData.photoStorage)` を付ける（以降の画面 Issue がこのプレビューを使うため）／確認：2つのプレビューで、開いたときの画面が違う
-6. `docs/architecture.md` の「フォルダ構成」の `App/` に `RootTab.swift`・`RootTabBar.swift`・`LaunchScreen.swift` を1行ずつ足し、「下タブは `RootView` が持つ」の文に「バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる」を添える／確認：文書だけ
+   - `#Preview("カメラから開く")` は `RootView(startTab: .camera)`、`#Preview("ホームから開く")` は `RootView(startTab: .home)`。どちらも `.modelContainer(SampleData.makePreviewContainer())` と `.environment(\.photoStorage, SampleData.photoStorage)` を付ける（以降の画面 Issue がこのプレビューを使うため）／確認：2つのプレビューで、開いたときの画面が違う
+6. `docs/architecture.md` の「フォルダ構成」の `App/` に `RootTab.swift`・`RootTabBar.swift`・`StartTab.swift` を1行ずつ足し、「下タブは `RootView` が持つ」の文に「バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる」を添える／確認：文書だけ
 7. `docs/rules/verification.md` の 1（ビルド）と 3（表示の確認）。スクショを `.verification/11/` に残す：`01-起動直後-カメラ.png`、`02-ホームタブ.png`、`03-一覧タブ.png`、`04-ホームから左スワイプ-一覧.png`、`05-launchScreen-home-ホームから開く.png`、`preview-RootTabBar.png`。スワイプ途中（指についてきている瞬間）の写真が撮れれば `04a-スワイプ途中.png` として足す。`launchScreen` の設定は `xcrun simctl spawn booted defaults write <bundle id> launchScreen home` で入れてからアプリを起動し直す（bundle id は `Config/Base.xcconfig` と `Local.xcconfig` から求める）。`notes.md` に操作と見るところを表で書く
 8. Issue #11 にコメント：「横スワイプでカメラを全画面に出せるか」の結果（標準カメラはモーダルなので横から出せない。バーのボタンだけにする）と、下タブを自作した理由（指についてくるスワイプのため）
 9. `docs/rules/self-review.md` のセルフレビューを回してから PR（`Closes #11`）。ワークスペース側の `open-issues.md` の該当行は、PR がマージされたあとに「決着」として整理する（別リポなので、この PR には含めない）

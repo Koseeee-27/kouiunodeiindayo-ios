@@ -11,8 +11,8 @@ struct RootView: View {
 
     /// 引数を省くと、設定（`UserDefaults`）の「開いたときの画面」に従う。
     /// `.onAppear` で切り替えると最初の1フレームがホームになってしまうので、`init` で決める。
-    init(launchScreen: LaunchScreen = .stored) {
-        _isCameraShown = State(initialValue: launchScreen == .camera)
+    init(startTab: StartTab = .stored) {
+        _isCameraShown = State(initialValue: startTab == .camera)
     }
 
     var body: some View {
@@ -54,13 +54,13 @@ struct RootView: View {
 
 // 以降の画面の Issue は、この2つのプレビューを本物の画面に差し替えて使う
 #Preview("カメラから開く") {
-    RootView(launchScreen: .camera)
+    RootView(startTab: .camera)
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
 #Preview("ホームから開く") {
-    RootView(launchScreen: .home)
+    RootView(startTab: .home)
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }

@@ -12,7 +12,7 @@ Kouiunodeiindayo/
 │   ├── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
 │   ├── RootTab.swift          ← 下タブの行き先の enum（並び順・文言・アイコン）
 │   ├── RootTabBar.swift       ← 自作の下タブのバー（見た目と押したときの通知）
-│   └── LaunchScreen.swift     ← 開いたときの画面の設定値（機能25）の enum とキー
+│   └── StartTab.swift         ← 開いたときにどのタブから始めるかの設定値（機能25）の enum とキー
 ├── Features/                  ← 画面ごとに1フォルダ
 │   ├── Home/
 │   ├── List/
