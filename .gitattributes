@@ -1,0 +1,3 @@
+# Xcode が project.pbxproj に書き戻す個人の Team ID（DEVELOPMENT_TEAM）を、ステージ時に自動で取り除く。
+# filter の本体は各自の git 設定に入れる必要がある。clone 後に scripts/setup-git.sh を1回実行する（docs/setup.md）。
+*.pbxproj filter=xcodeteam
