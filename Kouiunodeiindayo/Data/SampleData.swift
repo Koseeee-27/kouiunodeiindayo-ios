@@ -38,7 +38,7 @@ enum SampleData {
         return container
     }
 
-    /// 写真の代わりに使う単色の画像。デバッグ用の追加ボタンからも使う。
+    /// 写真の代わりに使う単色の画像（プレビュー用）。
     static func makeImage(color: UIColor) -> UIImage {
         let size = CGSize(width: 1200, height: 1600)
         let format = UIGraphicsImageRendererFormat.default()

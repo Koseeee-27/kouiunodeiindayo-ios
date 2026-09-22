@@ -1,69 +1,66 @@
-import OSLog
 import SwiftData
 import SwiftUI
 
-/// 開いたときの画面。ここでカメラ／ホーム／一覧の切り替えを持つ予定。
-/// 今はデータ層の動作確認だけができる仮の画面で、本物の RootView の Issue で丸ごと置き換える。
+/// 開いたときの画面。下タブ（左からカメラ／ホーム／一覧）と、ホーム⇄一覧の横スワイプを持つ。
+/// 並びと行き来の決まりは `docs/screen-design.md` の「ナビゲーション」が正。
 struct RootView: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Text("こういうのでいいんだよ")
-                .font(.title)
-            #if DEBUG
-            DataLayerDebugView()
-            #endif
-        }
-        .padding()
+    /// ページャーの現在位置。`.home` か `.list` だけが入る。
+    @State private var page: RootTab = .home
+    /// カメラのボタンが押されているか。開いたときの画面の設定で変わるので `init` で決める。
+    @State private var isCameraShown: Bool
+
+    /// 引数を省くと、設定（`UserDefaults`）の「開いたときの画面」に従う。
+    /// `.onAppear` で切り替えると最初の1フレームがホームになってしまうので、`init` で決める。
+    init(startTab: StartTab = .stored) {
+        _isCameraShown = State(initialValue: startTab == .camera)
     }
-}
-
-#if DEBUG
-/// データ層（記録の追加・削除、写真ファイルの作成・削除）を手で確かめるための仮の画面。
-private struct DataLayerDebugView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.photoStorage) private var photoStorage
-    @Query(sort: \Record.takenAt, order: .reverse) private var records: [Record]
-
-    private static let logger = Logger(category: "DataLayerDebugView")
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("記録: \(records.count) 件")
-            if let latest = records.first, let thumbnail = photoStorage.thumbnail(id: latest.id) {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
+        ZStack {
+            // 指についてくる横スワイプにするため、ホームと一覧はページャーに載せる
+            TabView(selection: $page) {
+                HomeView()
+                    .tag(RootTab.home)
+                RecordListView()
+                    .tag(RootTab.list)
             }
-            Button("サンプルを1件追加") { addSample() }
-            Button("すべて消す") { deleteAll() }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            if isCameraShown {
+                CameraView()
+            }
+        }
+        // safeAreaInset にするのは、ホーム・一覧のスクロールがバーの下まで伸びつつ、末尾がバーに隠れないようにするため
+        .safeAreaInset(edge: .bottom) {
+            // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
+            // （`ambiguous use of '__designTimeSelection'`）。クロージャで包むと通る
+            RootTabBar(selected: isCameraShown ? .camera : page) { tab in
+                select(tab)
+            }
         }
     }
 
-    private var store: RecordStore {
-        RecordStore(modelContext: modelContext, photoStorage: photoStorage)
-    }
-
-    private func addSample() {
-        do {
-            try store.add(image: SampleData.makeImage(color: .systemOrange), takenAt: .now)
-        } catch {
-            Self.logger.error("サンプルを追加できなかった: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    private func deleteAll() {
-        do {
-            try store.deleteAll()
-        } catch {
-            Self.logger.error("すべて消せなかった: \(error.localizedDescription, privacy: .public)")
+    private func select(_ tab: RootTab) {
+        withAnimation {
+            if tab == .camera {
+                isCameraShown = true
+            } else {
+                isCameraShown = false
+                page = tab
+            }
         }
     }
 }
-#endif
 
-#Preview {
-    RootView()
+// 以降の画面の Issue は、この2つのプレビューを本物の画面に差し替えて使う
+#Preview("カメラから開く") {
+    RootView(startTab: .camera)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("ホームから開く") {
+    RootView(startTab: .home)
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
