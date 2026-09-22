@@ -23,7 +23,8 @@ Kouiunodeiindayo/
 │   ├── Genre.swift            ← ジャンルの enum
 │   ├── RecordStore.swift      ← 書き込みの入口（下の「書くとき」）
 │   ├── PhotoStorage.swift     ← 写真ファイルの保存・読み込み・サムネイル作成・削除
-│   └── SampleData.swift       ← プレビュー用のサンプルデータ
+│   ├── SampleData.swift       ← プレビュー用のサンプルデータ
+│   └── Logging.swift          ← ログ（os.Logger）の共通設定
 ├── Design/
 │   ├── Theme.swift            ← 色・フォント・余白の定義
 │   └── SoundPlayer.swift      ← 効果音の再生

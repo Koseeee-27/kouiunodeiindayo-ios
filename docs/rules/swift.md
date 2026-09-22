@@ -22,7 +22,7 @@ Xcode 27・iOS 27 は 2026-09-14 に出たばかりで、AI の知識や Web の
 
 - データの形、ジャンルの持ち方、項目を足すときの決まりは `docs/data-model.md` が正。項目を足す・変えるときは、先にそちらを直す
 - 読み方・書き方の決まり（読むときは `@Query`、書くときは `RecordStore`）は `docs/architecture.md` が正
-- SwiftData の準備は、アプリの入口で `.modelContainer(for: Record.self)` を付けるだけにする。`ModelContainer` を自前で作らない（作成失敗時の `fatalError` を書かずに済む）
+- SwiftData の準備は、アプリの入口で `.modelContainer(for: Record.self)` を付けるだけにする。`ModelContainer` を自前で作らない（作成失敗時の `fatalError` を書かずに済む）。例外は `SampleData` のプレビュー用のメモリ上のものだけ
 - メインスレッドの `modelContext` だけを使う。`@ModelActor`（別スレッドで SwiftData を使う仕組み）やバックグラウンドの `ModelContext` を作らない
 - `#Predicate`（絞り込みの条件）の中には、`Genre.unsorted.rawValue` のような式や日付の計算を直接書けない。先に `let` で値に取り出してから使う
 - 「今日」のように実行時に決まる条件は、ビューの `init` で `Query(filter:sort:)` を組み立てる。日付をまたいでも自動では更新されない点に注意する
