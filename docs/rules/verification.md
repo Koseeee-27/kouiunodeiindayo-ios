@@ -35,7 +35,11 @@ xcodebuild test -scheme Kouiunodeiindayo -destination 'platform=iOS Simulator,na
 - 確認した画面のスクショを `.verification/<Issue番号>/` に残す（git には入れない）。PR を出す前に本人が見返し、PR の「表示の確認」に貼る
   - ファイル名は「連番-操作-結果」（例：`02-サンプル追加-1件.png`）。プレビューは `preview-<ビュー名>.png`
   - 同じフォルダの `notes.md` に、写真ごとの「操作」と「見るところ」を表で書く
-  - 貼り付けは、ブラウザで PR を開いて画像をドラッグする（`gh` では画像をアップロードできない）
+  - 貼り付けは `gh pr create` / `gh pr edit` の `--attach` で行う（gh 2.99 以上。`brew upgrade gh`）。本文に `![説明](.verification/10/01-起動直後-0件.png)` のように書いておくと、その場所に差し替わる
+
+    ```bash
+    gh pr edit <PR番号> --body-file body.md --attach '.verification/10/01-起動直後-0件.png#起動直後 0件'
+    ```
 
 ## 4. 実機での確認（人が行う）
 
