@@ -15,6 +15,9 @@ xcuserdata/
 # 個人ごとの署名設定（docs/setup.md を参照）
 Config/Local.xcconfig
 
+# 動作確認のスクショとメモ（docs/rules/verification.md を参照）
+.verification/
+
 # 環境変数・シークレット
 .env
 .env.*
