@@ -1,0 +1,14 @@
+#!/bin/sh
+# コミット直前の検査。個人の Team ID（DEVELOPMENT_TEAM）が project.pbxproj に混ざっていたら止める。
+# ふだんは .gitattributes の filter がステージ時に取り除くので、ここに来るのは filter が未設定のとき。
+# 有効にするには scripts/setup-git.sh を1回実行する（docs/setup.md）。
+
+status=0
+for file in $(git diff --cached --name-only --diff-filter=AM | grep '\.pbxproj$'); do
+  if git show ":$file" | grep -q 'DEVELOPMENT_TEAM = [A-Za-z0-9]'; then
+    echo "error: $file に DEVELOPMENT_TEAM（個人の Team ID）が入っています。コミットしないでください。" >&2
+    echo "       scripts/setup-git.sh を実行すると、以後は自動で取り除かれます。" >&2
+    status=1
+  fi
+done
+exit $status
