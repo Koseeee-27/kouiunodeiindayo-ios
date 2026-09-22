@@ -29,8 +29,16 @@ struct PhotoStorage {
         let thumbnailData = Self.jpegData(from: resized, maxLength: Self.thumbnailMaxLength)
 
         let photoFileName = Self.photoFileName(for: id)
-        try photoData.write(to: directory.appending(path: photoFileName))
-        try thumbnailData.write(to: directory.appending(path: Self.thumbnailFileName(for: id)))
+        let photoURL = directory.appending(path: photoFileName)
+        // 書き込み中に落ちても中途半端な JPEG が残らないよう、atomic で書く
+        try photoData.write(to: photoURL, options: .atomic)
+        do {
+            try thumbnailData.write(to: directory.appending(path: Self.thumbnailFileName(for: id)), options: .atomic)
+        } catch {
+            // 写真だけ残ると誰も片付けない（呼び出し側は id を知らない）ので、ここで消す
+            try? FileManager.default.removeItem(at: photoURL)
+            throw error
+        }
         return photoFileName
     }
 
@@ -38,7 +46,8 @@ struct PhotoStorage {
     func photo(fileName: String) -> UIImage? {
         let url = directory.appending(path: fileName)
         guard let image = UIImage(contentsOfFile: url.path(percentEncoded: false)) else {
-            Self.logger.error("写真を読めなかった: \(fileName, privacy: .public)")
+            // 記録を消した直後の再描画などでも通るので、error にはしない
+            Self.logger.notice("写真を読めなかった: \(fileName, privacy: .public)")
             return nil
         }
         return image

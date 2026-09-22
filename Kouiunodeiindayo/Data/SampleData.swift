@@ -15,6 +15,8 @@ enum SampleData {
 
     /// サンプルを 5 件入れたコンテナ。ジャンルと「うまい」を一通り含む。
     static func makePreviewContainer() -> ModelContainer {
+        // プレビューを開き直すたびにファイルが溜まらないよう、前回のぶんを消す
+        try? FileManager.default.removeItem(at: photoStorage.directory)
         let container = makeContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: photoStorage)
 

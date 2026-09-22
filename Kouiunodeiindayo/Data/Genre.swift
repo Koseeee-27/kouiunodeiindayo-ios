@@ -1,4 +1,3 @@
-
 /// 記録のジャンル。保存する文字列は `docs/data-model.md` の「ジャンルの値」が正。
 enum Genre: String, CaseIterable {
     case unsorted

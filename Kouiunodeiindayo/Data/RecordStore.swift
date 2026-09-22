@@ -28,6 +28,7 @@ struct RecordStore {
             try modelContext.save()
         } catch {
             // 記録が残らないのに写真だけ残る（孤児ファイル）のを防ぐ
+            Self.logger.error("記録を保存できなかった: \(error.localizedDescription, privacy: .public)")
             modelContext.delete(record)
             deletePhotos(id: id, photoFileName: photoFileName)
             throw error
