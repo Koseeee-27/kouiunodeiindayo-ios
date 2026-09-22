@@ -6,9 +6,9 @@
 ## フォルダ構成
 
 ```
-kouiunodeiindayo/
+Kouiunodeiindayo/
 ├── App/
-│   ├── kouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
+│   ├── KouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
 │   └── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
 ├── Features/                  ← 画面ごとに1フォルダ
 │   ├── Home/
