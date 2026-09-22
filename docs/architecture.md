@@ -9,7 +9,10 @@
 Kouiunodeiindayo/
 ├── App/
 │   ├── KouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
-│   └── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
+│   ├── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
+│   ├── RootTab.swift          ← 下タブの行き先の enum（並び順・文言・アイコン）
+│   ├── RootTabBar.swift       ← 自作の下タブのバー（見た目と押したときの通知）
+│   └── LaunchScreen.swift     ← 開いたときの画面の設定値（機能25）の enum とキー
 ├── Features/                  ← 画面ごとに1フォルダ
 │   ├── Home/
 │   ├── List/
@@ -35,7 +38,7 @@ Config/
 ```
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
-- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。設定への入口は画面設計でまだ決まっていない
+- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。設定への入口は画面設計でまだ決まっていない
 - ビューの型名は `〜View` にする（`List/` フォルダのビューは `RecordListView` など。SwiftUI の `List` と同じ名前にしない）
 - ファイルを足すときは、このフォルダの中に置くだけでよい（同期フォルダなので、Xcode が自動で認識する）
 
