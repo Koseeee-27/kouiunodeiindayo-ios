@@ -9,7 +9,7 @@ MCP（XcodeBuildMCP、Xcode の MCP）を入れている場合は、同じこと
 
 ```bash
 set -o pipefail
-xcodebuild -scheme <スキーム名> -destination 'generic/platform=iOS Simulator' build 2>&1 \
+xcodebuild -scheme Kouiunodeiindayo -destination 'generic/platform=iOS Simulator' build 2>&1 \
   | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)"
 ```
 
@@ -22,7 +22,7 @@ xcodebuild -scheme <スキーム名> -destination 'generic/platform=iOS Simulato
 
 ```bash
 set -o pipefail
-xcodebuild test -scheme <スキーム名> -destination 'platform=iOS Simulator,name=<シミュレータ名>' 2>&1 \
+xcodebuild test -scheme Kouiunodeiindayo -destination 'platform=iOS Simulator,name=<シミュレータ名>' 2>&1 \
   | grep -E "error:|failed|passed|TEST (SUCCEEDED|FAILED)"
 ```
 
