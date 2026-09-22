@@ -32,7 +32,11 @@ struct RootView: View {
         }
         // safeAreaInset にするのは、ホーム・一覧のスクロールがバーの下まで伸びつつ、末尾がバーに隠れないようにするため
         .safeAreaInset(edge: .bottom) {
-            RootTabBar(selected: isCameraShown ? .camera : page, onSelect: select)
+            // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
+            // （`ambiguous use of '__designTimeSelection'`）。クロージャで包むと通る
+            RootTabBar(selected: isCameraShown ? .camera : page) { tab in
+                select(tab)
+            }
         }
     }
 
@@ -48,6 +52,7 @@ struct RootView: View {
     }
 }
 
+// 以降の画面の Issue は、この2つのプレビューを本物の画面に差し替えて使う
 #Preview("カメラから開く") {
     RootView(launchScreen: .camera)
         .modelContainer(SampleData.makePreviewContainer())
