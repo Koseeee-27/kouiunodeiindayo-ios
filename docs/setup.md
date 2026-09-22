@@ -42,6 +42,9 @@
 3. `DEVELOPMENT_TEAM` に、自分の Team ID を書く。調べ方は次のどちらか
    - 「キーチェーンアクセス」アプリを開き、「Apple Development: （自分のメールアドレス）」という証明書の詳細を見る。「部署」の欄の英数字10桁が Team ID（証明書は、一度 Xcode で実機向けにビルドしようとすると作られる）
    - Xcode でターゲットの Signing & Capabilities を開き、Team に自分を一度選ぶ → `git diff` で `project.pbxproj` に出てくる `DEVELOPMENT_TEAM = XXXXXXXXXX` の値を控える → **`git checkout -- '*.pbxproj'` で変更を捨てる**（Team ID をコミットしないため）
+4. Xcode を終了（Cmd+Q）して、プロジェクトを開き直す（開いたままだと、`Local.xcconfig` の変更が読み込まれないことがある）。ターゲットの Signing & Capabilities で、Team が自分の名前、Bundle Identifier が自分の値になっていれば成功
+
+Team ID を調べるとき以外は、Signing & Capabilities の Team のプルダウンと、Build Settings の Development Team を触らない（Team ID が `project.pbxproj` に書き込まれ、相手の署名が通らなくなる）。書き込まれていないかは `grep DEVELOPMENT_TEAM Kouiunodeiindayo.xcodeproj/project.pbxproj` で確かめる（何も出なければよい）。
 
 `Config/Local.xcconfig` はコミットしない（`.gitignore` 済み）。
 `BUNDLE_ID_PREFIX` は一度決めたら変えない。無料の Apple ID では、新しい Bundle ID を7日間に10個までしか作れない。
@@ -111,12 +114,16 @@ Xcode 本体が持つ連携。ビルドに加えて、**Apple の公式ドキュ
 
 Xcode でプロジェクトを新規作成した直後は、Bundle ID と Team ID がプロジェクトファイル（`project.pbxproj`）のターゲット側に書かれている。ターゲット側の値は xcconfig より優先されるので、そのままでは `Config/Local.xcconfig` が効かない。
 
-1. Xcode で新規プロジェクトを作る。Product Name は `kouiunodeiindayo`（`Config/Base.xcconfig` の Bundle ID と揃える）。保存先はこのリポジトリの直下
-2. Xcode でプロジェクト（青いアイコン）を選び、Info → Configurations で、Debug と Release の両方に `Base` を割り当てる
-3. ターゲットの Build Settings で、次の行を選んで Delete キーで消す（太字でなくなれば、xcconfig の値が使われている）
-   - Product Bundle Identifier
-   - Development Team
-   - iOS Deployment Target、Targeted Device Families、Supported Interface Orientations（`Base.xcconfig` に書いてあるもの）
-4. Signing & Capabilities で「Automatically manage signing」はオンのまま。Team のプルダウンは触らない（選ぶと、Team ID がプロジェクトファイルに書き戻される）
-5. 自分の `Config/Local.xcconfig` を作り（上の 3）、実機でビルドできることを確かめてからコミットする。コミット前に `git diff` で、`DEVELOPMENT_TEAM` に自分の Team ID が入っていないことを確かめる
-6. 終わったら、この付録は残しておく（テスト用のターゲットを足したときも、同じ作業が要る）
+1. Xcode で新規プロジェクトを作る（Choose Template… → iOS → App。Interface は SwiftUI、Storage は SwiftData）。Product Name は `Kouiunodeiindayo`。保存先はこのリポジトリのフォルダ
+   - 「Create Git repository on my Mac」のチェックは外す。作成後、`Kouiunodeiindayo/` の中に `.git` ができていたら消す（リポジトリの中に別のリポジトリができてしまうため）
+   - Xcode は保存先に `Kouiunodeiindayo/` を1段作るので、Xcode を終了（Cmd+Q）してから、その中の `Kouiunodeiindayo.xcodeproj` と `Kouiunodeiindayo/` をリポジトリの直下へ移し、空になったフォルダを消す
+   - Bundle ID は `Config/Base.xcconfig` に小文字で書いてあり、Product Name を変えても変わらない
+2. `Config` フォルダをプロジェクトに追加する（File → Add Files to "Kouiunodeiindayo"…。Targets のチェックは外し、コピーはしない）。追加しないと、次の手順で `Base` を選べない
+3. 左の一覧でプロジェクト（青いアイコン）を選び、PROJECT の `Kouiunodeiindayo` → Info → Configurations で、Debug と Release それぞれのプロジェクトの行に `Base` を割り当てる
+4. Build Settings（All・Combined）で、次の太字の行を選んで Delete キーで消す（細字になれば、xcconfig の値が使われている）。消す場所が PROJECT と TARGETS に分かれている
+   - PROJECT の `Kouiunodeiindayo`：iOS Deployment Target
+   - TARGETS の `Kouiunodeiindayo`：Product Bundle Identifier、Targeted Device Families、Supported Interface Orientations (iPhone) と (iPad)。消したあとに Supported Interface Orientations が太字で残ったら、それも消す
+   - Development Team は、PROJECT と TARGETS の両方を見て、太字なら消す
+5. Signing & Capabilities で「Automatically manage signing」はオンのまま。Team のプルダウンは触らない（選ぶと、Team ID がプロジェクトファイルに書き戻される）
+6. 自分の `Config/Local.xcconfig` を作り（上の 3）、実機でビルドできることを確かめてからコミットする。コミット前に `grep DEVELOPMENT_TEAM Kouiunodeiindayo.xcodeproj/project.pbxproj` で、何も出ないことを確かめる
+7. 終わったら、この付録は残しておく（テスト用のターゲットを足したときも、同じ作業が要る）
