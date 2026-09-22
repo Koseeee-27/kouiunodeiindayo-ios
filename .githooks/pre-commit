@@ -3,11 +3,13 @@
 # 1. 個人の Team ID（DEVELOPMENT_TEAM）が project.pbxproj に混ざっていたら止める。
 #    ふだんは .gitattributes の filter がステージ時に取り除くので、ここに来るのは filter が未設定のとき。
 # 2. コミット対象の Swift ファイルを swift-format（Xcode 同梱）で整形して、ステージし直す。設定は .swift-format。
+#    `git commit <パス>` のようにパスを直接指定したコミットでは、コミットの中身は整形されるが、手元のステージには
+#    整形前が残るので、直後に git status で MM と出る。`git add` してから `git commit` する決まりなら起きない。
 
 status=0
 
 # 1. Team ID の検査
-for file in $(git diff --cached --name-only --diff-filter=AM | grep '\.pbxproj$'); do
+for file in $(git -c core.quotePath=false diff --cached --name-only --diff-filter=AMR | grep '\.pbxproj$'); do
   if git show ":$file" | grep -q 'DEVELOPMENT_TEAM = [A-Za-z0-9]'; then
     echo "error: $file に DEVELOPMENT_TEAM（個人の Team ID）が入っています。コミットしないでください。" >&2
     echo "       scripts/setup-git.sh を実行すると、以後は自動で取り除かれます。" >&2
@@ -16,15 +18,16 @@ for file in $(git diff --cached --name-only --diff-filter=AM | grep '\.pbxproj$'
 done
 
 # 2. Swift の整形
-staged_swift=$(git diff --cached --name-only --diff-filter=AM | grep '\.swift$')
+staged_swift=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=AMR | grep '\.swift$')
 if [ -n "$staged_swift" ]; then
-  if ! command -v swift >/dev/null 2>&1; then
-    echo "warning: swift コマンドが見つからないので、整形せずにコミットします（Xcode の準備は docs/setup.md）。" >&2
+  # /usr/bin/swift は Xcode が無くても存在する薄いコマンドなので、実際に動くかで判定する
+  if ! swift format --version >/dev/null 2>&1; then
+    echo "warning: swift format が動かないので、整形せずにコミットします（Xcode の準備は docs/setup.md の 2）。" >&2
   else
     # ファイルの一部だけをステージしているときは、未ステージの変更まで混ぜないよう整形せず、規約チェックの結果だけ出す
-    unstaged=$(git diff --name-only)
+    unstaged=$(git -c core.quotePath=false diff --name-only)
     echo "$staged_swift" | while IFS= read -r file; do
-      if echo "$unstaged" | grep -qx "$file"; then
+      if echo "$unstaged" | grep -qxF "$file"; then
         echo "warning: $file は一部だけステージされているので整形しませんでした。" >&2
         swift format lint --configuration .swift-format "$file" >&2 || true
       elif swift format --in-place --configuration .swift-format "$file"; then

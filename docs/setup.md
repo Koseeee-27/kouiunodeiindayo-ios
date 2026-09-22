@@ -9,6 +9,7 @@
 - **Bundle ID**：アプリを見分ける名前（例：`com.example.taro.appname`）
 - **xcconfig**：Xcode のビルド設定を書いておけるテキストファイル
 - **MCP**：AI ツールに外部の道具（ここではビルド）を使わせるための仕組み
+- **hook**：git がコミットなどの節目に自動で実行するスクリプト。このリポジトリでは `.githooks/` に置いてある
 
 ## 1. 必要なもの
 
@@ -37,7 +38,7 @@
    sh scripts/setup-git.sh
    ```
 
-5. コミット前に手で整形したいときは、Xcode でファイルを開いて Editor → Structure → Format File with swift-format（Ctrl + Shift + I）。設定（`.swift-format`）はリポジトリのものが使われる
+   コミット前に手で整形したいときは、Xcode でファイルを開いて Editor → Structure → Format File with swift-format（Ctrl + Shift + I）。設定（`.swift-format`）はリポジトリのものが使われる
 
 ## 3. 署名の設定（人ごとに1回）
 
