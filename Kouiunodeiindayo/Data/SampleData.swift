@@ -15,8 +15,7 @@ enum SampleData {
 
     /// サンプルを 5 件入れたコンテナ。ジャンルと「うまい」を一通り含む。
     static func makePreviewContainer() -> ModelContainer {
-        // プレビューを開き直すたびにファイルが溜まらないよう、前回のぶんを消す
-        try? FileManager.default.removeItem(at: photoStorage.directory)
+        _ = cleanedPhotoDirectory
         let container = makeContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: photoStorage)
 
@@ -52,4 +51,10 @@ enum SampleData {
     }
 
     private static let oneDay: TimeInterval = 60 * 60 * 24
+
+    /// 前回のプレビューのファイルが溜まらないよう、プロセスで1回だけ一時フォルダを消す。
+    /// 呼ぶたびに消すと、同時に開いている別のプレビューの写真まで消えてしまう。
+    private static let cleanedPhotoDirectory: Void = {
+        try? FileManager.default.removeItem(at: photoStorage.directory)
+    }()
 }

@@ -36,7 +36,11 @@ struct PhotoStorage {
             try thumbnailData.write(to: directory.appending(path: Self.thumbnailFileName(for: id)), options: .atomic)
         } catch {
             // 写真だけ残ると誰も片付けない（呼び出し側は id を知らない）ので、ここで消す
-            try? FileManager.default.removeItem(at: photoURL)
+            do {
+                try FileManager.default.removeItem(at: photoURL)
+            } catch let removeError {
+                Self.logger.error("サムネイルの書き込みに失敗したあと、写真を消せなかった: \(photoFileName, privacy: .public) \(removeError.localizedDescription, privacy: .public)")
+            }
             throw error
         }
         return photoFileName
