@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 仕分けのスワイプの向きと、向きごとのジャンル。向きとジャンルの対応は `docs/screen-design.md` の「仕分け」が正。
 /// 手触り（どこまで動かせば仕分けるか・傾き）の調整は、このファイルの定数を直す（実機で決める）。
-enum SwipeDirection: CaseIterable {
+enum SwipeDirection {
     case up
     case left
     case right
