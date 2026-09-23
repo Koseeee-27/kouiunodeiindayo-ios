@@ -12,4 +12,26 @@ enum Genre: String, CaseIterable {
     init(storedValue: String) {
         self = Genre(rawValue: storedValue) ?? .unsorted
     }
+
+    /// 画面に出す名前。仕分けのラベルと、詳細での付け直しで使う。
+    var title: String {
+        switch self {
+        case .unsorted: "仕分け待ち"
+        case .food: "食べ物"
+        case .drink: "飲み物"
+        case .dessert: "デザート"
+        case .noGenre: "なし"
+        }
+    }
+
+    /// SF Symbols の名前（仮。デザインが決まったら差し替える）。
+    var systemImage: String {
+        switch self {
+        case .unsorted: "tray"
+        case .food: "fork.knife"
+        case .drink: "cup.and.saucer"
+        case .dessert: "birthday.cake"
+        case .noGenre: "minus.circle"
+        }
+    }
 }
