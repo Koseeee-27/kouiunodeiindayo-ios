@@ -88,14 +88,15 @@ enum SwipeDirection {
     }
 
     /// スワイプで仕分けたカードを飛ばす先と時間。`translation` は離した瞬間の位置、`velocity` は離した瞬間の速さ（pt/秒）。
-    /// 仕分けの向きに進んでいる速さで払ったときは、その速さの向き（斜めも可）に飛ばす。そうでなければ仕分けの向きにまっすぐ。
+    /// 速さの主な向きが仕分けの向きと同じ（仕分けの向きから ±45° 以内）なら、その速さの向き（斜めも可）に飛ばす。
+    /// そうでなければ仕分けの向きにまっすぐ（仕分けたジャンルと違う向きへ飛んでいくように見えないように）。
     /// 時間は「残りの距離 ÷ 速さ」を上限・下限に収めたもの。離した瞬間の速さのまま飛ぶよう、呼ぶ側は `.linear` で動かす。
     static func flight(from translation: CGSize, velocity: CGSize, direction: SwipeDirection, in size: CGSize)
         -> (offset: CGSize, duration: TimeInterval)
     {
         let speed = hypot(velocity.width, velocity.height)
         let unit: CGSize
-        if speed >= flingMinSpeed, direction.distance(of: velocity) > 0 {
+        if speed >= flingMinSpeed, mainDirection(of: velocity) == direction {
             unit = CGSize(width: velocity.width / speed, height: velocity.height / speed)
         } else {
             unit = direction.unitVector

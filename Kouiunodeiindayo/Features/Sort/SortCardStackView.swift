@@ -61,7 +61,8 @@ struct SortCardStackView: View {
     /// ラベルはカードと一緒に動かさず、手前のカードの縁（上・下・左・右の真ん中）に固定する。
     /// `overlay` はカードの `ZStack` より手前に描かれるので、飛んでいくカードにもラベルが隠れない
     private func sortArea(screenSize: CGSize) -> some View {
-        let highlighted = SwipeDirection.direction(for: cardOffset)
+        // 飛んでいる間は、飛ばしている向き（仕分けたジャンル）を強調する。飛ぶ位置から決めると、斜めに飛んだときに別の向きになる
+        let highlighted = isCommitting ? flyingDirection : SwipeDirection.direction(for: cardOffset)
         return cardStack(screenSize: screenSize)
             .overlay(alignment: .top) {
                 genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
