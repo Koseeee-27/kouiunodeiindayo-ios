@@ -21,7 +21,7 @@ Kouiunodeiindayo/
 │   ├── List/
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
-│   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身
+│   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
 │   ├── Sort/                  ← 仕分け
 │   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理
@@ -32,6 +32,7 @@ Kouiunodeiindayo/
 │   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数
 │   ├── Detail/                ← 記録の詳細
 │   ├── Onboarding/            ← 初めて開いたときの説明、カメラの許可を断られたときの案内
+│   │   └── CameraAccessGuideView.swift ← カメラの許可を断られた・制限されているときの案内。設定を開く・アルバムから選ぶ・ホームへ
 │   └── Settings/
 ├── Data/
 │   ├── Record.swift           ← SwiftData のモデル（docs/data-model.md のとおり）
