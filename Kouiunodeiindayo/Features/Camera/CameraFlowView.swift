@@ -1,3 +1,4 @@
+import AVFoundation
 import OSLog
 import SwiftData
 import SwiftUI
@@ -5,9 +6,15 @@ import UIKit
 
 /// カメラのカバー（`RootView` の `fullScreenCover`）の中身。撮る → 保存 → 仕分けを、同じカバーの中で切り替える。
 /// カバーを閉じてから仕分けを出し直すと、ホームが一瞬見えてから仕分けが上がってくるため。
+/// カメラを出す前に許可の状態を見て、断られている・制限されているときは案内（`CameraAccessGuideView`）を出す（#21）。
 struct CameraFlowView: View {
-    enum Step {
+    enum Step: Equatable {
+        /// 許可をまだ聞いていない。iOS の許可ダイアログの答えを待つ
+        case requestingAccess
         case camera
+        case accessGuide(isRestricted: Bool)
+        /// 案内から「アルバムから選ぶ」。キャンセルで同じ文言の案内に戻るため `isRestricted` を持つ
+        case library(isRestricted: Bool)
         case sort
     }
 
@@ -20,18 +27,52 @@ struct CameraFlowView: View {
     @State private var step: Step
     @State private var isSaveFailed = false
 
-    /// `step` はプレビューで仕分けから始めるためだけに渡す。
-    init(step: Step = .camera) {
-        _step = State(initialValue: step)
+    /// `step` はプレビューで仕分けや案内から始めるためだけに渡す。`nil` ならカメラの許可の状態で決める。
+    init(step: Step? = nil) {
+        _step = State(initialValue: step ?? Self.initialStep())
+    }
+
+    private static func initialStep() -> Step {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            .camera
+        case .denied:
+            .accessGuide(isRestricted: false)
+        case .restricted:
+            .accessGuide(isRestricted: true)
+        case .notDetermined:
+            // 標準カメラに任せると、ダイアログで「許可しない」を押した瞬間に真っ黒な画面になるため、先にアプリから聞く
+            .requestingAccess
+        @unknown default:
+            .camera
+        }
     }
 
     var body: some View {
         Group {
             switch step {
+            case .requestingAccess:
+                // 許可ダイアログの後ろは無地
+                Color.black
+                    .ignoresSafeArea()
+                    .task { await requestAccess() }
             case .camera:
                 CameraView(
                     onPick: { image in save(image) },
                     onCancel: { dismiss() }
+                )
+                .ignoresSafeArea()
+            case .accessGuide(let isRestricted):
+                CameraAccessGuideView(
+                    isRestricted: isRestricted,
+                    onPickFromLibrary: { step = .library(isRestricted: isRestricted) },
+                    onGoHome: { dismiss() }
+                )
+            case .library(let isRestricted):
+                CameraView(
+                    forcesPhotoLibrary: true,
+                    onPick: { image in save(image) },
+                    onCancel: { step = .accessGuide(isRestricted: isRestricted) }
                 )
                 .ignoresSafeArea()
             case .sort:
@@ -45,9 +86,14 @@ struct CameraFlowView: View {
         }
     }
 
+    private func requestAccess() async {
+        let granted = await AVCaptureDevice.requestAccess(for: .video)
+        step = granted ? .camera : .accessGuide(isRestricted: false)
+    }
+
     private func save(_ image: UIImage) {
         do {
-            // 撮影日時は常に今。写真の撮影日時を使うのはカメラロールからの取り込み（機能18）だけ
+            // 撮影日時は常に今。案内からアルバムで選んだ写真も今は選んだ時刻（#21）。写真の撮影日時を読むのはカメラロールからの取り込み（機能18）の本体
             try RecordStore(modelContext: modelContext, photoStorage: photoStorage).add(image: image, takenAt: .now)
             step = .sort
         } catch {
@@ -57,8 +103,15 @@ struct CameraFlowView: View {
     }
 }
 
+// 許可の状態で決めると、プレビューでは未確認のため黒い画面になる。カメラの段を直接出す
 #Preview("カメラ") {
-    CameraFlowView()
+    CameraFlowView(step: .camera)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("案内（断られた）") {
+    CameraFlowView(step: .accessGuide(isRestricted: false))
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
