@@ -19,15 +19,31 @@ struct SortView: View {
     )
     private var records: [Record]
 
-    @State private var dragOffset: CGSize
+    /// 指で動かしている間の移動量。離したときも、iOS がジェスチャーを取り消したとき（通知センターを引き出すなど）も、
+    /// `onEnded` を待たずにバネで 0 に戻る
+    @GestureState(resetTransaction: Transaction(animation: .spring)) private var dragTranslation: CGSize = .zero
+    /// 仕分けて画面の外へ飛ばしている間のカードの位置
+    @State private var flyOffset: CGSize = .zero
     /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない
     @State private var isCommitting = false
     /// 開いた時点で仕分け待ちが0件だったか。最初の描画では nil（まだ控えていない）
     @State private var wasEmptyAtOpen: Bool?
 
+    /// プレビュー「ドラッグ途中」で使う、指で動かしている量の代わり。
+    /// `@GestureState` は外から値を入れられないので、指で動かしていないときだけこちらを使う
+    private let previewDragOffset: CGSize
+
     /// `dragOffset` はプレビューでドラッグの途中を見るためだけに渡す。
     init(dragOffset: CGSize = .zero) {
-        _dragOffset = State(initialValue: dragOffset)
+        previewDragOffset = dragOffset
+    }
+
+    /// カードの表示位置。傾きとラベルの強調もここから決める
+    private var cardOffset: CGSize {
+        if isCommitting {
+            return flyOffset
+        }
+        return dragTranslation == .zero ? previewDragOffset : dragTranslation
     }
 
     private var store: RecordStore {
@@ -86,7 +102,7 @@ struct SortView: View {
     }
 
     private func sortArea(screenSize: CGSize) -> some View {
-        let highlighted = SwipeDirection.direction(for: dragOffset)
+        let highlighted = SwipeDirection.direction(for: cardOffset)
         return VStack(spacing: 12) {
             genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
             HStack(spacing: 8) {
@@ -118,8 +134,8 @@ struct SortView: View {
                 .scaleEffect(isFront ? 1.0 : 0.95)
                 .offset(y: isFront ? 0 : 12)
                 // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
-                .rotationEffect(isFront ? SwipeDirection.rotation(for: dragOffset) : .zero)
-                .offset(isFront ? dragOffset : .zero)
+                .rotationEffect(isFront ? SwipeDirection.rotation(for: cardOffset) : .zero)
+                .offset(isFront ? cardOffset : .zero)
                 .gesture(dragGesture(screenSize: screenSize), isEnabled: isFront && !isCommitting)
                 .allowsHitTesting(isFront)
                 .accessibilityHidden(!isFront)
@@ -130,19 +146,16 @@ struct SortView: View {
 
     private func dragGesture(screenSize: CGSize) -> some Gesture {
         DragGesture()
-            .onChanged { value in
-                dragOffset = value.translation
+            .updating($dragTranslation) { value, state, _ in
+                state = value.translation
             }
+            // しきい値に届かなかったとき・取り消されたときは、`dragTranslation` がバネで戻るので何もしない
             .onEnded { value in
                 if let direction = SwipeDirection.committed(
                     translation: value.translation,
                     predictedEndTranslation: value.predictedEndTranslation
                 ) {
-                    commit(direction, screenSize: screenSize)
-                } else {
-                    withAnimation(.spring) {
-                        dragOffset = .zero
-                    }
+                    commit(direction, from: value.translation, screenSize: screenSize)
                 }
             }
     }
@@ -162,11 +175,17 @@ struct SortView: View {
 
     /// 手前のカードを `direction` の向きに飛ばし、飛び終わってからジャンルを付ける。
     /// 先に付けると `@Query` からその記録がすぐ消え、飛んでいる途中のカードが消えてしまうため。
-    private func commit(_ direction: SwipeDirection, screenSize: CGSize) {
+    /// `start` はスワイプで離した瞬間の位置。そこから飛ばすことで、見た目が途切れない（ラベルを押したときは 0）
+    private func commit(_ direction: SwipeDirection, from start: CGSize = .zero, screenSize: CGSize) {
         guard !isCommitting, let record = records.first else { return }
-        isCommitting = true
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            flyOffset = start
+            isCommitting = true
+        }
         withAnimation(.easeIn(duration: 0.25)) {
-            dragOffset = direction.offscreenOffset(in: screenSize)
+            flyOffset = direction.offscreenOffset(in: screenSize)
         } completion: {
             // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
             // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
@@ -186,7 +205,7 @@ struct SortView: View {
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
-            dragOffset = .zero
+            flyOffset = .zero
             isCommitting = false
         }
     }
