@@ -93,7 +93,7 @@ struct CameraFlowView: View {
 
     private func save(_ image: UIImage) {
         do {
-            // 撮影日時は常に今。案内からアルバムで選んだ写真も今は選んだ時刻（#21）。写真の撮影日時を読むのはカメラロールからの取り込み（機能18）の本体
+            // 撮影日時は常に今。アルバムから選んだ写真も、写真の撮影日時ではなく選んだ時刻にする（`docs/data-model.md`）
             try RecordStore(modelContext: modelContext, photoStorage: photoStorage).add(image: image, takenAt: .now)
             step = .sort
         } catch {
