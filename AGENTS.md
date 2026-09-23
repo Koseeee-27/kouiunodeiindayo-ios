@@ -80,6 +80,6 @@ PR        → 説明に「Closes #Issue番号」を書く。要所の PR だけ�
 詳細は `docs/rules/git-workflow.md`。
 
 - main に直接 push できない（GitHub 側で禁止している）。ブランチを切って PR でマージする（`feat/12-〜`、`fix/34-〜` など、Issue 番号を入れる）
-- コミットメッセージは日本語で簡潔に。AI の署名（Co-Authored-By など）は付けない
+- コミットメッセージと PR の題名は `feat: 〜` のように種類を先頭に付け、日本語で簡潔に書く。AI の署名（Co-Authored-By など）は付けない
 - 壊れた状態で push しない
 - こまめに pull する
