@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 仕分けのスワイプの向きと、向きごとのジャンル。向きとジャンルの対応は `docs/screen-design.md` の「仕分け」が正。
-/// 手触り（どこまで動かせば仕分けるか・傾き）の調整は、このファイルの定数を直す（実機で決める）。
+/// 手触り（どこまで動かせば仕分けるか・傾き・後ろのカード）の調整は、このファイルの定数を直す（実機で決める）。
 enum SwipeDirection {
     case up
     case left
@@ -18,6 +18,10 @@ enum SwipeDirection {
     static let pointsPerDegree: CGFloat = 20
     /// 傾きの上限（度）。
     static let maxRotationDegrees: Double = 15
+    /// 後ろのカードの大きさ（手前のカードに対する倍率）。
+    static let backCardScale: CGFloat = 0.92
+    /// 手前のカードの下の隙間から、後ろのカードの下端が見える高さ（pt）。
+    static let backCardPeek: CGFloat = 10
 
     var genre: Genre {
         switch self {

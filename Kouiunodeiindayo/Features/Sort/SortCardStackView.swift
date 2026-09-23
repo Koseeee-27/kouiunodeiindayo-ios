@@ -72,8 +72,9 @@ struct SortCardStackView: View {
                     isFavoriteEnabled: isFront && !isCommitting,
                     onToggleFavorite: { onToggleFavorite(record) }
                 )
-                .scaleEffect(isFront ? 1.0 : 0.95)
-                .offset(y: isFront ? 0 : 12)
+                // 後ろのカードは下端をそろえて小さくし、手前のカードの下の隙間から下端をのぞかせる
+                .scaleEffect(isFront ? 1.0 : SwipeDirection.backCardScale, anchor: .bottom)
+                .offset(y: isFront ? 0 : SwipeDirection.backCardPeek)
                 // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
                 .rotationEffect(isFront ? SwipeDirection.rotation(for: cardOffset) : .zero)
                 .offset(isFront ? cardOffset : .zero)
@@ -82,7 +83,9 @@ struct SortCardStackView: View {
                 .accessibilityHidden(!isFront)
             }
         }
-        .aspectRatio(3 / 4, contentMode: .fit)
+        // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする
+        .padding(.bottom, SwipeDirection.backCardPeek)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func dragGesture(screenSize: CGSize) -> some Gesture {
