@@ -18,7 +18,7 @@ struct RootView: View {
     var body: some View {
         // 指についてくる横スワイプにするため、ホームと一覧はページャーに載せる
         TabView(selection: $page) {
-            HomeView()
+            HomeView { select(.camera) }
                 .tag(RootTab.home)
             RecordListView()
                 .tag(RootTab.list)
