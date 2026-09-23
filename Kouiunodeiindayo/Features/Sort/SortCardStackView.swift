@@ -104,6 +104,9 @@ struct SortCardStackView: View {
             // 後ろのカードを先に描き、手前のカードをその上に重ねる
             ForEach(Array(records.prefix(2).reversed()), id: \.id) { record in
                 let isFront = record.id == records.first?.id
+                // 位置・傾き・スタンプを付けるカード。飛んでいる間は、先頭ではなく飛ばしている記録に付ける。
+                // `@Query` の更新から `onChange` で戻すまでの間に、新しい先頭が飛ぶ位置（画面の外）に出ないように
+                let isMoving = isCommitting ? record.id == flyingRecordID : isFront
                 SortCardView(
                     record: record,
                     isFavoriteEnabled: isFront && !isCommitting,
@@ -112,7 +115,7 @@ struct SortCardStackView: View {
                 // スタンプはカードと一緒に動く。真ん中だと、左右に動かしたときに左右のラベル（縦の真ん中）の下に潜るので、
                 // 上のラベルの下あたりに置く
                 .overlay(alignment: .top) {
-                    if isFront, let stampDirection {
+                    if isMoving, let stampDirection {
                         SortStampView(genre: stampDirection.genre)
                             .opacity(stampOpacity)
                             .padding(.top, Self.stampTopInset)
@@ -122,8 +125,8 @@ struct SortCardStackView: View {
                 .scaleEffect(isFront ? 1.0 : backScale, anchor: .bottom)
                 .offset(y: isFront ? 0 : backPeek)
                 // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
-                .rotationEffect(isFront ? SwipeDirection.rotation(for: cardOffset) : .zero)
-                .offset(isFront ? cardOffset : .zero)
+                .rotationEffect(isMoving ? SwipeDirection.rotation(for: cardOffset) : .zero)
+                .offset(isMoving ? cardOffset : .zero)
                 .gesture(dragGesture(screenSize: screenSize), isEnabled: isFront && !isCommitting)
                 .allowsHitTesting(isFront)
                 .accessibilityHidden(!isFront)
