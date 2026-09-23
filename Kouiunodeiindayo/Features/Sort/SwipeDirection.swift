@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 仕分けのスワイプの向きと、向きごとのジャンル。向きとジャンルの対応は `docs/screen-design.md` の「仕分け」が正。
-/// 手触り（どこまで動かせば仕分けるか・傾き・後ろのカード）の調整は、このファイルの定数を直す（実機で決める）。
+/// 手触り（どこまで動かせば仕分けるか・傾き・飛び方・後ろのカード）の調整は、このファイルの定数を直す（実機で決める）。
 enum SwipeDirection {
     case up
     case left
@@ -18,6 +18,11 @@ enum SwipeDirection {
     static let pointsPerDegree: CGFloat = 20
     /// 傾きの上限（度）。
     static let maxRotationDegrees: Double = 15
+    /// 離した瞬間の速さがこれ以上なら、払った向き（斜めも可）にそのまま飛ばす（pt/秒）。これ未満なら仕分けの向きにまっすぐ。
+    static let flingMinSpeed: CGFloat = 300
+    /// 飛ばす時間の下限・上限（秒）。速く払っても一瞬で消えず、ゆっくりでももたつかないようにする。
+    static let flyMinDuration: TimeInterval = 0.12
+    static let flyMaxDuration: TimeInterval = 0.35
     /// 後ろのカードの大きさ（手前のカードに対する倍率）。
     static let backCardScale: CGFloat = 0.92
     /// 手前のカードの下の隙間から、後ろのカードの下端が見える高さ（pt）。
@@ -65,6 +70,39 @@ enum SwipeDirection {
         case .left: CGSize(width: -size.width * 1.5, height: 0)
         case .right: CGSize(width: size.width * 1.5, height: 0)
         case .down: CGSize(width: 0, height: size.height * 1.5)
+        }
+    }
+
+    /// スワイプで仕分けたカードを飛ばす先と時間。`translation` は離した瞬間の位置、`velocity` は離した瞬間の速さ（pt/秒）。
+    /// 仕分けの向きに進んでいる速さで払ったときは、その速さの向き（斜めも可）に飛ばす。そうでなければ仕分けの向きにまっすぐ。
+    /// 時間は「残りの距離 ÷ 速さ」を上限・下限に収めたもの。離した瞬間の速さのまま飛ぶよう、呼ぶ側は `.linear` で動かす。
+    static func flight(from translation: CGSize, velocity: CGSize, direction: SwipeDirection, in size: CGSize)
+        -> (offset: CGSize, duration: TimeInterval)
+    {
+        let speed = hypot(velocity.width, velocity.height)
+        let unit: CGSize
+        if speed >= flingMinSpeed, direction.distance(of: velocity) > 0 {
+            unit = CGSize(width: velocity.width / speed, height: velocity.height / speed)
+        } else {
+            unit = direction.unitVector
+        }
+        // どこから離しても画面の外まで出る距離
+        let distance = max(size.width, size.height) * 1.5
+        let offset = CGSize(
+            width: translation.width + unit.width * distance,
+            height: translation.height + unit.height * distance
+        )
+        let duration = speed > 0 ? TimeInterval(distance / speed) : flyMaxDuration
+        return (offset, min(max(duration, flyMinDuration), flyMaxDuration))
+    }
+
+    /// その向きの長さ 1 のベクトル。
+    private var unitVector: CGSize {
+        switch self {
+        case .up: CGSize(width: 0, height: -1)
+        case .left: CGSize(width: -1, height: 0)
+        case .right: CGSize(width: 1, height: 0)
+        case .down: CGSize(width: 0, height: 1)
         }
     }
 

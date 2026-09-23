@@ -107,7 +107,13 @@ struct SortCardStackView: View {
                     translation: value.translation,
                     predictedEndTranslation: value.predictedEndTranslation
                 ) {
-                    commit(direction, from: value.translation, screenSize: screenSize)
+                    let flight = SwipeDirection.flight(
+                        from: value.translation,
+                        velocity: value.velocity,
+                        direction: direction,
+                        in: screenSize
+                    )
+                    commit(direction, from: value.translation, flight: flight, screenSize: screenSize)
                 }
             }
     }
@@ -126,8 +132,14 @@ struct SortCardStackView: View {
 
     /// 手前のカードを `direction` の向きに飛ばし、飛び終わってからジャンルを付ける。
     /// 先に付けると `@Query` からその記録がすぐ消え、飛んでいる途中のカードが消えてしまうため。
-    /// `start` はスワイプで離した瞬間の位置。そこから飛ばすことで、見た目が途切れない（ラベルを押したときは 0）
-    private func commit(_ direction: SwipeDirection, from start: CGSize = .zero, screenSize: CGSize) {
+    /// `start` はスワイプで離した瞬間の位置。そこから飛ばすことで、見た目が途切れない（ラベルを押したときは 0）。
+    /// `flight` はスワイプで払った勢いの飛び先と時間。ラベルを押したときは nil で、仕分けの向きにまっすぐ飛ばす
+    private func commit(
+        _ direction: SwipeDirection,
+        from start: CGSize = .zero,
+        flight: (offset: CGSize, duration: TimeInterval)? = nil,
+        screenSize: CGSize
+    ) {
         guard !isCommitting, let record = records.first else { return }
         var transaction = Transaction()
         transaction.disablesAnimations = true
@@ -136,8 +148,9 @@ struct SortCardStackView: View {
             isCommitting = true
             flyingRecordID = record.id
         }
-        withAnimation(.easeIn(duration: 0.25)) {
-            flyOffset = direction.offscreenOffset(in: screenSize)
+        let animation: Animation = flight.map { .linear(duration: $0.duration) } ?? .easeIn(duration: 0.25)
+        withAnimation(animation) {
+            flyOffset = flight?.offset ?? direction.offscreenOffset(in: screenSize)
         } completion: {
             // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
             // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
