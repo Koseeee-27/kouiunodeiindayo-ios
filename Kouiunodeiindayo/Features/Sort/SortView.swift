@@ -19,9 +19,14 @@ struct SortView: View {
     )
     private var records: [Record]
 
-    @State private var dragOffset: CGSize = .zero
+    @State private var dragOffset: CGSize
     /// カードが飛んでいる間。ジェスチャー・ラベル・✕ を受け付けない
     @State private var isCommitting = false
+
+    /// `dragOffset` はプレビューでドラッグの途中を見るためだけに渡す。
+    init(dragOffset: CGSize = .zero) {
+        _dragOffset = State(initialValue: dragOffset)
+    }
 
     private var store: RecordStore {
         RecordStore(modelContext: modelContext, photoStorage: photoStorage)
@@ -229,6 +234,12 @@ private struct SortGenreLabel: View {
 #Preview("うまいが付いている") {
     SortView()
         .modelContainer(makeFavoriteContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("ドラッグ途中") {
+    SortView(dragOffset: CGSize(width: 60, height: -10))
+        .modelContainer(makeManyUnsortedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
