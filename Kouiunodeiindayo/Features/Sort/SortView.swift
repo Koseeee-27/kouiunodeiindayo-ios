@@ -22,6 +22,8 @@ struct SortView: View {
     @State private var dragOffset: CGSize
     /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない
     @State private var isCommitting = false
+    /// 開いた時点で仕分け待ちが0件だったか。最初の描画では nil（まだ控えていない）
+    @State private var wasEmptyAtOpen: Bool?
 
     /// `dragOffset` はプレビューでドラッグの途中を見るためだけに渡す。
     init(dragOffset: CGSize = .zero) {
@@ -38,11 +40,17 @@ struct SortView: View {
                 header
                 if !records.isEmpty {
                     sortArea(screenSize: geometry.size)
-                } else {
+                } else if wasEmptyAtOpen ?? true {
                     emptyView
+                } else {
+                    // 仕分けて空になったときは、カバーが閉じる間に「仕分け待ちはありません」を見せない
+                    Color.clear
                 }
             }
             .padding()
+        }
+        .onAppear {
+            wasEmptyAtOpen = records.isEmpty
         }
         .onChange(of: records.first?.id) {
             if isCommitting {
