@@ -37,11 +37,11 @@
    - `#Preview` は `CameraView(onPick: { _ in }, onCancel: {})`（プレビューはシミュレータ上なので写真ライブラリが出る）／確認：ビルド
 2. `Kouiunodeiindayo/Features/Sort/SortView.swift` — 仮ビューに、閉じる手段と保存の確認を足す
    - `@Environment(\.dismiss) private var dismiss`
-   - 仕分け待ちの `@Query`：`#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、`init` の外（型のスコープ）で `let unsorted = Genre.unsorted.rawValue` に取り出してから `#Predicate<Record> { $0.genre == unsorted }`、並びは `\.takenAt` の新しい順（`docs/data-model.md` の「仕分け待ち」）
+   - 仕分け待ちの `@Query`：`#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、型のスコープで `private static let unsorted = Genre.unsorted.rawValue` に取り出してから `#Predicate<Record> { $0.genre == unsorted }`、並びは `\.takenAt` の新しい順（`docs/data-model.md` の「仕分け待ち」）
    - 中身：`Text("仕分け（仮。#16 で置き換える）")`、`Text("仕分け待ち \(records.count) 枚")`、最新1件があれば `Text(record.takenAt, format: .dateTime)`、`Button("ホームへ") { dismiss() }`（`accessibilityLabel` 付き）
    - `#Preview` は `.modelContainer(SampleData.makePreviewContainer())` と `.environment(\.photoStorage, SampleData.photoStorage)` を付ける／確認：プレビューで「仕分け待ち 1 枚」（サンプルデータの `unsorted` は1件）
 3. `Kouiunodeiindayo/Features/Camera/CameraFlowView.swift` — 新規。カバーの中身。撮る → 保存 → 仕分けの流れを持つ
-   - `enum Step { case camera, sort }`（ファイル内の private でよい）
+   - `enum Step { case camera, sort }`（`CameraFlowView` の中に入れ子で置く。`init(step:)` の引数に使うので private にはできない）
    - `@Environment(\.dismiss)`、`@Environment(\.modelContext)`、`@Environment(\.photoStorage)`
    - `@State private var step: Step`（初期値なし）、`@State private var isSaveFailed = false`。`init(step: Step = .camera)` で `_step = State(initialValue: step)`（`docs/rules/swift.md` の「宣言時に初期値を持つ `@State` に `init` で代入しない」に反しない書き方。`RootView` と同じ）
    - `body`：`switch step` で `.camera` なら `CameraView(onPick: { save($0) }, onCancel: { dismiss() }).ignoresSafeArea()`、`.sort` なら `SortView()`。`.alert("保存できませんでした", isPresented: $isSaveFailed) { Button("OK") { dismiss() } }`

@@ -6,7 +6,7 @@ import SwiftUI
 struct RootView: View {
     /// ページャーの現在位置。`.home` か `.list` だけが入る。
     @State private var page: RootTab = .home
-    /// カメラのボタンが押されているか。開いたときの画面の設定で変わるので `init` で決める。
+    /// カメラのカバーが出ているか。開いたときの画面の設定で変わるので `init` で決める。
     @State private var isCameraShown: Bool
 
     /// 引数を省くと、設定（`UserDefaults`）の「開いたときの画面」に従う。
@@ -16,26 +16,31 @@ struct RootView: View {
     }
 
     var body: some View {
-        ZStack {
-            // 指についてくる横スワイプにするため、ホームと一覧はページャーに載せる
-            TabView(selection: $page) {
-                HomeView()
-                    .tag(RootTab.home)
-                RecordListView()
-                    .tag(RootTab.list)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-
-            if isCameraShown {
-                CameraView()
-            }
+        // 指についてくる横スワイプにするため、ホームと一覧はページャーに載せる
+        TabView(selection: $page) {
+            HomeView()
+                .tag(RootTab.home)
+            RecordListView()
+                .tag(RootTab.list)
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
         // safeAreaInset にするのは、ホーム・一覧のスクロールがバーの下まで伸びつつ、末尾がバーに隠れないようにするため
         .safeAreaInset(edge: .bottom) {
             // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
             // （`ambiguous use of '__designTimeSelection'`）。クロージャで包むと通る
             RootTabBar(selected: isCameraShown ? .camera : page) { tab in
                 select(tab)
+            }
+        }
+        // 標準カメラはモーダルで出す前提の部品なので、埋め込まずカバーで出す。カバーなら下タブも隠れる
+        .fullScreenCover(isPresented: $isCameraShown) {
+            CameraFlowView()
+        }
+        // キャンセルと仕分け終了は、どちらもホームへ（`docs/screen-design.md` の「画面のつながり」）。
+        // `onDismiss` だと閉じ終わってから切り替わり、一覧から開いたときに一覧が一瞬見える
+        .onChange(of: isCameraShown) { _, isShown in
+            if !isShown {
+                page = .home
             }
         }
     }
