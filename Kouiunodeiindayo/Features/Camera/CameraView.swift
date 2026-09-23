@@ -9,6 +9,7 @@ import UIKit
 /// 許可の確認は呼び出し側（`CameraFlowView`）が行う。ここでは見ない。
 struct CameraView: UIViewControllerRepresentable {
     /// true なら実機でもカメラを使わず写真ライブラリを出す（カメラの許可を断られたときの「アルバムから選ぶ」）。
+    /// 作るとき（`makeUIViewController`）だけ見る。途中で変えても反映されない。
     var forcesPhotoLibrary = false
     /// 撮った（選んだ）写真を渡す。
     let onPick: (UIImage) -> Void

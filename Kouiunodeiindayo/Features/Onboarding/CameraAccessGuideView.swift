@@ -22,6 +22,7 @@ struct CameraAccessGuideView: View {
                 VStack(spacing: 12) {
                     Text("カメラが使えません")
                         .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
                     Text(message)
                         .font(.body)
                         .foregroundStyle(.secondary)
@@ -29,21 +30,15 @@ struct CameraAccessGuideView: View {
                 }
 
                 VStack(spacing: 12) {
-                    Button {
+                    // 制限はこのアプリの設定では外せないので、制限されているときはアルバムのほうを目立たせる
+                    wideButton("設定を開く", isProminent: !isRestricted) {
                         openSettings()
-                    } label: {
-                        Text("設定を開く")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accessibilityHint("設定アプリに移ります")
 
-                    Button {
+                    wideButton("アルバムから選ぶ", isProminent: isRestricted) {
                         onPickFromLibrary()
-                    } label: {
-                        Text("アルバムから選ぶ")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
 
                     Button("ホームへ") {
                         onGoHome()
@@ -63,6 +58,23 @@ struct CameraAccessGuideView: View {
             "スクリーンタイムなどでカメラが制限されているため、撮れません。アルバムから選んで記録できます。"
         } else {
             "カメラへのアクセスがオフになっています。設定アプリで「カメラ」をオンにすると撮れます。"
+        }
+    }
+
+    /// 横いっぱいのボタン。目立たせる1つだけ `.borderedProminent`、ほかは `.bordered`。
+    @ViewBuilder
+    private func wideButton(_ title: String, isProminent: Bool, action: @escaping () -> Void) -> some View {
+        // `Button(action: action)` と関数を直接渡すと、Xcode 27 のプレビューがビルドに失敗する。クロージャで包むと通る
+        let button = Button {
+            action()
+        } label: {
+            Text(title)
+                .frame(maxWidth: .infinity)
+        }
+        if isProminent {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button.buttonStyle(.bordered)
         }
     }
 

@@ -36,6 +36,7 @@
     - `.library` は `case library(isRestricted: Bool)` にした（ステップ 3 の2案のうち、`Step` に持たせるほう）
     - 案内画面は、中身が短いときに縦の真ん中に来るよう `ScrollView` に `.defaultScrollAnchor(.center, for: .alignment)` を付けた
     - シミュレータの確認に、計画の一覧に無い 09（許可をリセットして起動 → ダイアログ）・10（「許可しない」→ すぐ案内）を足した
+    - セルフレビューを受けて：制限されているときは「アルバムから選ぶ」を目立つボタン（`.borderedProminent`）にし、「設定を開く」を控えめ（`.bordered`）にした（制限はこのアプリの設定では外せないため。文言とボタンの数は変えない）。見出しに `.isHeader`、「設定を開く」に `accessibilityHint` を付けた
 
 ## ステップ
 
