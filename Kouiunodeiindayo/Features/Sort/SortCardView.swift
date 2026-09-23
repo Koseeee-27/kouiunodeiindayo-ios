@@ -49,7 +49,8 @@ struct SortCardView: View {
                 .background(.regularMaterial, in: .capsule)
         }
         .buttonStyle(.plain)
-        .disabled(!isFavoriteEnabled)
+        // `.disabled` だと薄い色になり、うまいが付いていないように見えるので、押せなくするだけにする
+        .allowsHitTesting(isFavoriteEnabled)
         .opacity(record.isFavorite ? 1.0 : 0.4)
         .padding(12)
         .accessibilityLabel("う、うまい")
