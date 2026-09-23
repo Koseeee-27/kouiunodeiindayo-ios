@@ -6,7 +6,11 @@ import UIKit
 /// シミュレータと、カメラが使えない実機（スクリーンタイムの制限など）では写真ライブラリになる（`sourceType`）。
 /// 中身を自作カメラに差し替えるときも口（`onPick` / `onCancel`）は変えない（#32）。
 /// 閉じるのは呼び出し側（`CameraFlowView` が中身を切り替える）。ここで `dismiss` は呼ばない。
+/// 許可の確認は呼び出し側（`CameraFlowView`）が行う。ここでは見ない。
 struct CameraView: UIViewControllerRepresentable {
+    /// true なら実機でもカメラを使わず写真ライブラリを出す（カメラの許可を断られたときの「アルバムから選ぶ」）。
+    /// 作るとき（`makeUIViewController`）だけ見る。途中で変えても反映されない。
+    var forcesPhotoLibrary = false
     /// 撮った（選んだ）写真を渡す。
     let onPick: (UIImage) -> Void
     /// キャンセルされた、または写真が取れなかったとき。
@@ -14,12 +18,15 @@ struct CameraView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = Self.sourceType
+        picker.sourceType = sourceType
         picker.delegate = context.coordinator
         return picker
     }
 
-    private static var sourceType: UIImagePickerController.SourceType {
+    private var sourceType: UIImagePickerController.SourceType {
+        if forcesPhotoLibrary {
+            return .photoLibrary
+        }
         #if targetEnvironment(simulator)
             // iOS 27 のシミュレータは `.camera` を使えると答え、標準カメラの画面も出るが、映像が来ずシャッターが効かない
             // iOS 27 SDK では `.photoLibrary` が将来の非推奨予告（`API_TO_BE_DEPRECATED`、PHPicker へ）。警告が出たら `PHPickerViewController` に替える
