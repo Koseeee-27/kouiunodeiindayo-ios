@@ -162,7 +162,9 @@ struct SortCardStackView: View {
         ) {
             commit(direction, screenSize: screenSize)
         }
-        .disabled(isCommitting)
+        // `.disabled` だと飛んでいる間にラベルが薄くなり、向かっている向きの強調も消えるので、押せなくするだけにする。
+        // 読み上げから押された場合も、`commit` の先頭で止まる
+        .allowsHitTesting(!isCommitting)
     }
 
     /// 手前のカードを `direction` の向きに飛ばし、飛び終わってからジャンルを付ける。
