@@ -20,6 +20,7 @@ struct SortCardView: View {
                         .scaledToFill()
                         // 切り抜いても、はみ出した部分の当たり判定は残り、横のラベルのタップを奪うので外す
                         .allowsHitTesting(false)
+                        .accessibilityLabel("仕分ける写真")
                 }
             }
             .clipShape(.rect(cornerRadius: 16))
