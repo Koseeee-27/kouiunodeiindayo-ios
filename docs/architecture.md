@@ -50,7 +50,7 @@ Config/
 ```
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
-- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。カメラは `RootView` が `fullScreenCover` で出す。撮ったあとの仕分けも同じカバーの中で `CameraFlowView` が切り替える。仕分けは `dismiss()` で閉じ、閉じるとホームに戻る。設定への入口は画面設計でまだ決まっていない
+- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。カメラは `RootView` が `fullScreenCover` で出す。撮ったあとの仕分けも同じカバーの中で `CameraFlowView` が切り替える。仕分けは `dismiss()` で閉じ、閉じるとホームに戻る。設定はホーム右上のアイコンから、ホームが `sheet` で `SettingsView` を出す
 - ホーム・一覧の仕分け待ちの入口は、それぞれの画面が `fullScreenCover` で `SortView` を出す。記録の詳細の開き方は #13 で決める（ホームは仮に `sheet`）
 - ビューの型名は `〜View` にする（`List/` フォルダのビューは `RecordListView` など。SwiftUI の `List` と同じ名前にしない）
 - ファイルを足すときは、このフォルダの中に置くだけでよい（同期フォルダなので、Xcode が自動で認識する）
