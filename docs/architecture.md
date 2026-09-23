@@ -20,6 +20,9 @@ Kouiunodeiindayo/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身
 │   ├── Sort/                  ← 仕分け
+│   │   ├── SortView.swift         ← 仕分けの画面。カード・ラベル・残り枚数・抜ける手段
+│   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
+│   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾きの定数
 │   ├── Detail/                ← 記録の詳細
 │   ├── Onboarding/            ← 初めて開いたときの説明、カメラの許可を断られたときの案内
 │   └── Settings/
