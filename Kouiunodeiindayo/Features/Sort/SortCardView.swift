@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import UIKit
 
@@ -13,14 +14,28 @@ struct SortCardView: View {
     @State private var photo: UIImage?
 
     var body: some View {
-        // `scaledToFill` の写真がはみ出して大きさを決めないよう、地の上に重ねてから切り抜く
+        // 写真の縦横比は崩さない。全体が見えるよう `scaledToFit` で真ん中に置き、
+        // 余った部分には同じ写真を `scaledToFill` でぼかして敷く。
+        // 写真がはみ出して大きさを決めないよう、地の上に重ねてから切り抜く。ぼかしと写真は別々の `overlay` にする
+        // （同じ `ZStack` に入れると、はみ出した地の大きさが手前の写真にも渡り、手前の写真まで切り抜かれてしまう）
         Color.secondary.opacity(0.2)
             .overlay {
                 if let photo {
                     Image(uiImage: photo)
                         .resizable()
                         .scaledToFill()
-                        // 切り抜いても、はみ出した部分の当たり判定は残り、横のラベルのタップを奪うので外す
+                        // 縁が透けて灰色の地が見えないよう、ぼかしの縁も不透明にする
+                        .blur(radius: 30, opaque: true)
+                        // 切り抜いても、はみ出した部分の当たり判定は残り、ラベルのタップを奪うので外す
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .overlay {
+                if let photo {
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFit()
                         .allowsHitTesting(false)
                         .accessibilityLabel("仕分ける写真")
                 }
@@ -56,4 +71,19 @@ struct SortCardView: View {
         .accessibilityLabel("う、うまい")
         .accessibilityAddTraits(record.isFavorite ? .isSelected : [])
     }
+}
+
+#Preview("横長の写真") {
+    let container = SortPreviewData.makeLandscapeContainer()
+    let unsorted = Genre.unsorted.rawValue
+    let descriptor = FetchDescriptor<Record>(
+        predicate: #Predicate { $0.genre == unsorted },
+        sortBy: [SortDescriptor(\.takenAt, order: .reverse)]
+    )
+    // プレビュー用なので、無ければ落として気づく
+    let record = try! container.mainContext.fetch(descriptor).first!
+    SortCardView(record: record, isFavoriteEnabled: true, onToggleFavorite: {})
+        .frame(width: 360, height: 640)
+        .modelContainer(container)
+        .environment(\.photoStorage, SampleData.photoStorage)
 }
