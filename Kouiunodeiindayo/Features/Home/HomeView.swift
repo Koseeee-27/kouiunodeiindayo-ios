@@ -12,7 +12,7 @@ struct HomeView: View {
     /// 撮るボタン。カメラのカバーの出し方は `RootView` が持つ
     let onTakePhoto: () -> Void
 
-    /// 仕分け済みの新しい順。「今日」は `#Predicate` に書けないので、`body` で先頭を見て切り分ける
+    /// 仕分け済みの新しい順。「今日」は `#Predicate` に書けないので、`body` で切り分ける
     @Query(
         filter: #Predicate<Record> { $0.genre != unsorted },
         sort: \Record.takenAt, order: .reverse
@@ -26,15 +26,17 @@ struct HomeView: View {
     @State private var selectedRecord: Record?
     @State private var isSortShown = false
 
+    /// 今日撮った記録のうち一番新しい1枚（新しい順なので、今日の最初の1件）。
+    /// 先頭だけを見ると、日付を未来に直した記録（#13）があるとき今日の記録が隠れるので、今日の記録を探す。
     /// 日付をまたいでも再描画されるまでは変わらない（`docs/rules/swift.md` の注意どおり許容する）
     private var todayRecord: Record? {
-        guard let first = records.first, Calendar.current.isDateInToday(first.takenAt) else { return nil }
-        return first
+        records.first { Calendar.current.isDateInToday($0.takenAt) }
     }
 
     /// 今日の一枚と同じ写真が2回出ないよう、今日の一枚を除く
     private var recentRecords: [Record] {
-        Array(records.dropFirst(todayRecord == nil ? 0 : 1).prefix(Self.recentCount))
+        let todayID = todayRecord?.id
+        return Array(records.lazy.filter { $0.id != todayID }.prefix(Self.recentCount))
     }
 
     var body: some View {
