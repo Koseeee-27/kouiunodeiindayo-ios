@@ -18,6 +18,8 @@ struct SortCardView: View {
                     Image(uiImage: photo)
                         .resizable()
                         .scaledToFill()
+                        // 切り抜いても、はみ出した部分の当たり判定は残り、横のラベルのタップを奪うので外す
+                        .allowsHitTesting(false)
                 }
             }
             .clipShape(.rect(cornerRadius: 16))
@@ -36,6 +38,9 @@ struct SortCardView: View {
         } label: {
             Text("う、うまい")
                 .font(.headline)
+                // 大きな文字サイズで「…」に省略されないよう、縮めて1行に収める
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.regularMaterial, in: .capsule)
