@@ -19,8 +19,12 @@ enum HomePreviewData {
 
     /// 昨日〜4日前の記録だけを4件入れたもの（仕分け待ち無し・今日の記録無し）。
     static func makeNoTodayContainer() -> ModelContainer {
-        let container = SampleData.makeContainer()
+        // `makeContainer()` から始めると一時フォルダの掃除が走らず、あとから開いた別のプレビューの掃除で
+        // ここで書いた写真が消えることがある。掃除込みの `makePreviewContainer()` を空にしてから足す
+        let container = SampleData.makePreviewContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        // プレビュー用なので、消せなければ落として気づく
+        try! store.deleteAll()
         let samples: [(color: UIColor, genre: Genre, isFavorite: Bool, daysAgo: Int)] = [
             (.systemGreen, .food, true, 1),
             (.systemPurple, .drink, false, 2),
