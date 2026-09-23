@@ -45,12 +45,13 @@ struct RootView: View {
         }
     }
 
+    /// カメラのカバーが出ている間はバーが隠れるので、ここに来るのはカバーが閉じているときだけ。
+    /// カバーを閉じたあとホームへ戻すのは `onChange(of: isCameraShown)` の1か所に任せる。
     private func select(_ tab: RootTab) {
         withAnimation {
             if tab == .camera {
                 isCameraShown = true
             } else {
-                isCameraShown = false
                 page = tab
             }
         }

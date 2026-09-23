@@ -22,13 +22,18 @@ struct CameraView: UIViewControllerRepresentable {
     private static var sourceType: UIImagePickerController.SourceType {
         #if targetEnvironment(simulator)
             // iOS 27 のシミュレータは `.camera` を使えると答え、標準カメラの画面も出るが、映像が来ずシャッターが効かない
+            // iOS 27 SDK では `.photoLibrary` が将来の非推奨予告（`API_TO_BE_DEPRECATED`、PHPicker へ）。警告が出たら `PHPickerViewController` に替える
             return .photoLibrary
         #else
             return UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
         #endif
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+        // Coordinator は作り直されないので、親の再描画で渡された新しいクロージャに付け直す
+        context.coordinator.onPick = onPick
+        context.coordinator.onCancel = onCancel
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onPick: onPick, onCancel: onCancel)
@@ -37,8 +42,8 @@ struct CameraView: UIViewControllerRepresentable {
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         private static let logger = Logger(category: "CameraView")
 
-        private let onPick: (UIImage) -> Void
-        private let onCancel: () -> Void
+        var onPick: (UIImage) -> Void
+        var onCancel: () -> Void
 
         init(onPick: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
             self.onPick = onPick
