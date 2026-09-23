@@ -15,6 +15,8 @@ struct RecordPhotoView: View {
 
     let record: Record
     let kind: Kind
+    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「う、うまい」）
+    var showsFavoriteLabel = false
 
     @Environment(\.photoStorage) private var photoStorage
     @State private var image: UIImage?
@@ -33,6 +35,11 @@ struct RecordPhotoView: View {
                 }
             }
             .clipped()
+            .overlay(alignment: .topTrailing) {
+                if showsFavoriteLabel && record.isFavorite {
+                    favoriteLabel
+                }
+            }
             // `@Query` の更新のたびに読み直さないよう、ファイルは記録が変わったときだけ読む
             .task(id: record.id) {
                 switch kind {
@@ -43,15 +50,35 @@ struct RecordPhotoView: View {
                 }
             }
     }
+
+    /// 仕分けの「う、うまい」と同じ位置（写真の右上）・同じカプセル。見た目は仮で、トーンが決まったら #23 で合わせる。
+    /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
+    private var favoriteLabel: some View {
+        let isLarge = kind == .photo
+        return Text("うまい")
+            .font(isLarge ? .headline : .caption)
+            // 文字サイズ最大でサムネイルに入り切らず「…」にならないよう、縮めて1行に収める（サムネイルは幅が 80pt ほどしかない）
+            .lineLimit(1)
+            .minimumScaleFactor(isLarge ? 0.5 : 0.3)
+            .padding(.horizontal, isLarge ? 12 : 6)
+            .padding(.vertical, isLarge ? 8 : 3)
+            .background(.regularMaterial, in: .capsule)
+            .padding(isLarge ? 12 : 4)
+            // 読み上げは呼ぶ側の `Button` のラベルに含める
+            .accessibilityHidden(true)
+    }
 }
 
 #Preview {
     let container = SampleData.makePreviewContainer()
-    // プレビュー用なので、無ければ落として気づく
-    let record = try! container.mainContext.fetch(FetchDescriptor<Record>()).first!
+    // お気に入りの記録で「うまい」を見る。プレビュー用なので、無ければ落として気づく
+    let descriptor = FetchDescriptor<Record>(predicate: #Predicate { $0.isFavorite })
+    let record = try! container.mainContext.fetch(descriptor).first!
     HStack(spacing: 16) {
-        RecordPhotoView(record: record, kind: .photo)
+        RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
             .frame(width: 160, height: 160)
+        RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
+            .frame(width: 80, height: 80)
         RecordPhotoView(record: record, kind: .thumbnail)
             .frame(width: 80, height: 80)
     }

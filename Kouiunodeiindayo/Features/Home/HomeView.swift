@@ -90,12 +90,12 @@ struct HomeView: View {
                     selectedRecord = record
                 } label: {
                     // 大きさは仮。#23 で見直す
-                    RecordPhotoView(record: record, kind: .photo)
+                    RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
                         .aspectRatio(1, contentMode: .fit)
                         .clipShape(.rect(cornerRadius: 16))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("今日の一枚。記録の詳細を開く")
+                .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
             } else {
                 VStack(spacing: 16) {
                     Text("今日はまだ撮っていません")
@@ -112,6 +112,11 @@ struct HomeView: View {
         }
     }
 
+    /// 「うまい」のラベルは読み上げから隠しているので、ボタンの読み上げに足す
+    private static func favoriteSuffix(_ record: Record) -> String {
+        record.isFavorite ? "。うまい付き" : ""
+    }
+
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("最近の写真")
@@ -124,13 +129,13 @@ struct HomeView: View {
                     Button {
                         selectedRecord = record
                     } label: {
-                        RecordPhotoView(record: record, kind: .thumbnail)
+                        RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                             .aspectRatio(1, contentMode: .fit)
                             .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(
-                        "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真。記録の詳細を開く"
+                        "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(Self.favoriteSuffix(record))。記録の詳細を開く"
                     )
                 }
             }
