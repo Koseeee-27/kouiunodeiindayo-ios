@@ -31,7 +31,9 @@ struct SortCardView: View {
     }
 
     private var favoriteButton: some View {
-        Button(action: onToggleFavorite) {
+        Button {
+            onToggleFavorite()
+        } label: {
             Text("う、うまい")
                 .font(.headline)
                 .padding(.horizontal, 12)
