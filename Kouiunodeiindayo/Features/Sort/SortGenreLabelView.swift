@@ -30,6 +30,8 @@ struct SortGenreLabelView: View {
                 .glassEffect(emphasis == .strong ? .regular.tint(.accentColor) : .regular, in: .capsule)
         }
         .buttonStyle(.plain)
+        // 文字サイズを XX Large 以上にすると、上のラベルと「う、うまい」、左右のラベル同士が重なるので上限を付ける
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .scaleEffect(emphasis == .strong ? 1.15 : 1.0)
         // ほかの向きのラベルも、何のラベルか読める濃さに留める
         .opacity(emphasis == .weak ? 0.6 : 1.0)

@@ -64,6 +64,8 @@ struct SortCardView: View {
                 .background(.regularMaterial, in: .capsule)
         }
         .buttonStyle(.plain)
+        // 上のラベルと同じ縁に並ぶので、ラベルと同じ上限を付ける（XX Large 以上で重なる）
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         // `.disabled` だと薄い色になり、うまいが付いていないように見えるので、押せなくするだけにする
         .allowsHitTesting(isFavoriteEnabled)
         .opacity(record.isFavorite ? 1.0 : 0.4)
