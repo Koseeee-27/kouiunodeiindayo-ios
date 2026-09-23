@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 /// 仕分けの写真 1 枚のカード。右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。
-/// ドラッグと仕分けは `SortView` が持つ。
+/// ドラッグと仕分けは `SortCardStackView` が持つ。
 struct SortCardView: View {
     let record: Record
     /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
