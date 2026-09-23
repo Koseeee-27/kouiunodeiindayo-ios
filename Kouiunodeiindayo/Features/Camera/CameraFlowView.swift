@@ -63,7 +63,7 @@ struct CameraFlowView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
-#Preview("仕分け（仮）") {
+#Preview("仕分け") {
     CameraFlowView(step: .sort)
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
