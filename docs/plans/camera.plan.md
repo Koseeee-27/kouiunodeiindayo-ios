@@ -18,6 +18,7 @@
   - **カメラは `fullScreenCover`（画面全体を覆うモーダル）で出す。** `RootView` の `ZStack` に埋め込む形はやめる。`UIImagePickerController` はモーダルで出す前提の部品で、埋め込みは Apple が保証していない。カバーなら下タブも自然に隠れる
   - **撮る → 保存 → 仕分けは、同じカバーの中で中身を切り替える**（`CameraFlowView` が `step` を持つ）。カメラのカバーを閉じてから仕分けのカバーを改めて出す形は、閉じ終わるのを待つ必要があり、ホームが一瞬見えてから仕分けが上がってくるのでやめる
   - **シミュレータで写真ライブラリに切り替える方法は、実行時の `UIImagePickerController.isSourceTypeAvailable(.camera)`。** Issue のコメントの `#if targetEnvironment(simulator)` ではなく実行時に判定する。シミュレータでは false になるので結果は同じで、加えて実機でスクリーンタイムの制限などでカメラが使えないときも落ちずに写真ライブラリへ逃げられる。コンパイル時の分岐も要らない
+    - 実装して分かったこと：**iOS 27 のシミュレータは `isSourceTypeAvailable(.camera)` が true を返す。** 標準カメラの画面は出るが、映像が来ず（`AVFoundationErrorDomain -11800`）シャッターが効かないので、写真を選べず先に進めない。そのため `#if targetEnvironment(simulator)` で `.photoLibrary` にし、実機では上の実行時の判定を残した（`CameraView.sourceType`）。実機でカメラが使えないときの逃げ道はそのまま
   - `CameraView` は SwiftData を知らない。保存（`RecordStore.add`）と画面の切り替え・エラー表示は `CameraFlowView` が持つ
   - `takenAt` は常に `.now`。シミュレータで古い写真を選んでも今日の記録になり、ホーム（今日の一枚。#14）の確認に使える。写真の撮影日時を使うのはカメラロールからの取り込み（機能18）のときだけ
   - キャンセル → ホームは、`fullScreenCover` の `onDismiss` ではなく `.onChange(of: isCameraShown)` で `page = .home` にする。`onDismiss` はカバーが閉じ終わってから呼ばれるので、一覧タブからカメラを開いてキャンセルすると、一覧が一瞬見えてからホームに変わる。`onChange` なら閉じ始める瞬間に切り替わる
@@ -30,7 +31,7 @@
 
 1. `Kouiunodeiindayo/Features/Camera/CameraView.swift` — 仮ビューを `struct CameraView: UIViewControllerRepresentable` に書き換える
    - `let onPick: (UIImage) -> Void`、`let onCancel: () -> Void`
-   - `makeUIViewController`：`UIImagePickerController()` を作り、`sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary`、`delegate = context.coordinator`。`allowsEditing` は既定（false）のまま。`updateUIViewController` は空
+   - `makeUIViewController`：`UIImagePickerController()` を作り、`sourceType` はシミュレータなら `.photoLibrary`、実機なら `UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary`（上の「実装して分かったこと」）、`delegate = context.coordinator`。`allowsEditing` は既定（false）のまま。`updateUIViewController` は空
    - `Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate`。`imagePickerController(_:didFinishPickingMediaWithInfo:)` で `info[.originalImage] as? UIImage` を `guard` し、取れたら `onPick(image)`。取れなければ `Logger` に残して `onCancel()`。`imagePickerControllerDidCancel(_:)` で `onCancel()`
    - **`picker.dismiss(animated:)` は呼ばない**。カバーの中身を `CameraFlowView` が切り替える（外す）ので、自分で閉じると二重になる
    - ファイル先頭のコメントに「シミュレータとカメラが使えない実機では写真ライブラリになる」「中身を自作カメラに差し替えるときは口（`onPick` / `onCancel`）を変えない（#32）」を書く
