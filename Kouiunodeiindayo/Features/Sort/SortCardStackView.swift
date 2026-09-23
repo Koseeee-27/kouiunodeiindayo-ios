@@ -42,23 +42,33 @@ struct SortCardStackView: View {
         }
     }
 
+    /// ラベルはカードと一緒に動かさず、手前のカードの縁（上・下・左・右の真ん中）に固定する。
+    /// `overlay` はカードの `ZStack` より手前に描かれるので、飛んでいくカードにもラベルが隠れない
     private func sortArea(screenSize: CGSize) -> some View {
         let highlighted = SwipeDirection.direction(for: cardOffset)
-        return VStack(spacing: 12) {
-            genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
-            HStack(spacing: 8) {
-                genreLabel(.left, highlighted: highlighted, screenSize: screenSize)
-                cardStack(screenSize: screenSize)
-                    // 飛んでいくカードがラベルの下に潜らないよう、手前に描く
-                    .zIndex(1)
-                genreLabel(.right, highlighted: highlighted, screenSize: screenSize)
+        return cardStack(screenSize: screenSize)
+            .overlay(alignment: .top) {
+                genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
+                    .padding(.top, Self.labelInset)
             }
-            .zIndex(1)
-            genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
-        }
-        // ラベルをカードに寄せたまま、残りの高さの真ん中に置く
-        .frame(maxHeight: .infinity)
+            .overlay(alignment: .leading) {
+                genreLabel(.left, highlighted: highlighted, screenSize: screenSize)
+                    .padding(.leading, Self.labelInset)
+            }
+            .overlay(alignment: .trailing) {
+                genreLabel(.right, highlighted: highlighted, screenSize: screenSize)
+                    .padding(.trailing, Self.labelInset)
+            }
+            .overlay(alignment: .bottom) {
+                genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
+                    .padding(.bottom, Self.labelInset)
+            }
+            // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
+            .padding(.bottom, SwipeDirection.backCardPeek)
     }
+
+    /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
+    private static let labelInset: CGFloat = 12
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
     /// 写真を読み直さず、読み込み中の灰色の地も出ない。
@@ -83,8 +93,6 @@ struct SortCardStackView: View {
                 .accessibilityHidden(!isFront)
             }
         }
-        // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする
-        .padding(.bottom, SwipeDirection.backCardPeek)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -109,7 +117,6 @@ struct SortCardStackView: View {
     {
         SortGenreLabelView(
             genre: direction.genre,
-            isVertical: direction == .left || direction == .right,
             emphasis: highlighted.map { $0 == direction ? .strong : .weak } ?? .normal
         ) {
             commit(direction, screenSize: screenSize)
