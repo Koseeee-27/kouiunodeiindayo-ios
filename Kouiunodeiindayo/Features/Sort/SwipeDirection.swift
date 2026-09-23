@@ -45,6 +45,20 @@ enum SwipeDirection {
         return direction
     }
 
+    /// 離せば仕分けになる距離（`commitDistance`）まで進んでいれば、その向き。超えた瞬間に振動させるのに使う。
+    static func pendingCommit(for translation: CGSize) -> SwipeDirection? {
+        guard let direction = mainDirection(of: translation),
+            direction.distance(of: translation) >= commitDistance
+        else { return nil }
+        return direction
+    }
+
+    /// 主な向きに、離せば仕分けになる距離のどこまで進んだか（0〜1）。スタンプの濃さと、後ろのカードのせり上がりに使う。
+    static func progress(for translation: CGSize) -> CGFloat {
+        guard let direction = mainDirection(of: translation) else { return 0 }
+        return min(max(direction.distance(of: translation) / commitDistance, 0), 1)
+    }
+
     /// 指を離したときに仕分けるなら、その向き。
     /// 向きは移動量で決め、予測位置は同じ向きのときだけ見る（払った勢いで逆向きに飛ばないように）。
     static func committed(translation: CGSize, predictedEndTranslation: CGSize) -> SwipeDirection? {

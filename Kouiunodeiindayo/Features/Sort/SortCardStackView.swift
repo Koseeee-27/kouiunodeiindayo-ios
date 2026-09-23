@@ -21,6 +21,12 @@ struct SortCardStackView: View {
     @State private var flyOffset: CGSize = .zero
     /// いま飛ばしている記録の id。300ms の保険が、あとから飛ばした別の記録を戻さないように控える
     @State private var flyingRecordID: UUID?
+    /// いま飛ばしている向き。飛んでいる間のスタンプに使う
+    @State private var flyingDirection: SwipeDirection?
+    /// 仕分けが決まった回数。決まった瞬間の振動のきっかけにする
+    @State private var commitCount = 0
+    /// 仕分けが決まって、後ろのカードを手前の大きさ・位置までせり上げている間
+    @State private var isNextRising = false
 
     /// カードの表示位置。傾きとラベルの強調もここから決める
     private var cardOffset: CGSize {
@@ -28,6 +34,11 @@ struct SortCardStackView: View {
             return flyOffset
         }
         return dragTranslation == .zero ? previewDragOffset : dragTranslation
+    }
+
+    /// 指で動かしていて、離せば仕分けになる向き。超えた瞬間（戻して超え直したときも）に軽く振動させる
+    private var pendingCommit: SwipeDirection? {
+        isCommitting ? nil : SwipeDirection.pendingCommit(for: cardOffset)
     }
 
     var body: some View {
@@ -40,6 +51,11 @@ struct SortCardStackView: View {
                 resetAfterCommit()
             }
         }
+        // 振動は実機でしか確かめられない。強さとタイミングは実機で調整する
+        .sensoryFeedback(trigger: pendingCommit) { _, new in
+            new != nil ? .impact(weight: .light) : nil
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: commitCount)
     }
 
     /// ラベルはカードと一緒に動かさず、手前のカードの縁（上・下・左・右の真ん中）に固定する。
@@ -69,11 +85,21 @@ struct SortCardStackView: View {
 
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
     private static let labelInset: CGFloat = 12
+    /// スタンプをカードの上端からどれだけ下に置くか（pt）。上のラベルと「う、うまい」に重ならない高さ
+    private static let stampTopInset: CGFloat = 96
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
     /// 写真を読み直さず、読み込み中の灰色の地も出ない。
     private func cardStack(screenSize: CGSize) -> some View {
-        ZStack {
+        let progress = SwipeDirection.progress(for: cardOffset)
+        // 飛んでいる間は、飛ばしている向きのスタンプを濃さ 1 で出す（ラベルを押したときも）
+        let stampDirection = isCommitting ? flyingDirection : SwipeDirection.direction(for: cardOffset)
+        let stampOpacity = isCommitting ? 1 : progress
+        // 後ろのカードは、ドラッグで進むほど手前の大きさに近づき、仕分けが決まったらバネで手前の大きさになる。
+        // 手前に来た時点ですでに手前と同じ大きさ・位置なので、切り替わっても跳ねない
+        let backScale = isNextRising ? 1 : SwipeDirection.backCardScale + (1 - SwipeDirection.backCardScale) * progress
+        let backPeek = isNextRising ? 0 : SwipeDirection.backCardPeek * (1 - progress)
+        return ZStack {
             // 後ろのカードを先に描き、手前のカードをその上に重ねる
             ForEach(Array(records.prefix(2).reversed()), id: \.id) { record in
                 let isFront = record.id == records.first?.id
@@ -82,9 +108,18 @@ struct SortCardStackView: View {
                     isFavoriteEnabled: isFront && !isCommitting,
                     onToggleFavorite: { onToggleFavorite(record) }
                 )
+                // スタンプはカードと一緒に動く。真ん中だと、左右に動かしたときに左右のラベル（縦の真ん中）の下に潜るので、
+                // 上のラベルの下あたりに置く
+                .overlay(alignment: .top) {
+                    if isFront, let stampDirection {
+                        SortStampView(genre: stampDirection.genre)
+                            .opacity(stampOpacity)
+                            .padding(.top, Self.stampTopInset)
+                    }
+                }
                 // 後ろのカードは下端をそろえて小さくし、手前のカードの下の隙間から下端をのぞかせる
-                .scaleEffect(isFront ? 1.0 : SwipeDirection.backCardScale, anchor: .bottom)
-                .offset(y: isFront ? 0 : SwipeDirection.backCardPeek)
+                .scaleEffect(isFront ? 1.0 : backScale, anchor: .bottom)
+                .offset(y: isFront ? 0 : backPeek)
                 // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
                 .rotationEffect(isFront ? SwipeDirection.rotation(for: cardOffset) : .zero)
                 .offset(isFront ? cardOffset : .zero)
@@ -147,6 +182,12 @@ struct SortCardStackView: View {
             flyOffset = start
             isCommitting = true
             flyingRecordID = record.id
+            flyingDirection = direction
+        }
+        commitCount += 1
+        // バネはせり上がりだけに付ける。位置（`flyOffset`）の戻しに効くと、次のカードが画面の外から飛んでくるように見える
+        withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
+            isNextRising = true
         }
         let animation: Animation = flight.map { .linear(duration: $0.duration) } ?? .easeIn(duration: 0.25)
         withAnimation(animation) {
@@ -173,6 +214,8 @@ struct SortCardStackView: View {
             flyOffset = .zero
             isCommitting = false
             flyingRecordID = nil
+            flyingDirection = nil
+            isNextRising = false
         }
     }
 }

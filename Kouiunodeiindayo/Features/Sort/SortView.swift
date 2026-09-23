@@ -128,7 +128,7 @@ struct SortView: View {
 }
 
 #Preview("ドラッグ途中") {
-    SortView(dragOffset: CGSize(width: 60, height: -10))
+    SortView(dragOffset: CGSize(width: 85, height: -10))
         .modelContainer(SortPreviewData.makeManyUnsortedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
