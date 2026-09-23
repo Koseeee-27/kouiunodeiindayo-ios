@@ -25,6 +25,7 @@ struct HomeView: View {
     /// 詳細を開いている記録
     @State private var selectedRecord: Record?
     @State private var isSortShown = false
+    @State private var isSettingsShown = false
 
     /// 今日撮った記録のうち一番新しい1枚（新しい順なので、今日の最初の1件）。
     /// 先頭だけを見ると、日付を未来に直した記録（#13）があるとき今日の記録が隠れるので、今日の記録を探す。
@@ -43,6 +44,8 @@ struct HomeView: View {
         // 文字サイズ最大や小さい画面で下が切れないよう、スクロールできるようにする（下タブの分は `RootView` が空ける）
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                // 仕分け待ちの帯の有無で位置が変わらないよう、帯より上に置く
+                settingsButtonRow
                 if !unsortedRecords.isEmpty {
                     sortEntry
                 }
@@ -61,6 +64,26 @@ struct HomeView: View {
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
             SortView()
+        }
+        .sheet(isPresented: $isSettingsShown) {
+            SettingsView()
+        }
+    }
+
+    /// 右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は #23 で合わせ直す）
+    private var settingsButtonRow: some View {
+        HStack {
+            Spacer()
+            Button {
+                isSettingsShown = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.title2)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("設定")
         }
     }
 
