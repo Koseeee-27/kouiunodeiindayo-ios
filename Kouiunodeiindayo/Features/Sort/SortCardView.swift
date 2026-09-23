@@ -5,6 +5,8 @@ import UIKit
 /// ドラッグと仕分けは `SortView` が持つ。
 struct SortCardView: View {
     let record: Record
+    /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
+    let isFavoriteEnabled: Bool
     let onToggleFavorite: () -> Void
 
     @Environment(\.photoStorage) private var photoStorage
@@ -47,6 +49,7 @@ struct SortCardView: View {
                 .background(.regularMaterial, in: .capsule)
         }
         .buttonStyle(.plain)
+        .disabled(!isFavoriteEnabled)
         .opacity(record.isFavorite ? 1.0 : 0.4)
         .padding(12)
         .accessibilityLabel("う、うまい")

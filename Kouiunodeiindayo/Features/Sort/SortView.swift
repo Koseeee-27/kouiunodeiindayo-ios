@@ -20,7 +20,7 @@ struct SortView: View {
     private var records: [Record]
 
     @State private var dragOffset: CGSize
-    /// カードが飛んでいる間。ジェスチャー・ラベル・✕ を受け付けない
+    /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない
     @State private var isCommitting = false
 
     /// `dragOffset` はプレビューでドラッグの途中を見るためだけに渡す。
@@ -93,19 +93,23 @@ struct SortView: View {
     private func cardStack(front: Record, screenSize: CGSize) -> some View {
         ZStack {
             if let next = records.dropFirst().first {
-                SortCardView(record: next, onToggleFavorite: {})
+                SortCardView(record: next, isFavoriteEnabled: false, onToggleFavorite: {})
                     .id(next.id)
                     .scaleEffect(0.95)
                     .offset(y: 12)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
-            SortCardView(record: front, onToggleFavorite: { store.toggleFavorite(front) })
-                .id(front.id)
-                // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
-                .rotationEffect(SwipeDirection.rotation(for: dragOffset))
-                .offset(dragOffset)
-                .gesture(dragGesture(screenSize: screenSize), isEnabled: !isCommitting)
+            SortCardView(
+                record: front,
+                isFavoriteEnabled: !isCommitting,
+                onToggleFavorite: { store.toggleFavorite(front) }
+            )
+            .id(front.id)
+            // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
+            .rotationEffect(SwipeDirection.rotation(for: dragOffset))
+            .offset(dragOffset)
+            .gesture(dragGesture(screenSize: screenSize), isEnabled: !isCommitting)
         }
         .aspectRatio(3 / 4, contentMode: .fit)
     }
