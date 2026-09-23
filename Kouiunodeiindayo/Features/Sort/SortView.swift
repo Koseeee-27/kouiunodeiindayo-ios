@@ -36,13 +36,18 @@ struct SortView: View {
         GeometryReader { geometry in
             VStack(spacing: 12) {
                 header
-                if let front = records.first {
-                    sortArea(front: front, screenSize: geometry.size)
+                if !records.isEmpty {
+                    sortArea(screenSize: geometry.size)
                 } else {
                     emptyView
                 }
             }
             .padding()
+        }
+        .onChange(of: records.first?.id) {
+            if isCommitting {
+                resetAfterCommit()
+            }
         }
         .onChange(of: records.isEmpty) { _, isEmpty in
             // 最後の1枚を仕分けたらホームへ
@@ -72,13 +77,13 @@ struct SortView: View {
         }
     }
 
-    private func sortArea(front: Record, screenSize: CGSize) -> some View {
+    private func sortArea(screenSize: CGSize) -> some View {
         let highlighted = SwipeDirection.direction(for: dragOffset)
         return VStack(spacing: 12) {
             genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
             HStack(spacing: 8) {
                 genreLabel(.left, highlighted: highlighted, screenSize: screenSize)
-                cardStack(front: front, screenSize: screenSize)
+                cardStack(screenSize: screenSize)
                     // 飛んでいくカードがラベルの下に潜らないよう、手前に描く
                     .zIndex(1)
                 genreLabel(.right, highlighted: highlighted, screenSize: screenSize)
@@ -90,26 +95,27 @@ struct SortView: View {
         .frame(maxHeight: .infinity)
     }
 
-    private func cardStack(front: Record, screenSize: CGSize) -> some View {
+    /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
+    /// 写真を読み直さず、読み込み中の灰色の地も出ない。
+    private func cardStack(screenSize: CGSize) -> some View {
         ZStack {
-            if let next = records.dropFirst().first {
-                SortCardView(record: next, isFavoriteEnabled: false, onToggleFavorite: {})
-                    .id(next.id)
-                    .scaleEffect(0.95)
-                    .offset(y: 12)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+            // 後ろのカードを先に描き、手前のカードをその上に重ねる
+            ForEach(Array(records.prefix(2).reversed()), id: \.id) { record in
+                let isFront = record.id == records.first?.id
+                SortCardView(
+                    record: record,
+                    isFavoriteEnabled: isFront && !isCommitting,
+                    onToggleFavorite: { store.toggleFavorite(record) }
+                )
+                .scaleEffect(isFront ? 1.0 : 0.95)
+                .offset(y: isFront ? 0 : 12)
+                // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
+                .rotationEffect(isFront ? SwipeDirection.rotation(for: dragOffset) : .zero)
+                .offset(isFront ? dragOffset : .zero)
+                .gesture(dragGesture(screenSize: screenSize), isEnabled: isFront && !isCommitting)
+                .allowsHitTesting(isFront)
+                .accessibilityHidden(!isFront)
             }
-            SortCardView(
-                record: front,
-                isFavoriteEnabled: !isCommitting,
-                onToggleFavorite: { store.toggleFavorite(front) }
-            )
-            .id(front.id)
-            // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
-            .rotationEffect(SwipeDirection.rotation(for: dragOffset))
-            .offset(dragOffset)
-            .gesture(dragGesture(screenSize: screenSize), isEnabled: !isCommitting)
         }
         .aspectRatio(3 / 4, contentMode: .fit)
     }
@@ -154,14 +160,19 @@ struct SortView: View {
         withAnimation(.easeIn(duration: 0.25)) {
             dragOffset = direction.offscreenOffset(in: screenSize)
         } completion: {
-            // 次のカードが元の位置からすぐ出るよう、アニメーション無しで戻す
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                store.setGenre(direction.genre, for: record)
-                dragOffset = .zero
-                isCommitting = false
-            }
+            // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
+            // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
+            store.setGenre(direction.genre, for: record)
+        }
+    }
+
+    /// 次のカードが元の位置からすぐ出るよう、アニメーション無しで戻す。
+    private func resetAfterCommit() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            dragOffset = .zero
+            isCommitting = false
         }
     }
 
