@@ -26,6 +26,8 @@ struct SortView: View {
     @State private var flyOffset: CGSize = .zero
     /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない
     @State private var isCommitting = false
+    /// いま飛ばしている記録の id。300ms の保険が、あとから飛ばした別の記録を戻さないように控える
+    @State private var flyingRecordID: UUID?
     /// 開いた時点で仕分け待ちが0件だったか。最初の描画では nil（まだ控えていない）
     @State private var wasEmptyAtOpen: Bool?
 
@@ -33,7 +35,7 @@ struct SortView: View {
     /// `@GestureState` は外から値を入れられないので、指で動かしていないときだけこちらを使う
     private let previewDragOffset: CGSize
 
-    /// `dragOffset` はプレビューでドラッグの途中を見るためだけに渡す。
+    /// 引数の `dragOffset` は `previewDragOffset` に入れる。プレビューでドラッグの途中を見るためだけに渡す。
     init(dragOffset: CGSize = .zero) {
         previewDragOffset = dragOffset
     }
@@ -183,6 +185,7 @@ struct SortView: View {
         withTransaction(transaction) {
             flyOffset = start
             isCommitting = true
+            flyingRecordID = record.id
         }
         withAnimation(.easeIn(duration: 0.25)) {
             flyOffset = direction.offscreenOffset(in: screenSize)
@@ -193,7 +196,7 @@ struct SortView: View {
             // 保険：先頭が変わらず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
-                if isCommitting, records.first?.id == record.id {
+                if flyingRecordID == record.id {
                     resetAfterCommit()
                 }
             }
@@ -207,6 +210,7 @@ struct SortView: View {
         withTransaction(transaction) {
             flyOffset = .zero
             isCommitting = false
+            flyingRecordID = nil
         }
     }
 
