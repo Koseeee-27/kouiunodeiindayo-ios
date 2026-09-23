@@ -171,6 +171,13 @@ struct SortView: View {
             // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
             // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
             store.setGenre(direction.genre, for: record)
+            // 保険：先頭が変わらず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                if isCommitting, records.first?.id == record.id {
+                    resetAfterCommit()
+                }
+            }
         }
     }
 
