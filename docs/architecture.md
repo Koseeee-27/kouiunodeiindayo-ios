@@ -17,6 +17,8 @@ Kouiunodeiindayo/
 │   ├── Home/
 │   ├── List/
 │   ├── Camera/
+│   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
+│   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身
 │   ├── Sort/                  ← 仕分け
 │   ├── Detail/                ← 記録の詳細
 │   ├── Onboarding/            ← 初めて開いたときの説明、カメラの許可を断られたときの案内
@@ -38,7 +40,7 @@ Config/
 ```
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
-- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。設定への入口は画面設計でまだ決まっていない
+- ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。カメラは `RootView` が `fullScreenCover` で出す。撮ったあとの仕分けも同じカバーの中で `CameraFlowView` が切り替える。仕分けは `dismiss()` で閉じ、閉じるとホームに戻る。設定への入口は画面設計でまだ決まっていない
 - ビューの型名は `〜View` にする（`List/` フォルダのビューは `RecordListView` など。SwiftUI の `List` と同じ名前にしない）
 - ファイルを足すときは、このフォルダの中に置くだけでよい（同期フォルダなので、Xcode が自動で認識する）
 
