@@ -27,4 +27,34 @@ enum SortPreviewData {
         store.toggleFavorite(record)
         return container
     }
+
+    /// サンプルデータの先頭に、横長の写真の仕分け待ちを1件足したもの。
+    /// 真ん中に丸と格子を描いておき、縦横比が崩れると丸がつぶれて分かるようにする。
+    static func makeLandscapeContainer() -> ModelContainer {
+        let container = SampleData.makePreviewContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        // 一番新しくして先頭に出す。プレビュー用なので、作れなければ落として気づく
+        _ = try! store.add(image: makeLandscapeImage(), takenAt: .now.addingTimeInterval(60))
+        return container
+    }
+
+    private static func makeLandscapeImage() -> UIImage {
+        let size = CGSize(width: 1600, height: 1200)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.systemYellow.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.systemBrown.setFill()
+            for x in stride(from: 0, to: size.width, by: 200) {
+                context.fill(CGRect(x: x, y: 0, width: 20, height: size.height))
+            }
+            for y in stride(from: 0, to: size.height, by: 200) {
+                context.fill(CGRect(x: 0, y: y, width: size.width, height: 20))
+            }
+            UIColor.systemRed.setFill()
+            context.cgContext.fillEllipse(in: CGRect(x: 500, y: 300, width: 600, height: 600))
+        }
+    }
 }

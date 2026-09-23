@@ -23,11 +23,13 @@ Kouiunodeiindayo/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身
 │   ├── Sort/                  ← 仕分け
-│   │   ├── SortView.swift         ← 仕分けの画面。カード・ラベル・残り枚数・抜ける手段
+│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段
+│   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
-│   │   ├── SortGenreLabelView.swift ← ラベル1つ。押すと仕分け・ドラッグ中の強調
+│   │   ├── SortGenreLabelView.swift ← 縁に重ねるチップ。押すと仕分け・ドラッグ中の強調
+│   │   ├── SortStampView.swift    ← ドラッグ中のスタンプ（見た目は仮）
 │   │   ├── SortPreviewData.swift  ← 仕分けのプレビュー用のサンプルデータ
-│   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾きの定数
+│   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数
 │   ├── Detail/                ← 記録の詳細
 │   ├── Onboarding/            ← 初めて開いたときの説明、カメラの許可を断られたときの案内
 │   └── Settings/
