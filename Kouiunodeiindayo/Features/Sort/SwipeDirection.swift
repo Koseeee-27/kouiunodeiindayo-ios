@@ -23,6 +23,8 @@ enum SwipeDirection {
     /// 飛ばす時間の下限・上限（秒）。速く払っても一瞬で消えず、ゆっくりでももたつかないようにする。
     static let flyMinDuration: TimeInterval = 0.12
     static let flyMaxDuration: TimeInterval = 0.35
+    /// 飛ばすとき、カードの重なりの枠の外にある画面の分（上の行・左右の余白・ホームインジケーター）として足す余白（pt）。
+    static let flyOutMargin: CGFloat = 100
     /// 後ろのカードの大きさ（手前のカードに対する倍率）。
     static let backCardScale: CGFloat = 0.92
     /// 手前のカードの下の隙間から、後ろのカードの下端が見える高さ（pt）。
@@ -87,10 +89,12 @@ enum SwipeDirection {
         }
     }
 
-    /// スワイプで仕分けたカードを飛ばす先と時間。`translation` は離した瞬間の位置、`velocity` は離した瞬間の速さ（pt/秒）。
+    /// スワイプで仕分けたカードを飛ばす先と時間。`translation` は離した瞬間の位置、`velocity` は離した瞬間の速さ（pt/秒）、
+    /// `size` はカードの重なりの枠の大きさ（カードもほぼこの大きさ）。
     /// 速さの主な向きが仕分けの向きと同じ（仕分けの向きから ±45° 以内）なら、その速さの向き（斜めも可）に飛ばす。
     /// そうでなければ仕分けの向きにまっすぐ（仕分けたジャンルと違う向きへ飛んでいくように見えないように）。
-    /// 時間は「残りの距離 ÷ 速さ」を上限・下限に収めたもの。離した瞬間の速さのまま飛ぶよう、呼ぶ側は `.linear` で動かす。
+    /// 距離は、離した位置からカードが画面の外に出きるまで。時間は「その距離 ÷ 離した瞬間の速さ」を上限・下限に収めたもの。
+    /// 呼ぶ側は `.linear` で動かすので、上限・下限に掛からなければ、離した瞬間の速さのまま画面の外へ出る。
     static func flight(from translation: CGSize, velocity: CGSize, direction: SwipeDirection, in size: CGSize)
         -> (offset: CGSize, duration: TimeInterval)
     {
@@ -101,14 +105,33 @@ enum SwipeDirection {
         } else {
             unit = direction.unitVector
         }
-        // どこから離しても画面の外まで出る距離
-        let distance = max(size.width, size.height) * 1.5
+        let distance = exitDistance(from: translation, unit: unit, in: size)
         let offset = CGSize(
             width: translation.width + unit.width * distance,
             height: translation.height + unit.height * distance
         )
         let duration = speed > 0 ? TimeInterval(distance / speed) : flyMaxDuration
         return (offset, min(max(duration, flyMinDuration), flyMaxDuration))
+    }
+
+    /// カードの真ん中が `translation` の位置から `unit` の向きに進んで、カード全体が画面の外に出きるまでの距離。
+    /// カードは最大 `maxRotationDegrees` 傾くので、傾いたカードを囲む箱の大きさで見る。
+    /// 枠の外（上の行・左右の余白・ホームインジケーター）の分は `flyOutMargin` で足す。
+    private static func exitDistance(from translation: CGSize, unit: CGSize, in size: CGSize) -> CGFloat {
+        let radians = maxRotationDegrees * .pi / 180
+        let cardHalfWidth = (size.width * cos(radians) + size.height * sin(radians)) / 2
+        let cardHalfHeight = (size.height * cos(radians) + size.width * sin(radians)) / 2
+        // カードの真ん中がこの範囲の外に出れば、カード全体が画面の外にある（枠の真ん中からの距離）
+        let limitX = size.width / 2 + flyOutMargin + cardHalfWidth
+        let limitY = size.height / 2 + flyOutMargin + cardHalfHeight
+        func distance(position: CGFloat, direction: CGFloat, limit: CGFloat) -> CGFloat {
+            if direction > 0 { return (limit - position) / direction }
+            if direction < 0 { return (-limit - position) / direction }
+            return .infinity
+        }
+        let distanceX = distance(position: translation.width, direction: unit.width, limit: limitX)
+        let distanceY = distance(position: translation.height, direction: unit.height, limit: limitY)
+        return max(min(distanceX, distanceY), 0)
     }
 
     /// その向きの長さ 1 のベクトル。
