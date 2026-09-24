@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 記録の詳細。写真（本体）・日付・ジャンルを出し、「う、うまい」の付け外し、記録を消す、閉じるができる。
+/// 記録の詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す、閉じるができる。
 /// 要素と操作は `docs/screen-design.md` の「記録の詳細」が正。
 /// ホーム・一覧から sheet で開く。sheet なので、閉じても元の画面のスクロール位置はそのまま残る。
 struct RecordDetailView: View {
@@ -48,7 +48,7 @@ struct RecordDetailView: View {
                 .accessibilityLabel("閉じる")
             }
             photo
-            Text(record.takenAt.formatted(date: .long, time: .omitted))
+            Text(verbatim: dateText)
                 .font(.headline)
             favoriteButton
             genreButtons
@@ -71,6 +71,12 @@ struct RecordDetailView: View {
         }
     }
 
+    /// 「2026年9月10日」の形。数字を直接埋め込むと「2,026」と桁区切りが入るので、`verbatim` で渡す
+    private var dateText: String {
+        let date = Calendar.current.dateComponents([.year, .month, .day], from: record.takenAt)
+        return "\(date.year ?? 0)年\(date.month ?? 0)月\(date.day ?? 0)日"
+    }
+
     /// 付け直せるジャンル。「なし」は選択肢に置かず、選択中のジャンルをもう一度押して外す
     private static let selectableGenres: [Genre] = [.food, .drink, .dessert]
 
@@ -87,23 +93,23 @@ struct RecordDetailView: View {
         }
     }
 
-    /// 「う、うまい」。写真には重ねず、ジャンルの上に置く。押すたびに付け外しする
+    /// 「うまい」。写真には重ねず、ジャンルの上に置く。押すたびに付け外しする
     private var favoriteButton: some View {
         Button {
             store.toggleFavorite(record)
         } label: {
-            Text("う、うまい")
+            Text("うまい")
                 .font(.headline)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(.regularMaterial, in: .capsule)
+                .background(.regularMaterial, in: .rect)
         }
         .buttonStyle(.plain)
-        // 付いていないときは薄く、付いたら濃くする（仕分けと同じ）
+        // 付いていないときは薄く、付いたら濃くする
         .opacity(record.isFavorite ? 1.0 : 0.4)
-        .accessibilityLabel("う、うまい")
+        .accessibilityLabel("うまい")
         .accessibilityAddTraits(record.isFavorite ? .isSelected : [])
     }
 
