@@ -51,7 +51,7 @@ struct RecordPhotoView: View {
             }
     }
 
-    /// 仕分けの「う、うまい」と同じ四角（位置は写真の左下）。見た目は仮で、トーンが決まったら #23 で合わせる。
+    /// 仕分けの「う、うまい」（丸）とは別の、写真の左下に置く四角。見た目は仮で、トーンが決まったら #23 で合わせる。
     /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
     private var favoriteLabel: some View {
         let isLarge = kind == .photo

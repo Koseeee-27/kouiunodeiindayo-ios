@@ -31,7 +31,7 @@ struct RecordListView: View {
                     .padding(.horizontal)
                 // タイトルと下の内容の区切り線
                 Rectangle()
-                    .fill(.black)
+                    .fill(.primary)
                     .frame(height: 2)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 16) {
@@ -124,7 +124,7 @@ struct RecordListView: View {
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                 .aspectRatio(1, contentMode: .fit)
-                .overlay(Rectangle().stroke(.black, lineWidth: 1))
+                .overlay(Rectangle().stroke(.primary, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
