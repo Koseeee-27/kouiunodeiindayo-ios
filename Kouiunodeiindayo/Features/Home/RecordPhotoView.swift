@@ -35,7 +35,7 @@ struct RecordPhotoView: View {
                 }
             }
             .clipped()
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .bottomLeading) {
                 if showsFavoriteLabel && record.isFavorite {
                     favoriteLabel
                 }
@@ -51,7 +51,7 @@ struct RecordPhotoView: View {
             }
     }
 
-    /// 仕分けの「う、うまい」と同じ位置（写真の右上）・同じカプセル。見た目は仮で、トーンが決まったら #23 で合わせる。
+    /// 仕分けの「う、うまい」と同じ四角（位置は写真の左下）。見た目は仮で、トーンが決まったら #23 で合わせる。
     /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
     private var favoriteLabel: some View {
         let isLarge = kind == .photo
@@ -62,7 +62,7 @@ struct RecordPhotoView: View {
             .minimumScaleFactor(isLarge ? 0.5 : 0.3)
             .padding(.horizontal, isLarge ? 12 : 6)
             .padding(.vertical, isLarge ? 8 : 3)
-            .background(.regularMaterial, in: .capsule)
+            .background(.regularMaterial, in: .rect)
             .padding(isLarge ? 12 : 4)
             // 読み上げは呼ぶ側の `Button` のラベルに含める
             .accessibilityHidden(true)

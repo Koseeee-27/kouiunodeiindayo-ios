@@ -23,19 +23,32 @@ struct RecordListView: View {
 
     var body: some View {
         ScrollView {
+            // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
             VStack(alignment: .leading, spacing: 16) {
-                if !unsortedRecords.isEmpty {
-                    sortEntry
+                Text("こういうのでいいんだよ")
+                    .font(.title2.bold())
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal)
+                // タイトルと下の内容の区切り線
+                Rectangle()
+                    .fill(.black)
+                    .frame(height: 2)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 16) {
+                    if !unsortedRecords.isEmpty {
+                        sortEntry
+                    }
+                    if records.isEmpty {
+                        Text("まだ記録がありません")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 48)
+                    } else {
+                        grid
+                    }
                 }
-                if records.isEmpty {
-                    Text("まだ記録がありません")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 48)
-                } else {
-                    grid
-                }
+                .padding(.horizontal)
             }
-            .padding()
+            .padding(.vertical)
         }
         // #13 で記録を渡す形にする。仮の詳細には閉じるボタンが無いので、下に引いて閉じられる sheet にしておく
         .sheet(item: $selectedRecord) { _ in
@@ -64,21 +77,59 @@ struct RecordListView: View {
         .accessibilityLabel("仕分け待ち \(unsortedRecords.count) 枚。仕分けを始める")
     }
 
-    private var grid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
-            ForEach(records, id: \.id) { record in
-                Button {
-                    selectedRecord = record
-                } label: {
-                    RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
-                        .aspectRatio(1, contentMode: .fit)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(
-                    "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")。記録の詳細を開く"
-                )
+    /// 写真どうしの隙間（上下左右とも同じ）
+    private static let photoSpacing: CGFloat = 6
+    /// 月と月の隙間。写真どうしの隙間より少し広くする
+    private static let monthSpacing: CGFloat = 20
+
+    /// 新しい順の記録を、年と月ごとにまとめる（並びは保ったまま）
+    private var months: [(month: DateComponents, records: [Record])] {
+        var result: [(month: DateComponents, records: [Record])] = []
+        for record in records {
+            let month = Calendar.current.dateComponents([.year, .month], from: record.takenAt)
+            if result.last?.month == month {
+                result[result.count - 1].records.append(record)
+            } else {
+                result.append((month, [record]))
             }
         }
+        return result
+    }
+
+    private var grid: some View {
+        LazyVStack(alignment: .leading, spacing: Self.monthSpacing) {
+            ForEach(months, id: \.month) { section in
+                VStack(alignment: .leading, spacing: Self.photoSpacing) {
+                    // 数字をそのまま補間すると「2,026」と桁区切りが入るので、文字列にしてから渡す
+                    Text(verbatim: "\(section.month.year ?? 0)年\(section.month.month ?? 0)月")
+                        .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.bottom, Self.photoSpacing)
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: Self.photoSpacing), count: 3),
+                        spacing: Self.photoSpacing
+                    ) {
+                        ForEach(section.records, id: \.id) { record in
+                            photoButton(record)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func photoButton(_ record: Record) -> some View {
+        Button {
+            selectedRecord = record
+        } label: {
+            RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay(Rectangle().stroke(.black, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")。記録の詳細を開く"
+        )
     }
 }
 
