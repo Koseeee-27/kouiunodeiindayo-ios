@@ -15,7 +15,7 @@ struct RecordPhotoView: View {
 
     let record: Record
     let kind: Kind
-    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「う、うまい」）
+    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けの「う、うまい」と記録の詳細の「うまい」）
     var showsFavoriteLabel = false
 
     @Environment(\.photoStorage) private var photoStorage
