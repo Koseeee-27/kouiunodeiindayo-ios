@@ -9,7 +9,7 @@ App Store に出すビルドに要る設定（表示名・輸出コンプライ�
 - `project.pbxproj` は触らない。ビルド設定は `Config/Base.xcconfig` に書く。アプリ側の設定（pbxproj のターゲット）には `CFBundleDisplayName` と `ITSAppUsesNonExemptEncryption` のキーが無いので、xcconfig の値がそのまま効く
 - `Kouiunodeiindayo/Resources/` は同期フォルダなので、ファイルを置くだけでアプリに入る
 - 決めたこと（2026-09-25 にこうせいと確認。迷ったら戻す先）
-  - **表示名は「こういうのでいいんだよ。」**。ホーム画面で「…」に切れても、この名前でいく
+  - **表示名は「いいんだよ」**。最初は「こういうのでいいんだよ。」（切れても、この名前でいく）で実装したが、シミュレータで「こういうので…」と切れて見えたため、PR の途中で、切れずに出る 5 文字に変えた（2026-09-25 にこうせいと確認）
   - **`SampleData` は `#if DEBUG` で囲まない。** `#Preview` のコードはリリースのビルドにも入るので型は残るが、プレビューの外から呼ばれていなければ動かないので害はない。プレビューの外で使っていないことを grep で確かめ、結果を PR に書く
   - **`docs/rules/swift.md` に、Privacy Manifest を直す場面のルールを 1 行足す**（使う理由の申告が要る API を新しく使うとき）
   - 写真ライブラリの許可の文言（`NSPhotoLibraryUsageDescription` など）は、その機能（機能18・19）を入れるときに足す。今回は入れない
@@ -18,7 +18,7 @@ App Store に出すビルドに要る設定（表示名・輸出コンプライ�
 ## ステップ
 
 1. `Config/Base.xcconfig` — 末尾に 2 行とコメントを足す
-   - `INFOPLIST_KEY_CFBundleDisplayName = こういうのでいいんだよ。`（ホーム画面のアイコンの下に出る名前。Xcode の General タブで編集すると pbxproj に書き戻されて二重になるので、ここで変える旨をコメントに書く）
+   - `INFOPLIST_KEY_CFBundleDisplayName = いいんだよ`（ホーム画面のアイコンの下に出る名前。Xcode の General タブで編集すると pbxproj に書き戻されて二重になるので、ここで変える旨をコメントに書く）
    - `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO`（独自の暗号化をしていないという申告。無いとアップロードのたびに質問される）
    - 確認方法：ビルドが通る
 2. `Kouiunodeiindayo/Resources/PrivacyInfo.xcprivacy` — 新規作成（XML の plist）
@@ -35,14 +35,13 @@ App Store に出すビルドに要る設定（表示名・輸出コンプライ�
 5. 検証（`docs/rules/verification.md`）
    - Debug のビルド
    - Release のビルド：`xcodebuild -scheme Kouiunodeiindayo -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath <一時フォルダ> build`
-   - できた `Kouiunodeiindayo.app` の `Info.plist` を `plutil -p` で見て、`CFBundleDisplayName` = `こういうのでいいんだよ。`、`ITSAppUsesNonExemptEncryption` = `false` を確かめる
+   - できた `Kouiunodeiindayo.app` の `Info.plist` を `plutil -p` で見て、`CFBundleDisplayName` = `いいんだよ`、`ITSAppUsesNonExemptEncryption` = `false` を確かめる
    - `Kouiunodeiindayo.app/PrivacyInfo.xcprivacy` があり、`plutil -lint` が通ることを確かめる
    - シミュレータにアプリを入れ、ホーム画面のアイコンの下に表示名が出ているところを撮る。`.verification/45/` に置き、`notes.md` に操作と見るところを書く
 
 ## リスク
 
 - `.xcprivacy` が同期フォルダからアプリに入らない：Release でビルドした `.app` の中を見て確かめる。入っていなければ止めて人に相談する（pbxproj を触らない）
-- 表示名が長く、ホーム画面で「…」に切れる：決定済み。直さない
 - `SampleData` の型自体はリリースのビルドに残る：プレビューからしか呼ばれないので動かない。決定済み
 
 ## 完成の確認方法
