@@ -92,9 +92,10 @@ struct HomeView: View {
         .padding()
     }
 
-    /// 右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
+    /// 左上のタイトルロゴと右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
     private var settingsButtonRow: some View {
         HStack {
+            TitleLogoView()
             Spacer()
             Button {
                 isSettingsShown = true
