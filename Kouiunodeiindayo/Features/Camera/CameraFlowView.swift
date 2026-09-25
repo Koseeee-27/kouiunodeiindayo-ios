@@ -52,7 +52,7 @@ struct CameraFlowView: View {
         Group {
             switch step {
             case .requestingAccess:
-                // 許可ダイアログの後ろは無地
+                // 許可ダイアログの後ろは無地。すぐ後に出るカメラと同じ黒にする（アプリの地の色にはしない）
                 Color.black
                     .ignoresSafeArea()
                     .task { await requestAccess() }

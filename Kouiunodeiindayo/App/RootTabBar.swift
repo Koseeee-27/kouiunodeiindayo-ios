@@ -16,7 +16,7 @@ struct RootTabBar: View {
                     VStack(spacing: 4) {
                         Image(systemName: tab.systemImage)
                         Text(tab.title)
-                            .font(.caption2)
+                            .font(Theme.font(.caption2))
                     }
                     .foregroundStyle(style(isSelected: tab == selected))
                 }

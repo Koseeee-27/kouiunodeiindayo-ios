@@ -70,7 +70,7 @@ struct HomeView: View {
         }
     }
 
-    /// 右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は #23 で合わせ直す）
+    /// 右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
     private var settingsButtonRow: some View {
         HStack {
             Spacer()
@@ -78,7 +78,7 @@ struct HomeView: View {
                 isSettingsShown = true
             } label: {
                 Image(systemName: "gearshape")
-                    .font(.title2)
+                    .font(Theme.font(.title2))
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
             }
@@ -107,12 +107,12 @@ struct HomeView: View {
     private var todaySection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("今日の一枚")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
             if let record = todayRecord {
                 Button {
                     selectedRecord = record
                 } label: {
-                    // 大きさは仮。#23 で見直す
+                    // 大きさは仮。3:4 にそろえるのは #57
                     RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
                         .aspectRatio(1, contentMode: .fit)
                         .clipShape(.rect(cornerRadius: 16))
@@ -143,7 +143,7 @@ struct HomeView: View {
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("最近の写真")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: Self.recentCount),
                 spacing: 8

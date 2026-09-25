@@ -55,7 +55,7 @@ struct SortCardView: View {
             onToggleFavorite()
         } label: {
             Text("う、うまい")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
                 // 大きな文字サイズで「…」に省略されないよう、縮めて1行に収める
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)

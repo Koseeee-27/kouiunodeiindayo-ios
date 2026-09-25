@@ -15,16 +15,16 @@ struct CameraAccessGuideView: View {
         ScrollView {
             VStack(spacing: 24) {
                 Image(systemName: "camera.fill")
-                    .font(.largeTitle)
+                    .font(Theme.font(.largeTitle))
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
 
                 VStack(spacing: 12) {
                     Text("カメラが使えません")
-                        .font(.title2.bold())
+                        .font(Theme.font(.title2, bold: true))
                         .accessibilityAddTraits(.isHeader)
                     Text(message)
-                        .font(.body)
+                        .font(Theme.font(.body))
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                 }

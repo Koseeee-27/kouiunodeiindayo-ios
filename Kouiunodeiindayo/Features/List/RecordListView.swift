@@ -26,13 +26,13 @@ struct RecordListView: View {
             // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
             VStack(alignment: .leading, spacing: 16) {
                 Text("こういうのでいいんだよ")
-                    .font(.title2.bold())
+                    .font(Theme.font(.title2, bold: true))
                     .accessibilityAddTraits(.isHeader)
                     .padding(.horizontal)
                 // タイトルと下の内容の区切り線
                 Rectangle()
                     .fill(Theme.line)
-                    .frame(height: 2)
+                    .frame(height: Theme.lineWidthThick)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 16) {
                     if !unsortedRecords.isEmpty {
@@ -103,7 +103,7 @@ struct RecordListView: View {
                 VStack(alignment: .leading, spacing: Self.photoSpacing) {
                     // 数字をそのまま補間すると「2,026」と桁区切りが入るので、文字列にしてから渡す
                     Text(verbatim: "\(section.month.year ?? 0)年\(section.month.month ?? 0)月")
-                        .font(.headline)
+                        .font(Theme.font(.headline, bold: true))
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, Self.photoSpacing)
                     LazyVGrid(
@@ -125,7 +125,7 @@ struct RecordListView: View {
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                 .aspectRatio(1, contentMode: .fit)
-                .overlay(Rectangle().stroke(Theme.line, lineWidth: Theme.lineWidth))
+                .overlay(Rectangle().stroke(Theme.line, lineWidth: Theme.lineWidthThin))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

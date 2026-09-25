@@ -72,14 +72,14 @@ struct SortView: View {
     private var header: some View {
         ZStack {
             Text("あと \(records.count) 枚")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
             HStack {
                 // 位置は仮（画面設計で抜ける手段の形はまだ決まっていない）
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.title2)
+                        .font(Theme.font(.title2))
                         .padding(8)
                 }
                 .disabled(isCommitting)

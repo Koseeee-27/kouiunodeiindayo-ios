@@ -51,12 +51,12 @@ struct RecordPhotoView: View {
             }
     }
 
-    /// 仕分けの「う、うまい」（丸）とは別の、写真の左下に置く四角。見た目は仮で、トーンが決まったら #23 で合わせる。
+    /// 仕分けの「う、うまい」（丸）とは別の、写真の左下に置く四角。見た目は仮（四角にして右上に置くのは #58）。
     /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
     private var favoriteLabel: some View {
         let isLarge = kind == .photo
         return Text("うまい")
-            .font(isLarge ? .headline : .caption)
+            .font(isLarge ? Theme.font(.headline, bold: true) : Theme.font(.caption))
             // 文字サイズ最大でサムネイルに入り切らず「…」にならないよう、縮めて1行に収める（サムネイルは幅が 80pt ほどしかない）
             .lineLimit(1)
             .minimumScaleFactor(isLarge ? 0.5 : 0.3)
