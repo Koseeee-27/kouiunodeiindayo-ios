@@ -26,7 +26,7 @@ App Store に出すビルドに要る設定（表示名・輸出コンプライ�
    - `NSPrivacyTrackingDomains` = 空の配列
    - `NSPrivacyCollectedDataTypes` = 空の配列
    - `NSPrivacyAccessedAPITypes` = 1 件：`NSPrivacyAccessedAPIType` = `NSPrivacyAccessedAPICategoryUserDefaults`、`NSPrivacyAccessedAPITypeReasons` = [`CA92.1`]（`StartTab.swift` の `@AppStorage` / `UserDefaults` がアプリ自身の設定を読み書きしている）
-   - 他の申告が要る API（ファイルの作成日時・更新日時、空き容量、起動からの時間、キーボードの一覧）は使っていない。実装前に `grep -rnE "creationDate|modificationDate|attributesOfItem|resourceValues|volumeAvailableCapacity|systemUptime|mach_absolute_time|activeInputModes" Kouiunodeiindayo` で 0 件なのを確かめる
+   - 他の申告が要る API（ファイルの作成日時・更新日時、空き容量、起動からの時間、キーボードの一覧）は使っていない。実装前に `grep -rnE "creationDate|modificationDate|contentModificationDate|attributesOfItem|attributesOfFileSystem|resourceValues|URLResourceKey|volumeAvailableCapacity|systemFreeSize|systemUptime|mach_absolute_time|activeInputModes|UITextInputMode|ProcessInfo|stat\(|statfs|getattrlist" Kouiunodeiindayo` で 0 件なのを確かめる（空き容量・ファイルの日時の低レベルな API も含める。セルフレビューで範囲を広げた）
    - 確認方法：`plutil -lint` が通る
 3. `docs/rules/swift.md` — 「全体」の節に 1 行足す
    - 使う理由の申告が要る API（`UserDefaults`・ファイルの作成日時や更新日時・空き容量など）を新しく使うときは、`Kouiunodeiindayo/Resources/PrivacyInfo.xcprivacy` にも種類と理由コードを足す
