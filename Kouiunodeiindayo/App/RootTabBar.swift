@@ -10,11 +10,18 @@ struct RootTabBar: View {
     let selected: RootTab
     let onSelect: (RootTab) -> Void
 
-    /// 指が今乗っているタブ。滑らせている間、選択中の見た目をここに追従させる
-    @State private var pressedTab: RootTab?
-    /// 指のバーの中での横位置。指が離れているときは nil
-    @State private var fingerX: CGFloat?
+    /// 指のバーの中での横位置。指が離れているときは nil。
+    /// `@GestureState` にしておくと、着信などで操作が途中で取り消されても、自動で nil に戻る
+    @GestureState private var fingerX: CGFloat?
+    /// 今の押している間に、最後に切り替えたタブ。同じタブで何度も切り替えを呼ばないために持つ
+    @State private var lastTab: RootTab?
     @State private var width: CGFloat = 0
+    @State private var height: CGFloat = 0
+
+    /// 指が今乗っているタブ。滑らせている間、選択中の見た目をここに追従させる
+    private var pressedTab: RootTab? {
+        fingerX.map { tab(at: $0) }
+    }
 
     var body: some View {
         // ガラスを2枚（バーとレンズ）重ねるので、`GlassEffectContainer` にまとめる（Apple の公式ドキュメントの推奨）
@@ -52,28 +59,39 @@ struct RootTabBar: View {
             }
         }
         .padding(.vertical, 10)
-        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
+        .onGeometryChange(for: CGSize.self, of: \.size) {
+            width = $0.width
+            height = $0.height
+        }
+        // 押した瞬間にホーム・一覧が切り替わるのは、滑らせて切り替える操作のため（標準のボタンは離したときに動く）
         .gesture(
             DragGesture(minimumDistance: 0)
+                .updating($fingerX) { value, state, _ in
+                    state = value.location.x
+                }
                 .onChanged { value in
-                    fingerX = value.location.x
                     let tab = tab(at: value.location.x)
-                    guard tab != pressedTab else { return }
-                    pressedTab = tab
+                    guard tab != lastTab else { return }
+                    lastTab = tab
                     // カメラは指を離したときに開く。ここで開くと、滑らせている途中でカバーが出てしまう
                     if tab != .camera {
                         onSelect(tab)
                     }
                 }
                 .onEnded { value in
-                    let tab = tab(at: value.location.x)
-                    pressedTab = nil
-                    fingerX = nil
-                    if tab == .camera {
-                        onSelect(tab)
+                    lastTab = nil
+                    // 指をバーの外へ逃がして離したときは、押したことにしない（標準のボタンと同じ）
+                    if tab(at: value.location.x) == .camera, isInsideBar(value.location) {
+                        onSelect(.camera)
                     }
                 }
         )
+        // 操作が取り消されて `onEnded` が呼ばれなかったときも、次の押し始めで切り替えを呼べるようにする
+        .onChange(of: fingerX == nil) { _, isReleased in
+            if isReleased {
+                lastTab = nil
+            }
+        }
     }
 
     /// 選ばれているタブに乗るガラスのレンズ。指を置くと少し大きくなって、指の位置についてくる
@@ -111,6 +129,13 @@ struct RootTabBar: View {
     private func index(of tab: RootTab) -> Int {
         RootTab.allCases.firstIndex(of: tab) ?? 0
     }
+
+    /// 指を離した位置が、バーの中（縦は少し余裕を持たせる）か
+    private func isInsideBar(_ point: CGPoint) -> Bool {
+        (-Self.releaseSlop...(height + Self.releaseSlop)).contains(point.y)
+    }
+
+    private static let releaseSlop: CGFloat = 20
 
     /// バーの中の横位置から、その下にあるタブを求める。バーの外へはみ出しても、端のタブに丸める
     private func tab(at x: CGFloat) -> RootTab {

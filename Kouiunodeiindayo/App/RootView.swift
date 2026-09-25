@@ -40,7 +40,7 @@ struct RootView: View {
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.height) { tabBarHeight = $0 }
         }
-        // ページャーはセーフエリア（ステータスバー・下タブの周り）まで地を広げないので、ここでも地を敷く
+        // ページャーは上のセーフエリア（ステータスバーの周り）まで地を広げないので、ここでも地を敷く
         .background(Theme.background)
         .onGeometryChange(for: CGFloat.self, of: \.safeAreaInsets.bottom) { bottomSafeArea = $0 }
         // 標準カメラはモーダルで出す前提の部品なので、埋め込まずカバーで出す。カバーなら下タブも隠れる
