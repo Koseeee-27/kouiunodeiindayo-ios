@@ -123,7 +123,7 @@ struct RecordListView: View {
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                 .aspectRatio(1, contentMode: .fit)
-                .overlay(Rectangle().stroke(Theme.line, lineWidth: Theme.lineWidthThin))
+                .photoFrame(.small)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

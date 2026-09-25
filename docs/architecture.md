@@ -45,6 +45,7 @@ Kouiunodeiindayo/
 ├── Design/
 │   ├── Theme.swift            ← 色・フォント・余白の定義
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
+│   ├── PhotoFrame.swift       ← 写真の墨のコマ枠（`.photoFrame(.main / .small)`）
 │   └── SoundPlayer.swift      ← 効果音の再生
 └── Resources/                 ← フォント、効果音、画像（Assets）
 Config/

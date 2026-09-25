@@ -26,7 +26,7 @@ struct SortCardView: View {
                         .accessibilityLabel("仕分ける写真")
                 }
             }
-            .clipShape(.rect(cornerRadius: 16))
+            .photoFrame(.main)
             .overlay(alignment: .topTrailing) {
                 favoriteButton
             }
