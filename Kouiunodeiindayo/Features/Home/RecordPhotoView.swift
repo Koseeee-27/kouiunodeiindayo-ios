@@ -15,7 +15,7 @@ struct RecordPhotoView: View {
 
     let record: Record
     let kind: Kind
-    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「うまい」）
+    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「う、うまい」）
     var showsFavoriteLabel = false
 
     @Environment(\.photoStorage) private var photoStorage
@@ -51,24 +51,19 @@ struct RecordPhotoView: View {
             }
     }
 
-    /// 仕分けのハンコの絵と同じ横長の長方形を、アプリ側で描いて写真の右上に傾けて置く（絵は線が細く、サムネイルでは潰れるため）。
-    /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
+    /// 写真本体（今日の一枚など）での「うまい」の絵の幅（pt）
+    private static let favoriteBadgeWidthLarge: CGFloat = 80
+    /// サムネイルでの「うまい」の絵の幅（pt）
+    private static let favoriteBadgeWidthSmall: CGFloat = 48
+
+    /// 「うまい」の絵（かえでさん作。色付き）を写真の右上に傾けて置く。
+    /// 絵なので文字サイズでは大きさを変えない。写真本体では大きく、サムネイルでは小さく出す
     private var favoriteLabel: some View {
         let isLarge = kind == .photo
-        return Text("うまい")
-            .font(isLarge ? Theme.font(.headline, bold: true) : Theme.font(.caption, bold: true))
-            .foregroundStyle(Theme.accent)
-            // 文字サイズ最大でサムネイルに入り切らず「…」にならないよう、縮めて1行に収める（サムネイルは幅が 80pt ほどしかない）
-            .lineLimit(1)
-            .minimumScaleFactor(isLarge ? 0.5 : 0.3)
-            // 横長に見えるよう、左右の余白を上下より大きく取る
-            .padding(.horizontal, isLarge ? 14 : 7)
-            .padding(.vertical, isLarge ? 6 : 3)
-            .background(Theme.background, in: .rect)
-            .overlay {
-                Rectangle()
-                    .strokeBorder(Theme.accent, lineWidth: isLarge ? Theme.lineWidthThick : Theme.lineWidthThin)
-            }
+        return Image(.umaiBadge)
+            .resizable()
+            .scaledToFit()
+            .frame(width: isLarge ? Self.favoriteBadgeWidthLarge : Self.favoriteBadgeWidthSmall)
             .rotationEffect(Theme.favoriteTilt)
             // 傾けると角が数 pt はみ出すので、写真の縁から少し離す
             .padding(isLarge ? 12 : 6)

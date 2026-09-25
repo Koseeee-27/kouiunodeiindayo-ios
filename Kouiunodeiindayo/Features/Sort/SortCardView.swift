@@ -3,10 +3,10 @@ import SwiftUI
 import UIKit
 
 /// 仕分けの写真 1 枚のカード。3:4 のカード（大きさは `SortCardStackView` が決める）。縦の写真はいっぱい、横長は上下が無地。
-/// 右上の「うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
+/// 右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
 struct SortCardView: View {
     let record: Record
-    /// カードが飛んでいる間は false にして、「うまい」を押せなくする
+    /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
     let isFavoriteEnabled: Bool
     let onToggleFavorite: () -> Void
 
@@ -36,9 +36,9 @@ struct SortCardView: View {
             }
     }
 
-    /// 「うまい」の絵の幅（pt）
+    /// 「う、うまい」の絵の幅（pt）
     private static let favoriteStampWidth: CGFloat = 130
-    /// 「うまい」の絵をカードの上端からどれだけ下に置くか（pt）。上のラベルと横に並ばない高さ
+    /// 「う、うまい」の絵をカードの上端からどれだけ下に置くか（pt）。上のラベルと横に並ばない高さ
     private static let favoriteStampTopInset: CGFloat = 60
 
     private var favoriteButton: some View {
@@ -61,7 +61,7 @@ struct SortCardView: View {
         .allowsHitTesting(isFavoriteEnabled)
         .padding(.top, Self.favoriteStampTopInset)
         .padding(.trailing, 12)
-        .accessibilityLabel("うまい")
+        .accessibilityLabel("う、うまい")
         .accessibilityAddTraits(record.isFavorite ? .isSelected : [])
     }
 }

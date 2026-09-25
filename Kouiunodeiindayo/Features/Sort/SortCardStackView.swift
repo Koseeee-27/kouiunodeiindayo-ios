@@ -5,7 +5,7 @@ import SwiftUI
 struct SortCardStackView: View {
     /// 仕分け待ち（`SortView` の `@Query` の結果）。先頭2件だけ使う
     let records: [Record]
-    /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「うまい」を受け付けない。✕ を持つ `SortView` と共有する
+    /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない。✕ を持つ `SortView` と共有する
     @Binding var isCommitting: Bool
     /// プレビュー「ドラッグ途中」で使う、指で動かしている量の代わり。
     /// `@GestureState` は外から値を入れられないので、指で動かしていないときだけこちらを使う
@@ -86,7 +86,7 @@ struct SortCardStackView: View {
 
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
     private static let labelInset: CGFloat = 12
-    /// スタンプをカードの上端からどれだけ下に置くか（pt）。上のラベルと「うまい」に重ならない高さ
+    /// スタンプをカードの上端からどれだけ下に置くか（pt）。上のラベルと「う、うまい」に重ならない高さ
     private static let stampTopInset: CGFloat = 130
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
