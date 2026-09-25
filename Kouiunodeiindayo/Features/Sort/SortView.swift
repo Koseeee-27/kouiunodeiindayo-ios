@@ -3,9 +3,11 @@ import SwiftUI
 
 /// 仕分け。写真のカードを4方向にスワイプ（またはラベルを押す）してジャンルを付け、「う、うまい」でお気に入りを付け外しする。
 /// 要素と操作は `docs/screen-design.md` の「仕分け」、スワイプを自作する理由は `docs/adr/0005-swipe-ui.md` が正。
-/// 今は撮ったあと（カメラのカバーの中の `CameraFlowView`）から開く。下タブには載らない。
+/// 開き方は2つ。下タブには載らない。
+/// - `recordID` なし：ホーム・一覧の仕分け待ちへの入口から。溜まっている仕分け待ちを、新しい順に1枚ずつ出す（残りの枚数と後ろのカードも出す）
+/// - `recordID` あり：撮った直後（カメラのカバーの中の `CameraFlowView`）から。今撮った1枚だけを出し、残りの枚数と後ろのカードは出さない
+///
 /// 閉じるのは `dismiss()`。✕ で抜けたときと、最後の1枚を仕分けたとき。抜けた分は仕分け待ちに残る。
-/// 出す順番は仕分け待ちの新しい順（`@Query` の並びそのまま）。撮った直後の1枚が一番新しいので、先頭に来る。
 /// この画面は上の行（✕・残り枚数）と空のときを持つ。カード・ラベル・ドラッグは `SortCardStackView`。
 struct SortView: View {
     // `#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、先に値に取り出す
@@ -14,11 +16,10 @@ struct SortView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.photoStorage) private var photoStorage
-    @Query(
-        filter: #Predicate<Record> { $0.genre == unsorted },
-        sort: \Record.takenAt, order: .reverse
-    )
-    private var records: [Record]
+    /// 出す写真。`init` で条件を決める（`recordID` があれば、その1件が仕分け待ちのあいだだけ入る）
+    @Query private var records: [Record]
+    /// 撮った直後の仕分けで、出す1枚の id。`nil` なら溜まっている仕分け待ちを出す
+    private let singleRecordID: UUID?
 
     /// カードが飛んでいる間。✕ を受け付けない（`SortCardStackView` と共有する）
     @State private var isCommitting = false
@@ -28,9 +29,23 @@ struct SortView: View {
     /// プレビュー「ドラッグ途中」で使う、指で動かしている量の代わり。`SortCardStackView` にそのまま渡す
     private let previewDragOffset: CGSize
 
+    /// `recordID` は、撮った直後の仕分けで今撮った1枚だけを出すときに渡す。
     /// 引数の `dragOffset` は `previewDragOffset` に入れる。プレビューでドラッグの途中を見るためだけに渡す。
-    init(dragOffset: CGSize = .zero) {
+    init(recordID: UUID? = nil, dragOffset: CGSize = .zero) {
+        singleRecordID = recordID
         previewDragOffset = dragOffset
+        let unsorted = Self.unsorted
+        if let recordID {
+            _records = Query(
+                filter: #Predicate<Record> { $0.genre == unsorted && $0.id == recordID },
+                sort: \Record.takenAt, order: .reverse
+            )
+        } else {
+            _records = Query(
+                filter: #Predicate<Record> { $0.genre == unsorted },
+                sort: \Record.takenAt, order: .reverse
+            )
+        }
     }
 
     private var store: RecordStore {
@@ -71,8 +86,11 @@ struct SortView: View {
 
     private var header: some View {
         ZStack {
-            Text("あと \(records.count) 枚")
-                .font(Theme.font(.headline, bold: true))
+            // 撮った直後は今撮った1枚だけなので、残りの枚数は出さない
+            if singleRecordID == nil {
+                Text("あと \(records.count) 枚")
+                    .font(Theme.font(.headline, bold: true))
+            }
             HStack {
                 // 位置は仮（画面設計で抜ける手段の形はまだ決まっていない）
                 Button {
@@ -125,6 +143,14 @@ struct SortView: View {
 #Preview("横長の写真") {
     SortView()
         .modelContainer(SortPreviewData.makeLandscapeContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("カメラから（今撮った1枚だけ）") {
+    // 仕分け待ちが3件ある中で、そのうち1件だけを出す
+    let container = SortPreviewData.makeManyUnsortedContainer()
+    SortView(recordID: SortPreviewData.newestUnsortedID(in: container))
+        .modelContainer(container)
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
