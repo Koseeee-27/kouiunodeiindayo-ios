@@ -161,7 +161,7 @@ struct SortView: View {
 }
 
 /// 画面の幅が一番狭い機種（iPhone SE 第3世代・13 mini 相当の幅 375pt）で、上のラベルと「う、うまい」が重ならないかを見る。
-/// 文字サイズは X Large（ラベルと「う、うまい」は上限の Large で止まる）
+/// 文字サイズは X Large（ラベルは上限の Large で止まる。「う、うまい」は絵なので文字サイズで変わらない）
 #Preview("幅 375pt・文字サイズ X Large") {
     SortView()
         .frame(width: 375, height: 667)

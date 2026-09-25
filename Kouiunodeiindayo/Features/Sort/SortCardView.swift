@@ -36,26 +36,31 @@ struct SortCardView: View {
             }
     }
 
+    /// 「う、うまい」の絵の幅（pt）
+    private static let favoriteStampWidth: CGFloat = 130
+    /// 「う、うまい」の絵をカードの上端からどれだけ下に置くか（pt）。上のラベルと横に並ばない高さ
+    private static let favoriteStampTopInset: CGFloat = 60
+
     private var favoriteButton: some View {
         Button {
             onToggleFavorite()
         } label: {
-            Text("う、うまい")
-                .font(Theme.font(.headline, bold: true))
-                // 大きな文字サイズで「…」に省略されないよう、縮めて1行に収める
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.regularMaterial, in: .capsule)
+            // 2 つの絵は縦横比が少し違うので、幅をそろえて `scaledToFit` にし、切り替わっても位置がずれないようにする
+            Image(record.isFavorite ? .umaiStamp : .umaiStampOutline)
+                .resizable()
+                .scaledToFit()
+                .frame(width: Self.favoriteStampWidth)
+                // 色なしの絵は中が透けるので、線の上だけでなく四角全体を押せるようにする
+                .contentShape(.rect)
+                .rotationEffect(Theme.favoriteTilt)
+                // 押す前は色なしの絵を薄くし、押した後の色付きの絵との差をはっきりさせる
+                .opacity(record.isFavorite ? 1.0 : 0.5)
         }
         .buttonStyle(.plain)
-        // 上のラベルと同じ縁に並ぶので、ラベルと同じ上限を付ける（幅 375pt の機種では X Large でくっつく）
-        .dynamicTypeSize(...DynamicTypeSize.large)
         // `.disabled` だと薄い色になり、うまいが付いていないように見えるので、押せなくするだけにする
         .allowsHitTesting(isFavoriteEnabled)
-        .opacity(record.isFavorite ? 1.0 : 0.4)
-        .padding(12)
+        .padding(.top, Self.favoriteStampTopInset)
+        .padding(.trailing, 12)
         .accessibilityLabel("う、うまい")
         .accessibilityAddTraits(record.isFavorite ? .isSelected : [])
     }
