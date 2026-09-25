@@ -56,11 +56,12 @@ struct RecordDetailView: View {
             deleteButton
         }
         .padding()
-        // 記録が変わったときだけファイルを読む（サムネイルではなく写真本体）
+        // 記録が変わったときだけファイルを読む（写真本体）
         .task(id: record.id) {
             image = photoStorage.photo(fileName: record.photoFileName)
         }
-        .confirmationDialog("この記録を消しますか？", isPresented: $isDeleteConfirmationShown, titleVisibility: .visible) {
+        // iOS 26 の `confirmationDialog` は「やめる」を出さない（外をタップして閉じる）ので、「消す」と「やめる」が並ぶ `alert` にする
+        .alert("この記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
             Button("消す", role: .destructive) {
                 delete()
             }
