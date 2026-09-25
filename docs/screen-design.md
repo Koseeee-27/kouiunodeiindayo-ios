@@ -1,7 +1,7 @@
 ---
 notion: https://app.notion.com/p/3caa8572e3bc8138852bfea342e3dc72
 title: 画面設計
-synced: 2026-09-24
+synced: 2026-09-25
 ---
 
 # 画面設計
