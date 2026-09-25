@@ -4,8 +4,13 @@ import SwiftUI
 /// 配色の正はチームの Notion「デザイン要件書」の確定版（マンガのコマ）。ダーク用の色は未定なので、アプリは明るい表示に固定している（`Config/Base.xcconfig`）。
 /// 赤はハンコ・スタンプだけに使う。
 enum Theme {
-    /// メイン（ボタン・強調）。墨。値は `Assets.xcassets` の AccentColor が正
-    /// （アプリ全体の強調色 tint と `.borderedProminent` もそこから墨になるので、値を1か所にまとめている）
+    /// 墨。文字（主）と線の元の色
+    /// Asset の AccentColor（`main`）にも同じ値を入れている。Asset はコードから値を読めないので、墨を変えるときは両方を直す
+    private static let ink = Color(hex: 0x26221F)
+
+    /// メイン（ボタン・強調）。値は `Assets.xcassets` の AccentColor
+    /// （アプリ全体の強調色 tint と `.borderedProminent` もそこから決まる）。
+    /// 文字・線とは役割が別なので、`ink` にはぶら下げない（強調色を変えても文字の色は変わらない）
     static let main = Color.accentColor
     /// メインの地の上に置く文字・アイコン
     static let onMain = Color(hex: 0xFFFFFF)
@@ -16,11 +21,11 @@ enum Theme {
     /// 背景の段差（カード・写真の読み込み中など、一段上の面）
     static let surface = Color(hex: 0xFFFFFF)
     /// 文字（主）
-    static let textPrimary = Color(hex: 0x26221F)
+    static let textPrimary = ink
     /// 文字（副）
     static let textSecondary = Color(hex: 0x6E6862)
     /// 線・区切り
-    static let line = Color(hex: 0x26221F)
+    static let line = ink
 
     /// 細い線（写真の枠など）。太さは仮。Figma の 4px は強いので細くしている
     static let lineWidthThin: CGFloat = 1
