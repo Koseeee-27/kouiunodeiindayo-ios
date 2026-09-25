@@ -56,7 +56,14 @@ struct RecordStore {
         let id = record.id
         let photoFileName = record.photoFileName
         modelContext.delete(record)
-        try modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            // 削除が「予定」のまま残ると、あとの自動保存で記録だけ消えて写真ファイルが残る。削除を取り消してから投げ直す
+            Self.logger.error("記録を消せなかった: \(error.localizedDescription, privacy: .public)")
+            modelContext.rollback()
+            throw error
+        }
         deletePhotos(id: id, photoFileName: photoFileName)
     }
 
