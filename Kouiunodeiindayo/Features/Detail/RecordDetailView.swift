@@ -91,7 +91,7 @@ struct RecordDetailView: View {
                 .accessibilityHidden(true)
         } else {
             Theme.surface
-                .aspectRatio(3 / 4, contentMode: .fit)
+                .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
         }
     }
 

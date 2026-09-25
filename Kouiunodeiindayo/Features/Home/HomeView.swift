@@ -41,20 +41,14 @@ struct HomeView: View {
     }
 
     var body: some View {
-        // 文字サイズ最大や小さい画面で下が切れないよう、スクロールできるようにする（下タブの分は `RootView` が空ける）
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // 仕分け待ちの帯の有無で位置が変わらないよう、帯より上に置く
-                settingsButtonRow
-                if !unsortedRecords.isEmpty {
-                    sortEntry
-                }
-                todaySection
-                if !recentRecords.isEmpty {
-                    recentSection
-                }
+        // ふだんの文字サイズでは、スクロールせずに1画面に収める（今日の一枚が残りの高さに合わせて縮む）。
+        // 文字サイズが大きいなどで今日の一枚が `todayPhotoMinHeight` を取れないときだけ、スクロールする版に切り替える。
+        // 下タブの分は `RootView` が空ける
+        ViewThatFits(in: .vertical) {
+            content(fillsHeight: true)
+            ScrollView {
+                content(fillsHeight: false)
             }
-            .padding()
         }
         .background(Theme.background)
         // sheet で開くので、閉じてもホームの位置は残る
@@ -68,6 +62,30 @@ struct HomeView: View {
         .sheet(isPresented: $isSettingsShown) {
             SettingsView()
         }
+    }
+
+    /// 1画面に収める版で、今日の一枚をこれより小さくしない（pt）。これを取れないときはスクロールする版にする
+    private static let todayPhotoMinHeight: CGFloat = 200
+
+    /// `fillsHeight` が true のときは、今日の一枚に残りの高さを渡し、余りは一番下に空ける
+    private func content(fillsHeight: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // 仕分け待ちの帯の有無で位置が変わらないよう、帯より上に置く
+            settingsButtonRow
+            if !unsortedRecords.isEmpty {
+                sortEntry
+            }
+            todaySection(fillsHeight: fillsHeight)
+                // ほかの要素より先に、残りの高さを受け取る
+                .layoutPriority(1)
+            if !recentRecords.isEmpty {
+                recentSection
+            }
+            if fillsHeight {
+                Spacer(minLength: 0)
+            }
+        }
+        .padding()
     }
 
     /// 右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
@@ -104,7 +122,7 @@ struct HomeView: View {
         .accessibilityLabel("仕分け待ち \(unsortedRecords.count) 枚。仕分けを始める")
     }
 
-    private var todaySection: some View {
+    private func todaySection(fillsHeight: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("今日の一枚")
                 .font(Theme.font(.headline, bold: true))
@@ -112,13 +130,20 @@ struct HomeView: View {
                 Button {
                     selectedRecord = record
                 } label: {
-                    // 大きさは仮。3:4 にそろえるのは #57
+                    // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
                     RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
-                        .aspectRatio(1, contentMode: .fit)
+                        .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
                         .clipShape(.rect(cornerRadius: 16))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
+                // 1画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
+                .frame(
+                    minHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
+                    idealHeight: fillsHeight ? Self.todayPhotoMinHeight : nil
+                )
+                // 高さで決まって横幅より細くなったときは、左右の真ん中に置く
+                .frame(maxWidth: .infinity)
             } else {
                 VStack(spacing: 16) {
                     Text("今日はまだ撮っていません")
@@ -193,5 +218,22 @@ struct HomeView: View {
 #Preview("記録が多い") {
     HomeView(onTakePhoto: {})
         .modelContainer(HomePreviewData.makeManyContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+/// 一番小さい機種（iPhone SE 第3世代。幅 375pt・高さ 667pt から上のステータスバー 20pt を除いた大きさ）で、
+/// ふだんの文字サイズならスクロールせずに下タブの上まで収まるかを見る。下タブも入れるため `RootView` で出す
+#Preview("SE 相当・仕分け待ちあり") {
+    RootView(startTab: .home)
+        .frame(width: 375, height: 647)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("SE 相当・文字サイズ XXX Large") {
+    RootView(startTab: .home)
+        .frame(width: 375, height: 647)
+        .dynamicTypeSize(.xxxLarge)
+        .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
