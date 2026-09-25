@@ -34,6 +34,10 @@ enum Theme {
     /// 仕分けのスタンプの枠。形と一緒に仮
     static let lineWidthStamp: CGFloat = 4
 
+    /// 写真の縦横比（幅 3・高さ 4。iPhone の標準のカメラで縦に構えて撮ったときと同じ）。
+    /// 仕分けのカード・ホームの今日の一枚・記録の詳細で使う。一覧とホームの最近の写真は正方形
+    static let photoAspectRatio: CGFloat = 3.0 / 4.0
+
     /// 文字。游ゴシックは iOS に入っていないので、見た目の近いヒラギノ角ゴで代わりにする。
     /// 文字サイズの設定に追従させるため、`relativeTo:` で標準の文字の種類に合わせる
     static func font(_ style: Font.TextStyle, bold: Bool = false) -> Font {

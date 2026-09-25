@@ -33,6 +33,8 @@ struct RootView: View {
             // ページャーを画面の下まで広げる。スクロールの末尾がバーに隠れないよう、バーの分だけ下に余白を足す
             .ignoresSafeArea(.container, edges: .bottom)
             .contentMargins(.bottom, tabBarHeight + bottomSafeArea, for: .scrollContent)
+            // `contentMargins` はスクロールする中身にしか効かない。スクロールしない版のホームは、この値で下を空ける
+            .environment(\.tabBarInset, tabBarHeight + bottomSafeArea)
             // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
             // （`ambiguous use of '__designTimeSelection'`）。クロージャで包むと通る
             RootTabBar(selected: isCameraShown ? .camera : page) { tab in
@@ -80,4 +82,10 @@ struct RootView: View {
     RootView(startTab: .home)
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+extension EnvironmentValues {
+    /// 画面の下から、下タブの上端までの高さ（下タブ ＋ 下のセーフエリア）。
+    /// ページャーは下タブの裏まで広がるので、スクロールしない中身はこの分だけ下を空ける（`RootView` が入れる）
+    @Entry var tabBarInset: CGFloat = 0
 }

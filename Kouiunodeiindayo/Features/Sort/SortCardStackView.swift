@@ -132,7 +132,9 @@ struct SortCardStackView: View {
                 .accessibilityHidden(!isFront)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // カードは 3:4。ラベルの `overlay` はこの後に付くので、ラベルもカードの縁に付く（先に付けると、場所全体の縁に残ってカードから浮く）。
+        // 場所の真ん中に置くのは、`body` の `frame` が受け持つ
+        .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
     }
 
     private func dragGesture(screenSize: CGSize) -> some Gesture {
