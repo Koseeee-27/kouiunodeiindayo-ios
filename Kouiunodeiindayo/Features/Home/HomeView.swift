@@ -42,7 +42,7 @@ struct HomeView: View {
 
     var body: some View {
         // ふだんの文字サイズでは、スクロールせずに1画面に収める（今日の一枚が残りの高さに合わせて縮む）。
-        // 文字サイズが大きいなどで今日の一枚が `todayPhotoMinHeight` を取れないときだけ、スクロールする版に切り替える。
+        // 文字サイズが大きいなどで中身が入り切らないとき（今日の一枚は `todayPhotoMinHeight` で数える）だけ、スクロールする版に切り替える。
         // 下タブの分は `RootView` が空ける
         ViewThatFits(in: .vertical) {
             content(fillsHeight: true)
