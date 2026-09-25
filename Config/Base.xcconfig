@@ -19,3 +19,9 @@ INFOPLIST_KEY_NSCameraUsageDescription = ご飯の写真を撮って記録する
 
 // アプリを明るい表示に固定する。ダーク用の色が未定のため（配色は Kouiunodeiindayo/Design/Theme.swift）
 INFOPLIST_KEY_UIUserInterfaceStyle = Light
+
+// ホーム画面のアイコンの下に出る名前。ここで変える（Xcode の General タブで編集すると project.pbxproj に書き戻され、二重になる）
+INFOPLIST_KEY_CFBundleDisplayName = いいんだよ
+
+// 独自の暗号化をしていないという申告。無いと App Store Connect へのアップロードのたびに質問される
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
