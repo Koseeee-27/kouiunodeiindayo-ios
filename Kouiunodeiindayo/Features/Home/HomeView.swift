@@ -56,6 +56,7 @@ struct HomeView: View {
             }
             .padding()
         }
+        .background(Theme.background)
         // sheet で開くので、閉じてもホームの位置は残る
         .sheet(item: $selectedRecord) { record in
             RecordDetailView(record: record)

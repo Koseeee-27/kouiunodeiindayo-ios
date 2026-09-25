@@ -16,3 +16,6 @@ TARGETED_DEVICE_FAMILY = 1
 
 // カメラを使う理由の文言（文言の正は docs/screen-design.md のカメラの項）
 INFOPLIST_KEY_NSCameraUsageDescription = ご飯の写真を撮って記録するために、カメラを使います。
+
+// アプリを明るい表示に固定する。ダーク用の色が未定のため（配色は Kouiunodeiindayo/Design/Theme.swift）
+INFOPLIST_KEY_UIUserInterfaceStyle = Light

@@ -16,7 +16,7 @@ struct CameraAccessGuideView: View {
             VStack(spacing: 24) {
                 Image(systemName: "camera.fill")
                     .font(.largeTitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
 
                 VStack(spacing: 12) {
@@ -25,7 +25,7 @@ struct CameraAccessGuideView: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(message)
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
 
@@ -49,6 +49,7 @@ struct CameraAccessGuideView: View {
             .padding(24)
             .frame(maxWidth: .infinity)
         }
+        .background(Theme.background)
         // 中身が短いときは画面の縦の真ん中に置く。長いときは上から並べてスクロールさせる
         .defaultScrollAnchor(.center, for: .alignment)
     }

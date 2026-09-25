@@ -31,7 +31,7 @@ struct RecordListView: View {
                     .padding(.horizontal)
                 // タイトルと下の内容の区切り線
                 Rectangle()
-                    .fill(.primary)
+                    .fill(Theme.line)
                     .frame(height: 2)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 16) {
@@ -50,6 +50,7 @@ struct RecordListView: View {
             }
             .padding(.vertical)
         }
+        .background(Theme.background)
         // sheet で開くので、閉じても一覧のスクロール位置は残る
         .sheet(item: $selectedRecord) { record in
             RecordDetailView(record: record)
@@ -124,7 +125,7 @@ struct RecordListView: View {
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                 .aspectRatio(1, contentMode: .fit)
-                .overlay(Rectangle().stroke(.primary, lineWidth: 1))
+                .overlay(Rectangle().stroke(Theme.line, lineWidth: Theme.lineWidth))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

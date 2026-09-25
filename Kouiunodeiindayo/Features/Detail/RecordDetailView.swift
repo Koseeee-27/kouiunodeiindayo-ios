@@ -56,6 +56,7 @@ struct RecordDetailView: View {
             deleteButton
         }
         .padding()
+        .background(Theme.background)
         // 記録が変わったときだけファイルを読む（写真本体）
         .task(id: record.id) {
             image = photoStorage.photo(fileName: record.photoFileName)
@@ -89,7 +90,7 @@ struct RecordDetailView: View {
                 .scaledToFit()
                 .accessibilityHidden(true)
         } else {
-            Color.secondary.opacity(0.2)
+            Theme.surface
                 .aspectRatio(3 / 4, contentMode: .fit)
         }
     }
@@ -128,7 +129,7 @@ struct RecordDetailView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .foregroundStyle(isSelected ? Color.white : Theme.textPrimary)
                         .background(
                             isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.regularMaterial),
                             in: .rect(cornerRadius: 8))
@@ -146,10 +147,10 @@ struct RecordDetailView: View {
             isDeleteConfirmationShown = true
         } label: {
             Text("記録を消す")
-                .underline(true, color: .primary)
+                .underline(true, color: Theme.accent)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.red)
+        .foregroundStyle(Theme.accent)
         .frame(minHeight: 44)
     }
 

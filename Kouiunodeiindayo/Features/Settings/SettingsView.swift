@@ -19,6 +19,9 @@ struct SettingsView: View {
                     LabeledContent("バージョン", value: Self.version)
                 }
             }
+            // `List` の標準の地を消してから、アプリの地に差し替える
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -38,7 +41,7 @@ struct SettingsView: View {
                 Text(title)
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
             }
         }

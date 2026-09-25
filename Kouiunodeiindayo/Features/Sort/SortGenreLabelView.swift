@@ -23,7 +23,7 @@ struct SortGenreLabelView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 // 色を付けた地の上でも読めるよう、強調中は白にする
-                .foregroundStyle(emphasis == .strong ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                .foregroundStyle(emphasis == .strong ? AnyShapeStyle(.white) : AnyShapeStyle(Theme.textPrimary))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 // 見た目は仮（Liquid Glass はトーンが決まったら #23 で見直す）

@@ -57,6 +57,7 @@ struct SortView: View {
         }
         // カードを幅いっぱいに広げる。下はセーフエリアの内側まで使う
         .padding(.horizontal, 16)
+        .background(Theme.background)
         .onAppear {
             wasEmptyAtOpen = records.isEmpty
         }

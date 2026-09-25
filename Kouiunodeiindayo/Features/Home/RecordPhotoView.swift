@@ -23,7 +23,7 @@ struct RecordPhotoView: View {
 
     var body: some View {
         // `scaledToFill` の写真がはみ出して大きさを決めないよう、地の上に重ねてから切り抜く
-        Color.secondary.opacity(0.2)
+        Theme.surface
             .overlay {
                 if let image {
                     Image(uiImage: image)
