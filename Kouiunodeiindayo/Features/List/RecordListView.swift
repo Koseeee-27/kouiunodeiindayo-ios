@@ -26,13 +26,13 @@ struct RecordListView: View {
             // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
             VStack(alignment: .leading, spacing: 16) {
                 Text("こういうのでいいんだよ")
-                    .font(.title2.bold())
+                    .font(Theme.font(.title2, bold: true))
                     .accessibilityAddTraits(.isHeader)
                     .padding(.horizontal)
                 // タイトルと下の内容の区切り線
                 Rectangle()
-                    .fill(.primary)
-                    .frame(height: 2)
+                    .fill(Theme.line)
+                    .frame(height: Theme.lineWidthThick)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 16) {
                     if !unsortedRecords.isEmpty {
@@ -50,6 +50,7 @@ struct RecordListView: View {
             }
             .padding(.vertical)
         }
+        .background(Theme.background)
         // sheet で開くので、閉じても一覧のスクロール位置は残る
         .sheet(item: $selectedRecord) { record in
             RecordDetailView(record: record)
@@ -102,7 +103,7 @@ struct RecordListView: View {
                 VStack(alignment: .leading, spacing: Self.photoSpacing) {
                     // 数字をそのまま補間すると「2,026」と桁区切りが入るので、文字列にしてから渡す
                     Text(verbatim: "\(section.month.year ?? 0)年\(section.month.month ?? 0)月")
-                        .font(.headline)
+                        .font(Theme.font(.headline, bold: true))
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, Self.photoSpacing)
                     LazyVGrid(
@@ -124,7 +125,7 @@ struct RecordListView: View {
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                 .aspectRatio(1, contentMode: .fit)
-                .overlay(Rectangle().stroke(.primary, lineWidth: 1))
+                .overlay(Rectangle().stroke(Theme.line, lineWidth: Theme.lineWidthThin))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

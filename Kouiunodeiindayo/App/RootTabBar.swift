@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 画面の下に出す自作のタブバー。左からカメラ／ホーム／一覧（`RootTab` の並び順）。
 /// 標準の `TabView` の下タブは、タブ同士を指で滑らせて行き来できないため自作する（`docs/plans/root-tabs.plan.md`）。
-/// 色・フォント・余白は `Design/Theme.swift`（Issue #23）ができてから当てる。
+/// 色は `Theme`（選ばれているタブは tint の墨）。フォント・余白はまだ仮。
 struct RootTabBar: View {
     let selected: RootTab
     let onSelect: (RootTab) -> Void
@@ -16,7 +16,7 @@ struct RootTabBar: View {
                     VStack(spacing: 4) {
                         Image(systemName: tab.systemImage)
                         Text(tab.title)
-                            .font(.caption2)
+                            .font(Theme.font(.caption2))
                     }
                     .foregroundStyle(style(isSelected: tab == selected))
                 }
@@ -33,9 +33,9 @@ struct RootTabBar: View {
         .glassEffect()
     }
 
-    /// `.tint` と `.secondary` は型が違うので、`AnyShapeStyle` で揃えてから渡す。
+    /// `.tint` と `Color` は型が違うので、`AnyShapeStyle` で揃えてから渡す。
     private func style(isSelected: Bool) -> AnyShapeStyle {
-        isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)
+        isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(Theme.textSecondary)
     }
 }
 

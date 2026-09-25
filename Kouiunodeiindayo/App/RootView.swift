@@ -24,6 +24,8 @@ struct RootView: View {
                 .tag(RootTab.list)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+        // ページャーはセーフエリア（ステータスバー・下タブの周り）まで地を広げないので、ここでも地を敷く
+        .background(Theme.background)
         // safeAreaInset にするのは、ホーム・一覧のスクロールがバーの下まで伸びつつ、末尾がバーに隠れないようにするため
         .safeAreaInset(edge: .bottom) {
             // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する

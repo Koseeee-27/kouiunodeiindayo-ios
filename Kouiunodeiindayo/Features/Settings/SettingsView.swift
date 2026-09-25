@@ -8,7 +8,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("このアプリについて") {
+                Section {
                     // 外部ページは Safari に渡す（アプリ内ブラウザは使わない）
                     if let url = AppLinks.privacyPolicy {
                         externalLink("プライバシーポリシー", destination: url)
@@ -17,8 +17,17 @@ struct SettingsView: View {
                         externalLink("お問い合わせ", destination: url)
                     }
                     LabeledContent("バージョン", value: Self.version)
+                } header: {
+                    // 下の `.font` が見出しにも効くので、見出しは小さい文字を明示する
+                    Text("このアプリについて")
+                        .font(Theme.font(.footnote))
                 }
             }
+            // `List` の行は標準の文字で描かれるので、アプリの文字をここでも当てる
+            .font(Theme.font(.body))
+            // `List` の標準の地を消してから、アプリの地に差し替える
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -38,7 +47,7 @@ struct SettingsView: View {
                 Text(title)
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
             }
         }

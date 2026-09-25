@@ -18,7 +18,7 @@ struct SortCardView: View {
         // 余った部分には同じ写真を `scaledToFill` でぼかして敷く。
         // 写真がはみ出して大きさを決めないよう、地の上に重ねてから切り抜く。ぼかしと写真は別々の `overlay` にする
         // （同じ `ZStack` に入れると、はみ出した地の大きさが手前の写真にも渡り、手前の写真まで切り抜かれてしまう）
-        Color.secondary.opacity(0.2)
+        Theme.surface
             .overlay {
                 if let photo {
                     Image(uiImage: photo)
@@ -55,7 +55,7 @@ struct SortCardView: View {
             onToggleFavorite()
         } label: {
             Text("う、うまい")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
                 // 大きな文字サイズで「…」に省略されないよう、縮めて1行に収める
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)

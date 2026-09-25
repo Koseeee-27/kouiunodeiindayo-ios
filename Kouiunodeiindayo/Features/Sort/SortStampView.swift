@@ -1,21 +1,21 @@
 import SwiftUI
 
 /// ドラッグ中、手前のカードの上寄りに押すハンコ風のジャンル名。濃さは呼ぶ側が進んだ距離で決める。
-/// 見た目は仮。#23 で合わせる。
+/// 色は `Theme.accent`。形は仮。
 struct SortStampView: View {
     let genre: Genre
 
     var body: some View {
         Text(genre.title)
-            .font(.largeTitle.weight(.heavy))
+            .font(Theme.font(.largeTitle, bold: true))
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            .foregroundStyle(.red)
+            .foregroundStyle(Theme.accent)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(.red, lineWidth: 4)
+                    .strokeBorder(Theme.accent, lineWidth: Theme.lineWidthStamp)
             }
             .rotationEffect(.degrees(-12))
             // 押せるラベルと同じ内容なので、読み上げない

@@ -40,7 +40,7 @@ struct RecordDetailView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.title2)
+                        .font(Theme.font(.title2))
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(.rect)
                 }
@@ -49,13 +49,14 @@ struct RecordDetailView: View {
             }
             photo
             Text(verbatim: dateText)
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
             favoriteButton
             genreButtons
             Spacer(minLength: 0)
             deleteButton
         }
         .padding()
+        .background(Theme.background)
         // 記録が変わったときだけファイルを読む（写真本体）
         .task(id: record.id) {
             image = photoStorage.photo(fileName: record.photoFileName)
@@ -89,7 +90,7 @@ struct RecordDetailView: View {
                 .scaledToFit()
                 .accessibilityHidden(true)
         } else {
-            Color.secondary.opacity(0.2)
+            Theme.surface
                 .aspectRatio(3 / 4, contentMode: .fit)
         }
     }
@@ -100,7 +101,7 @@ struct RecordDetailView: View {
             store.toggleFavorite(record)
         } label: {
             Text("うまい")
-                .font(.headline)
+                .font(Theme.font(.headline, bold: true))
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .padding(.horizontal, 12)
@@ -124,13 +125,13 @@ struct RecordDetailView: View {
                     store.setGenre(isSelected ? .noGenre : genre, for: record)
                 } label: {
                     Label(genre.title, systemImage: genre.systemImage)
-                        .font(.subheadline)
+                        .font(Theme.font(.subheadline))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .foregroundStyle(isSelected ? Theme.onMain : Theme.textPrimary)
                         .background(
-                            isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.regularMaterial),
+                            isSelected ? AnyShapeStyle(Theme.main) : AnyShapeStyle(.regularMaterial),
                             in: .rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
@@ -146,10 +147,10 @@ struct RecordDetailView: View {
             isDeleteConfirmationShown = true
         } label: {
             Text("記録を消す")
-                .underline(true, color: .primary)
+                .underline(true, color: Theme.main)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.red)
+        .foregroundStyle(Theme.main)
         .frame(minHeight: 44)
     }
 

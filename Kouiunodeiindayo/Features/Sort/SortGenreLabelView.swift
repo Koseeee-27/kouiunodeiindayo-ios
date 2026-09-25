@@ -19,15 +19,15 @@ struct SortGenreLabelView: View {
             action()
         } label: {
             Label(genre.title, systemImage: genre.systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(Theme.font(.subheadline, bold: true))
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 // 色を付けた地の上でも読めるよう、強調中は白にする
-                .foregroundStyle(emphasis == .strong ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                .foregroundStyle(emphasis == .strong ? AnyShapeStyle(Theme.onMain) : AnyShapeStyle(Theme.textPrimary))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                // 見た目は仮（Liquid Glass はトーンが決まったら #23 で見直す）
-                .glassEffect(emphasis == .strong ? .regular.tint(.accentColor) : .regular, in: .capsule)
+                // 見た目は仮（形は提案版のワイヤーで候補を比べてから決める）
+                .glassEffect(emphasis == .strong ? .regular.tint(Theme.main) : .regular, in: .capsule)
         }
         .buttonStyle(.plain)
         // 文字サイズを大きくすると、上のラベルと「う、うまい」、左右のラベル同士が重なるので上限を付ける。
