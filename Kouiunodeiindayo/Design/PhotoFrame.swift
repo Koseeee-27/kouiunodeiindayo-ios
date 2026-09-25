@@ -17,11 +17,11 @@ enum PhotoFrame {
 
 extension View {
     /// 四角く切り抜き、内側に墨の枠を引く。外寸は変えない（写真の端が線の太さ分だけ隠れる）
-    func photoFrame(_ frame: PhotoFrame) -> some View {
+    func photoFrame(_ style: PhotoFrame) -> some View {
         clipped()
             .overlay {
                 Rectangle()
-                    .strokeBorder(Theme.line, lineWidth: frame.lineWidth)
+                    .strokeBorder(Theme.line, lineWidth: style.lineWidth)
                     // 枠は飾りなので、押す判定と読み上げから外す
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
