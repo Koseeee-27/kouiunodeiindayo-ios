@@ -50,9 +50,9 @@ struct RecordListView: View {
             }
             .padding(.vertical)
         }
-        // #13 で記録を渡す形にする。仮の詳細には閉じるボタンが無いので、下に引いて閉じられる sheet にしておく
-        .sheet(item: $selectedRecord) { _ in
-            RecordDetailView()
+        // sheet で開くので、閉じても一覧のスクロール位置は残る
+        .sheet(item: $selectedRecord) { record in
+            RecordDetailView(record: record)
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
