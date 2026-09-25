@@ -2,8 +2,8 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 仕分けの写真 1 枚のカード。右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。
-/// ドラッグと仕分けは `SortCardStackView` が持つ。
+/// 仕分けの写真 1 枚のカード。3:4 のカード（大きさは `SortCardStackView` が決める）。縦の写真はいっぱい、横長は上下が無地。
+/// 右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
 struct SortCardView: View {
     let record: Record
     /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
@@ -14,23 +14,9 @@ struct SortCardView: View {
     @State private var photo: UIImage?
 
     var body: some View {
-        // 写真の縦横比は崩さない。全体が見えるよう `scaledToFit` で真ん中に置き、
-        // 余った部分には同じ写真を `scaledToFill` でぼかして敷く。
-        // 写真がはみ出して大きさを決めないよう、地の上に重ねてから切り抜く。ぼかしと写真は別々の `overlay` にする
-        // （同じ `ZStack` に入れると、はみ出した地の大きさが手前の写真にも渡り、手前の写真まで切り抜かれてしまう）
+        // 写真の縦横比は崩さない。全体が見えるよう `scaledToFit` で真ん中に置き、余り（横長の写真の上下）はカードの地のまま。
+        // 写真が大きさを決めないよう、地の上に重ねる
         Theme.surface
-            .overlay {
-                if let photo {
-                    Image(uiImage: photo)
-                        .resizable()
-                        .scaledToFill()
-                        // 縁が透けて灰色の地が見えないよう、ぼかしの縁も不透明にする
-                        .blur(radius: 30, opaque: true)
-                        // 切り抜いても、はみ出した部分の当たり判定は残り、ラベルのタップを奪うので外す
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
             .overlay {
                 if let photo {
                     Image(uiImage: photo)
@@ -85,7 +71,7 @@ struct SortCardView: View {
     // プレビュー用なので、無ければ落として気づく
     let record = try! container.mainContext.fetch(descriptor).first!
     SortCardView(record: record, isFavoriteEnabled: true, onToggleFavorite: {})
-        .frame(width: 360, height: 640)
+        .frame(width: 360, height: 480)
         .modelContainer(container)
         .environment(\.photoStorage, SampleData.photoStorage)
 }
