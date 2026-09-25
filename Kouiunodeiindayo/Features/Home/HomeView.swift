@@ -26,6 +26,8 @@ struct HomeView: View {
     @State private var selectedRecord: Record?
     @State private var isSortShown = false
     @State private var isSettingsShown = false
+    /// 下タブの上端までの高さ。スクロールしない版で、最近の写真が下タブの裏に隠れないように下を空ける
+    @Environment(\.tabBarInset) private var tabBarInset
 
     /// 今日撮った記録のうち一番新しい1枚（新しい順なので、今日の最初の1件）。
     /// 先頭だけを見ると、日付を未来に直した記録（#13）があるとき今日の記録が隠れるので、今日の記録を探す。
@@ -43,9 +45,11 @@ struct HomeView: View {
     var body: some View {
         // ふだんの文字サイズでは、スクロールせずに1画面に収める（今日の一枚が残りの高さに合わせて縮む）。
         // 文字サイズが大きいなどで中身が入り切らないとき（今日の一枚は `todayPhotoMinHeight` で数える）だけ、スクロールする版に切り替える。
-        // 下タブの分は `RootView` が空ける
+        // ページャーは下タブの裏まで広がる。スクロールする版の下余白は `RootView` の `contentMargins` が、
+        // スクロールしない版の下余白は `tabBarInset` で空ける
         ViewThatFits(in: .vertical) {
             content(fillsHeight: true)
+                .padding(.bottom, tabBarInset)
             ScrollView {
                 content(fillsHeight: false)
             }
