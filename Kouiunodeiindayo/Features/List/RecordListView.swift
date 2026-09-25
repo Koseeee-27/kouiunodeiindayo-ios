@@ -25,9 +25,7 @@ struct RecordListView: View {
         ScrollView {
             // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
             VStack(alignment: .leading, spacing: 16) {
-                Text("こういうのでいいんだよ")
-                    .font(Theme.font(.title2, bold: true))
-                    .accessibilityAddTraits(.isHeader)
+                TitleLogoView()
                     .padding(.horizontal)
                 // タイトルと下の内容の区切り線
                 Rectangle()
