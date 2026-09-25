@@ -16,6 +16,18 @@ enum SortPreviewData {
         return container
     }
 
+    /// 仕分け待ちのうち一番新しい1件の id（撮った直後の仕分けのプレビューで、今撮った1枚に見立てる）。
+    static func newestUnsortedID(in container: ModelContainer) -> UUID {
+        let unsorted = Genre.unsorted.rawValue
+        var descriptor = FetchDescriptor<Record>(
+            predicate: #Predicate { $0.genre == unsorted },
+            sortBy: [SortDescriptor(\.takenAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        // プレビュー用なので、無ければ落として気づく
+        return try! container.mainContext.fetch(descriptor).first!.id
+    }
+
     /// サンプルデータの仕分け待ちに「うまい」を付けたもの。
     static func makeFavoriteContainer() -> ModelContainer {
         let container = SampleData.makePreviewContainer()
