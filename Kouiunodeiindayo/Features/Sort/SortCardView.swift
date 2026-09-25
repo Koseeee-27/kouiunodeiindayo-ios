@@ -3,10 +3,10 @@ import SwiftUI
 import UIKit
 
 /// 仕分けの写真 1 枚のカード。3:4 のカード（大きさは `SortCardStackView` が決める）。縦の写真はいっぱい、横長は上下が無地。
-/// 右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
+/// 右上の「うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
 struct SortCardView: View {
     let record: Record
-    /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
+    /// カードが飛んでいる間は false にして、「うまい」を押せなくする
     let isFavoriteEnabled: Bool
     let onToggleFavorite: () -> Void
 
@@ -40,23 +40,21 @@ struct SortCardView: View {
         Button {
             onToggleFavorite()
         } label: {
-            Text("う、うまい")
-                .font(Theme.font(.headline, bold: true))
-                // 大きな文字サイズで「…」に省略されないよう、縮めて1行に収める
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.regularMaterial, in: .capsule)
+            // 2 つの絵は縦横比が少し違うので、幅をそろえて `scaledToFit` にし、切り替わっても位置がずれないようにする
+            Image(record.isFavorite ? .umaiStamp : .umaiStampOutline)
+                .resizable()
+                .scaledToFit()
+                // 幅 375pt の機種で上のラベルに重ならない幅
+                .frame(width: 100)
+                // 色なしの絵は中が透けるので、線の上だけでなく四角全体を押せるようにする
+                .contentShape(.rect)
+                .rotationEffect(Theme.favoriteTilt)
         }
         .buttonStyle(.plain)
-        // 上のラベルと同じ縁に並ぶので、ラベルと同じ上限を付ける（幅 375pt の機種では X Large でくっつく）
-        .dynamicTypeSize(...DynamicTypeSize.large)
         // `.disabled` だと薄い色になり、うまいが付いていないように見えるので、押せなくするだけにする
         .allowsHitTesting(isFavoriteEnabled)
-        .opacity(record.isFavorite ? 1.0 : 0.4)
         .padding(12)
-        .accessibilityLabel("う、うまい")
+        .accessibilityLabel("うまい")
         .accessibilityAddTraits(record.isFavorite ? .isSelected : [])
     }
 }

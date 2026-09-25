@@ -15,7 +15,7 @@ struct RecordPhotoView: View {
 
     let record: Record
     let kind: Kind
-    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「う、うまい」）
+    /// お気に入りの記録に「うまい」を重ねるか。出すだけで、押して付け外しはできない（付けるのは仕分けと記録の詳細の「うまい」）
     var showsFavoriteLabel = false
 
     @Environment(\.photoStorage) private var photoStorage
@@ -35,7 +35,7 @@ struct RecordPhotoView: View {
                 }
             }
             .clipped()
-            .overlay(alignment: .bottomLeading) {
+            .overlay(alignment: .topTrailing) {
                 if showsFavoriteLabel && record.isFavorite {
                     favoriteLabel
                 }
@@ -51,19 +51,27 @@ struct RecordPhotoView: View {
             }
     }
 
-    /// 仕分けの「う、うまい」（丸）とは別の、写真の左下に置く四角。見た目は仮（四角にして右上に置くのは #58）。
+    /// 仕分けのハンコの絵と同じ横長の長方形を、アプリ側で描いて写真の右上に傾けて置く（絵は線が細く、サムネイルでは潰れるため）。
     /// 写真本体（今日の一枚など）では大きく、サムネイルでは小さく出す
     private var favoriteLabel: some View {
         let isLarge = kind == .photo
         return Text("うまい")
-            .font(isLarge ? Theme.font(.headline, bold: true) : Theme.font(.caption))
+            .font(isLarge ? Theme.font(.headline, bold: true) : Theme.font(.caption, bold: true))
+            .foregroundStyle(Theme.accent)
             // 文字サイズ最大でサムネイルに入り切らず「…」にならないよう、縮めて1行に収める（サムネイルは幅が 80pt ほどしかない）
             .lineLimit(1)
             .minimumScaleFactor(isLarge ? 0.5 : 0.3)
-            .padding(.horizontal, isLarge ? 12 : 6)
-            .padding(.vertical, isLarge ? 8 : 3)
-            .background(.regularMaterial, in: .rect)
-            .padding(isLarge ? 12 : 4)
+            // 横長に見えるよう、左右の余白を上下より大きく取る
+            .padding(.horizontal, isLarge ? 14 : 7)
+            .padding(.vertical, isLarge ? 6 : 3)
+            .background(Theme.background, in: .rect)
+            .overlay {
+                Rectangle()
+                    .strokeBorder(Theme.accent, lineWidth: isLarge ? Theme.lineWidthThick : Theme.lineWidthThin)
+            }
+            .rotationEffect(Theme.favoriteTilt)
+            // 傾けると角が数 pt はみ出すので、写真の縁から少し離す
+            .padding(isLarge ? 12 : 6)
             // 読み上げは呼ぶ側の `Button` のラベルに含める
             .accessibilityHidden(true)
     }

@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// 仕分け。写真のカードを4方向にスワイプ（またはラベルを押す）してジャンルを付け、「う、うまい」でお気に入りを付け外しする。
+/// 仕分け。写真のカードを4方向にスワイプ（またはラベルを押す）してジャンルを付け、「うまい」でお気に入りを付け外しする。
 /// 要素と操作は `docs/screen-design.md` の「仕分け」、スワイプを自作する理由は `docs/adr/0005-swipe-ui.md` が正。
 /// 今は撮ったあと（カメラのカバーの中の `CameraFlowView`）から開く。下タブには載らない。
 /// 閉じるのは `dismiss()`。✕ で抜けたときと、最後の1枚を仕分けたとき。抜けた分は仕分け待ちに残る。
@@ -134,8 +134,8 @@ struct SortView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
-/// 画面の幅が一番狭い機種（iPhone SE 第3世代・13 mini 相当の幅 375pt）で、上のラベルと「う、うまい」が重ならないかを見る。
-/// 文字サイズは X Large（ラベルと「う、うまい」は上限の Large で止まる）
+/// 画面の幅が一番狭い機種（iPhone SE 第3世代・13 mini 相当の幅 375pt）で、上のラベルと「うまい」が重ならないかを見る。
+/// 文字サイズは X Large（ラベルは上限の Large で止まる。「うまい」は絵なので文字サイズで変わらない）
 #Preview("幅 375pt・文字サイズ X Large") {
     SortView()
         .frame(width: 375, height: 667)

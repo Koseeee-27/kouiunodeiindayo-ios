@@ -38,6 +38,9 @@ enum Theme {
     /// 仕分けのカード・ホームの今日の一枚・記録の詳細で使う。一覧とホームの最近の写真は正方形
     static let photoAspectRatio: CGFloat = 3.0 / 4.0
 
+    /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けとホーム・一覧で同じ値を使う
+    static let favoriteTilt = Angle.degrees(-6)
+
     /// 文字。游ゴシックは iOS に入っていないので、見た目の近いヒラギノ角ゴで代わりにする。
     /// 文字サイズの設定に追従させるため、`relativeTo:` で標準の文字の種類に合わせる
     static func font(_ style: Font.TextStyle, bold: Bool = false) -> Font {
