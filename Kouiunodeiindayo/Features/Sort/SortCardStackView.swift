@@ -87,7 +87,7 @@ struct SortCardStackView: View {
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
     private static let labelInset: CGFloat = 12
     /// スタンプをカードの上端からどれだけ下に置くか（pt）。上のラベルと「うまい」に重ならない高さ
-    private static let stampTopInset: CGFloat = 96
+    private static let stampTopInset: CGFloat = 130
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
     /// 写真を読み直さず、読み込み中の灰色の地も出ない。
