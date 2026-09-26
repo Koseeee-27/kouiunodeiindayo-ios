@@ -11,8 +11,12 @@ struct SuggestionMock: SuggestionService {
 
     /// 何もしない。`@Environment` の既定値。
     static let disabled = SuggestionMock(result: nil)
-    /// ラーメンの写真に見立てた提案。
-    static let ramen = SuggestionMock(result: SuggestionResult(genre: .food, tags: [.ramen, .noodles, .chinese]))
+    /// ラーメンの写真に見立てた提案。おまかせに任せられる確率
+    static let ramen = SuggestionMock(
+        result: SuggestionResult(genre: .food, genreConfidence: 0.95, tags: [.ramen, .noodles, .chinese]))
+    /// ラーメンだが自信が無い（おまかせに任せない確率）。
+    static let ramenUnsure = SuggestionMock(
+        result: SuggestionResult(genre: .food, genreConfidence: 0.6, tags: [.ramen, .noodles, .chinese]))
     /// 提案なし（Worker が自信が低いと返したとき）。問い合わせ済みにはなる。
     static let noSuggestion = SuggestionMock(result: .empty)
 
@@ -25,12 +29,14 @@ struct SuggestionMock: SuggestionService {
     func requestSuggestion(for id: UUID, photoFileName: String, store: RecordStore) {
         guard let result else { return }
         guard delay > .zero else {
-            store.saveSuggestion(genre: result.genre, tags: result.tags, for: id)
+            store.saveSuggestion(
+                genre: result.genre, genreConfidence: result.genreConfidence, tags: result.tags, for: id)
             return
         }
         Task {
             try? await Task.sleep(for: delay)
-            store.saveSuggestion(genre: result.genre, tags: result.tags, for: id)
+            store.saveSuggestion(
+                genre: result.genre, genreConfidence: result.genreConfidence, tags: result.tags, for: id)
         }
     }
 }
