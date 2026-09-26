@@ -46,6 +46,11 @@
 - 名前：何もしないモックは `SuggestionMock.none` ではなく `SuggestionMock.disabled`、提案なしの結果は `SuggestionResult.none` ではなく `SuggestionResult.empty` にした。`Optional` の型のところで `.none` と書くと「値が無い（nil）」と読まれ、黙って意味が変わるため（`Genre.noGenre` と同じ理由）
 - `SuggestionMock` に `immediate`（待たずに、その場で保存する版）を足した。プレビューの静止画は開いた直後に撮られ、裏で保存するのを待たないので、確認用のプレビューではこれを使う
 - テストは `SuggestionClientTests` に加えて `SuggestionServiceTests` を足した（モックが保存すること・何もしないモック・URL と合言葉が未設定の本物が保存しないこと）。Vision と Worker を呼ぶ流れは実機で見る
+- レビュー（2026-09-26）を受けて直した点
+  - Vision の失敗のログに、エラーの説明文（写真のファイルの場所が入りうる）を出さず、種類とコードだけを出す（通信の失敗と同じ `describe`）
+  - `LiveSuggestionService` は `PhotoStorage` を持たない。写真の場所は、頼まれた時点で `store`（`RecordStore.photoURL(fileName:)`）から作って待ち行列に入れる。保存した置き場所と読む置き場所がずれないように
+  - `LiveSuggestionService` に、ラベルの取得と問い合わせをクロージャで差し替える `init(labels:suggest:)` を足した（本物は `init(configuration:)`）。`SuggestionServiceTests` に、同じ写真を弾く・1件ずつ処理する・失敗したら次に頼めば問い合わせ直す・写真の場所は頼んだ `RecordStore` から作る、のテストを足した（Vision もネットも呼ばない）
+  - URL は https だけを許す。http は手元の `wrangler dev`（`localhost`）を呼ぶときだけ（合言葉を平文で流さないため）
 - `Config/Base.xcconfig` はプロジェクト全体に割り当てているので、`INFOPLIST_FILE` はテストのターゲットにも効く（テストの束の Info.plist にも2つのキーが入る）。テストの束はアプリに入らないので、そのままにした
 
 ## 型と関数の口
@@ -125,8 +130,8 @@ protocol SuggestionService {
 
 /// 本物。ImageLabeler → SuggestionClient。
 @MainActor final class LiveSuggestionService: SuggestionService {
-    init(configuration: SuggestionClient.Configuration? = SuggestionClient.configurationFromBundle(),
-         photoStorage: PhotoStorage = .standard)
+    convenience init(configuration: SuggestionClient.Configuration? = SuggestionClient.configurationFromBundle())
+    init(labels: @escaping LabelProvider, suggest: Suggester?)   // テストで差し替える
 }
 
 extension EnvironmentValues {
