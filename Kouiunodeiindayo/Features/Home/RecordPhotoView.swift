@@ -4,7 +4,7 @@ import UIKit
 
 /// 記録1件の写真を `PhotoStorage` から読んで出す。写真本体かサムネイルかは `kind` で選ぶ。
 /// `SortCardView` と同じ型（地の上に重ねてから切り抜く・記録が変わったときだけ読む）。一覧（#12）のグリッドでも使える。
-/// 大きさと角丸は呼ぶ側が決める。押せる場所の `accessibilityLabel` も呼ぶ側の `Button` に付ける。
+/// 大きさと枠（`photoFrame`）は呼ぶ側が決める。押せる場所の `accessibilityLabel` も呼ぶ側の `Button` に付ける。
 struct RecordPhotoView: View {
     enum Kind {
         /// 写真本体。ホームの今日の一枚など、大きく出す場所で使う

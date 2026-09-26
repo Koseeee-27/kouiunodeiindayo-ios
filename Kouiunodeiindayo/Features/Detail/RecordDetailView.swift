@@ -89,9 +89,11 @@ struct RecordDetailView: View {
                 .resizable()
                 .scaledToFit()
                 .accessibilityHidden(true)
+                .photoFrame(.main)
         } else {
             Theme.surface
                 .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
+                .photoFrame(.main)
         }
     }
 
