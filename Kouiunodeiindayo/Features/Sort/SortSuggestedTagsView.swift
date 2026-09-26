@@ -13,9 +13,6 @@ struct SortSuggestedTagsView: View {
     let isEnabled: Bool
     let onToggle: (Tag) -> Void
 
-    /// チップ同士の間隔（pt）
-    private static let spacing: CGFloat = 8
-
     var body: some View {
         ZStack {
             // 高さを決めるための見えないチップ。提案が無いときも 1 行分を空ける
@@ -43,7 +40,7 @@ struct SortSuggestedTagsView: View {
     }
 
     private var row: some View {
-        HStack(spacing: Self.spacing) {
+        HStack(spacing: Theme.chipSpacing) {
             ForEach(tags, id: \.self) { tag in
                 SortTagChipView(tag: tag, isAttached: !removed.contains(tag)) {
                     onToggle(tag)
@@ -60,13 +57,13 @@ private struct SortTagChipView: View {
     let action: () -> Void
 
     /// −・＋ の丸の直径。文字サイズに合わせて大きくする
-    @ScaledMetric(relativeTo: .subheadline) private var symbolSize: CGFloat = 18
+    @ScaledMetric(relativeTo: .subheadline) private var symbolSize = Theme.chipSymbolSize
 
     var body: some View {
         Button {
             action()
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: Theme.chipInnerSpacing) {
                 Text(tag.title)
                     .font(Theme.font(.subheadline, bold: true))
                     .lineLimit(1)
@@ -76,9 +73,7 @@ private struct SortTagChipView: View {
                     .background(Circle().fill(Theme.chipSymbolBackground))
             }
             .foregroundStyle(isAttached ? Theme.textPrimary : Theme.textSecondary)
-            .padding(.leading, 13)
-            .padding(.trailing, 9)
-            .padding(.vertical, 7)
+            .padding(Theme.chipPadding)
             .background {
                 let shape = Capsule().inset(by: Theme.lineWidthBubble / 2)
                 if isAttached {

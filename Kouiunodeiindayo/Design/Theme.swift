@@ -37,6 +37,16 @@ enum Theme {
     static let suggestionMarkOffset: CGFloat = 4
     /// 仕分けのタグのチップの「−」「＋」の丸の地
     static let chipSymbolBackground = textSecondary.opacity(0.2)
+    /// 仕分けのタグのチップの「−」「＋」の丸の直径（文字サイズが標準のとき。`@ScaledMetric` で文字サイズに合わせる）
+    static let chipSymbolSize: CGFloat = 18
+    /// 仕分けのタグのチップの内側の余白（右は「−」「＋」の丸があるので狭く）
+    static let chipPadding = EdgeInsets(top: 7, leading: 13, bottom: 7, trailing: 9)
+    /// 仕分けのタグのチップの、名前と「−」「＋」の丸の間
+    static let chipInnerSpacing: CGFloat = 4
+    /// 仕分けのタグのチップ同士の間
+    static let chipSpacing: CGFloat = 8
+    /// 仕分けの下のラベルと、その下のタグの行の間
+    static let sortBelowLabelSpacing: CGFloat = 4
 
     /// 太い線（見出しの下の区切りなど）。太さは仮
     static let lineWidthThick: CGFloat = 2

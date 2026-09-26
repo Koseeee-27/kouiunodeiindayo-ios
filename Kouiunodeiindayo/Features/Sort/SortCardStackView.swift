@@ -96,7 +96,7 @@ struct SortCardStackView<BelowCard: View>: View {
             }
             .overlay(alignment: .bottom) {
                 // 下のラベルも、カードの下の縁の外に出す。そのすぐ下に `belowCard`（提案されたタグの行）
-                VStack(spacing: Self.belowCardGap) {
+                VStack(spacing: Theme.sortBelowLabelSpacing) {
                     genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
                     belowCard
                 }
@@ -115,8 +115,6 @@ struct SortCardStackView<BelowCard: View>: View {
     // 型が `BelowCard` を持つ汎用の型なので、定数は `static let` で持てない（計算で返す）
     /// 上と下のラベルを、カードの縁からどれだけ外に離すか（pt）
     private static var outerLabelGap: CGFloat { 8 }
-    /// 下のラベルと、その下の `belowCard` の間（pt）
-    private static var belowCardGap: CGFloat { 4 }
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
     private static var labelInset: CGFloat { 12 }
     /// スタンプをカードの上端からどれだけ下に置くか（pt）。右上の「う、うまい」と重ならない高さ
