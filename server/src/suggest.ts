@@ -109,12 +109,13 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
   return { genre, genreConfidence, tags };
 }
 
-// 対応するラベルの確信度が一番強い料理のタグ。DISH_LABEL_MIN 未満なら無し。同じ強さなら DISH_TAGS の順で先のもの。
+// 対応するラベルの確信度が一番強い料理のタグ。DISH_LABEL_MIN（タグに labelMin があればそれ）未満のラベルは見ない。
+// 同じ強さなら DISH_TAGS の順で先のもの。
 function strongestDish(labels: Label[]): DishTag | null {
   let best: { dish: DishTag; confidence: number } | null = null;
   for (const dish of DISH_TAGS) {
     for (const label of labels) {
-      if (!dish.labels.includes(label.name) || label.confidence < DISH_LABEL_MIN) continue;
+      if (!dish.labels.includes(label.name) || label.confidence < (dish.labelMin ?? DISH_LABEL_MIN)) continue;
       if (best === null || label.confidence > best.confidence) {
         best = { dish, confidence: label.confidence };
       }

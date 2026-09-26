@@ -21,13 +21,28 @@ export interface DishTag {
   key: string;
   kind: DishKind;
   labels: string[];
+  // このタグだけ DISH_LABEL_MIN より高いしきい値にするとき（取り違えやすい料理）
+  labelMin?: number;
   category: CategoryKey | null;
   cuisine: CuisineKey | null;
 }
 
+// パスタだけ、料理のタグのしきい値を DISH_LABEL_MIN（0.15）より上げる（#114）。
+// Vision は、麺の料理（ラーメン・まぜそば・麻辣湯など）に spaghetti・pasta を 0.2〜0.5 で出しやすい。こうせいの写真では、
+// 0.15〜0.30 でパスタが付いた 3 枚（spaghetti 0.23・0.21、pasta 0.27）が全部パスタでなかった。0.30 に戻しても、
+// ほかの写真で失う正しいタグは無かった（作業用のメモ photos-0927 を直す前と後の Worker に流して確かめた）。
+export const PASTA_LABEL_MIN = 0.3;
+
 export const DISH_TAGS: DishTag[] = [
   { key: "ramen", kind: "food", labels: ["ramen"], category: "noodles", cuisine: "chinese" },
-  { key: "pasta", kind: "food", labels: ["pasta", "spaghetti"], category: "noodles", cuisine: "western" },
+  {
+    key: "pasta",
+    kind: "food",
+    labels: ["pasta", "spaghetti"],
+    labelMin: PASTA_LABEL_MIN,
+    category: "noodles",
+    cuisine: "western",
+  },
   { key: "sushi", kind: "food", labels: ["sushi"], category: "rice_dish", cuisine: "japanese" },
   { key: "curry", kind: "food", labels: ["curry"], category: "rice_dish", cuisine: null },
   { key: "gyoza", kind: "food", labels: ["gyoza", "dumpling"], category: null, cuisine: "chinese" },
@@ -91,10 +106,13 @@ export const LABEL_MIN = 0.05;
 // 0.30：うどんの例（最大 0.22、全部「弱い」）でも Jev は food 0.97・noodles 0.87 を返したので、弱い扱いでも推せる。料理名のラベル（0.55〜0.8）は「強い」に入る。
 export const STRONG_MIN = 0.3;
 // 料理のタグを付けるのに要る、対応するラベルの確信度。料理のタグは、対応するラベルが一番強い 1 つだけを付ける。
-// 0.15（#114。0.30 から下げた）：こうせいの写真 77 枚で、0.30 以上を全部付けると、料理のタグが付くのは 34 枚で、
-// 2 つ以上付く写真が 5 枚（ラーメン＋パスタなど）あった。一番強い 1 つに絞り、ジャンルと食い違うタグを除くのとセットで
-// 0.15 に下げると、付くのは 46 枚・2 つ以上は 0 枚。写っていない料理名は 0.1〜0.2 で出る（うどんに ramen 0.14）ので、
-// 0.15 未満は付けない。ラベルは scripts/real-labels.tsv と、作業用のメモ（photos-0927）。
+// 0.15（#114。0.30 から下げた）：こうせいの写真 77 枚で数えた（ジャンルは正解を使った）。
+// - 0.30 以上を全部付ける（直す前）：料理のタグが付くのは 34 枚。2 つ以上付く写真が 5 枚（ラーメン＋パスタなど）
+// - 0.15 に下げて一番強い 1 つに絞る：46 枚・2 つ以上は 0 枚
+// - さらにジャンルと種類が違うタグを除く：42 枚
+// - さらにパスタだけ 0.30 にする（PASTA_LABEL_MIN）：39 枚
+// 写っていない料理名は 0.1〜0.2 で出る（うどんに ramen 0.14）ので、0.15 未満は付けない。
+// ラベルは scripts/real-labels.tsv と、作業用のメモ（photos-0927）。
 export const DISH_LABEL_MIN = 0.15;
 // おまかせ（アプリが自信のある写真を勝手に仕分ける）に回してよい根拠の強さ。
 // Vision の食べ物系のラベル（GENERAL_FOOD_LABELS）の最大がこれ未満なら、ジャンルは返すが genreConfidence を null にする。
