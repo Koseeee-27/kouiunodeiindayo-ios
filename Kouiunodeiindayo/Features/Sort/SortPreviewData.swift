@@ -41,6 +41,17 @@ enum SortPreviewData {
         return try! container.mainContext.fetch(descriptor).first!.id
     }
 
+    /// 仕分け待ちの id を新しい順に（取り込みから開いた仕分けのプレビューで、取り込んだ写真に見立てる）。
+    static func unsortedIDs(in container: ModelContainer) -> [UUID] {
+        let unsorted = Genre.unsorted.rawValue
+        let descriptor = FetchDescriptor<Record>(
+            predicate: #Predicate { $0.genre == unsorted },
+            sortBy: [SortDescriptor(\.takenAt, order: .reverse)]
+        )
+        // プレビュー用なので、取れなければ落として気づく
+        return try! container.mainContext.fetch(descriptor).map(\.id)
+    }
+
     /// サンプルデータの仕分け待ちに「うまい」を付けたもの。
     static func makeFavoriteContainer() -> ModelContainer {
         let container = SampleData.makePreviewContainer()
