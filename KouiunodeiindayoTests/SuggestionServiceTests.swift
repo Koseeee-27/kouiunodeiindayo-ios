@@ -111,6 +111,15 @@ struct SuggestionServiceTests {
         #expect(receivedURL == context.photoStorage.photoURL(fileName: record.photoFileName))
     }
 
+    @Test func 届いたジャンルの確率を記録に保存する() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: SuggesterProbe().suggest)
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        try await waitUntil { record.suggestedAt != nil }
+        #expect(record.suggestedGenreConfidence == 0.88)
+    }
+
     private static let fixedLabels: LiveSuggestionService.LabelProvider = { _ in
         [ImageLabel(name: "ramen", confidence: 0.9)]
     }
@@ -151,7 +160,7 @@ private final class SuggesterProbe {
                 failuresLeft -= 1
                 throw URLError(.notConnectedToInternet)
             }
-            return SuggestionResult(genre: .food, tags: [.ramen])
+            return SuggestionResult(genre: .food, genreConfidence: 0.88, tags: [.ramen])
         }
     }
 }

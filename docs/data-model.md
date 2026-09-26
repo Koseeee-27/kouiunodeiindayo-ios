@@ -19,6 +19,7 @@
 | `isFavorite` | `Bool` | お気に入り（うまい）が付いているか。既定は `false` |
 | `tags` | `[String]` | 付いているタグのキー（下の「タグの値」）。既定は空 |
 | `suggestedGenre` | `String?` | 提案したジャンル（`food`／`drink`／`dessert`）。問い合わせたが提案が無かったとき（自信が低い）と、まだ問い合わせていないときは `nil`（機能26） |
+| `suggestedGenreConfidence` | `Double?` | 提案したジャンルの確率（0〜1）。おまかせ（機能26）で任せるかの判定に使う。提案したジャンルが無い・まだ問い合わせていない・確率を返す前の Worker で問い合わせたときは `nil` |
 | `suggestedTags` | `[String]` | 提案したタグのキー。既定は空（機能26） |
 | `suggestedAt` | `Date?` | 提案を問い合わせ終えた日時。提案が無かったときも書く。`nil` はまだ問い合わせていない（通信できなかった・時間切れのときも `nil` のまま） |
 
@@ -87,6 +88,7 @@
 | ホームの今日の一枚（機能23） | `genre` が `unsorted` 以外で、`takenAt` が今日。複数あるときは `takenAt` が一番新しい1枚 | — |
 | 言葉で探す（機能28） | `genre` が `unsorted` 以外を `@Query` で取り、タグ・うまい・時期での絞り込みは取ったあとに Swift 側で行う（`tags` のような配列は `#Predicate` の中で使うと実行時に失敗する報告があるため）。料理のタグは、対応表で大分類・系統にも当てはめて判定する（「ラーメン」だけの記録も「麺類」「中華」で当たる） | `takenAt` の新しい順 |
 | 提案を問い合わせる写真（機能26） | `genre` が `unsorted` で、`suggestedAt` が `nil` | `takenAt` の新しい順 |
+| おまかせで任せる写真（機能26） | 仕分けの画面に出ている写真のうち、`suggestedGenre` があり、`suggestedGenreConfidence` が境目（アプリの定数 `AutoSortPolicy.threshold`）以上 | 画面の並び順 |
 | ホームの最近の写真（機能23） | `genre` が `unsorted` 以外で、今日の一枚を除く。4件 | `takenAt` の新しい順 |
 
 ## 写真ファイル
