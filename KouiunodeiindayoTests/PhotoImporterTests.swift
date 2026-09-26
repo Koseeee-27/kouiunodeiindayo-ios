@@ -39,9 +39,10 @@ struct PhotoImporterTests {
     }
 
     @Test func 時差の形が崩れていれば渡した時間帯で読む() throws {
+        // 時差として読めない文字列にして、時差で読んだ結果と取り違えないようにする
         let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
         let date = PhotoImporter.takenAt(
-            fromImageProperties: Self.exif(["DateTimeOriginal": "2026:09:26 12:34:56", "OffsetTimeOriginal": "+9"]),
+            fromImageProperties: Self.exif(["DateTimeOriginal": "2026:09:26 12:34:56", "OffsetTimeOriginal": "abc"]),
             timeZone: tokyo)
         #expect(date == Date(timeIntervalSince1970: 1_790_393_696))
     }
