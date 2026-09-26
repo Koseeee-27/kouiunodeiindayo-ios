@@ -72,8 +72,8 @@ struct SearchCondition: Equatable, Sendable {
 }
 
 enum SearchPeriod: String, CaseIterable, Sendable {
-    case today, thisWeek = "this_week", thisMonth = "this_month", earlier
-    var title: String   // 「今日」「今週」「今月」「今月より前」（チップの文字。M1）
+    case today, thisWeek = "this_week", thisMonth = "this_month", thisYear = "this_year", earlier
+    var title: String   // 「今日」「今週」「今月」「今年」「今月より前」（チップの文字。M1）
 }
 ```
 
@@ -109,7 +109,7 @@ enum RecordSearchFilter {
 ```
 
 - `matches(record, tag:)`：`record.tagValues` に `tag` がある、または `record.tagValues` のどれかの `category == tag` か `cuisine == tag`
-- 時期：`today` は `calendar.isDate(date, inSameDayAs: now)`、`this_week` は `calendar.dateInterval(of: .weekOfYear, for: now)` の始まり以降、`this_month` は `dateInterval(of: .month, for: now)` の始まり以降、`earlier` は今月の始まりより前。未来の日付（機能13 で直したもの）は `this_week`・`this_month` に含める（`today` 以外は「始まり以降」で見るため）
+- 時期：`today` は `calendar.isDate(date, inSameDayAs: now)`、`this_week` は `calendar.dateInterval(of: .weekOfYear, for: now)` の始まり以降、`this_month` は `dateInterval(of: .month, for: now)` の始まり以降、`this_year` は `dateInterval(of: .year, for: now)` の始まり以降、`earlier` は今月の始まりより前。未来の日付（機能13 で直したもの）は `this_week`・`this_month`・`this_year` に含める（`today` 以外は「始まり以降」で見るため）
 
 ### 一覧（`Features/List/RecordListView.swift`。M0・M1）
 
@@ -132,7 +132,7 @@ enum RecordSearchFilter {
   - 質問 3 つ（どれも `choice`）
     - `tag`：34 個のタグのキー＋`none`。説明は「日本語名 / 英語」（例 `ramen: "ラーメン / ramen"`、`noodles: "麺類 / noodle dishes"`）。表は `tags.ts` に `SEARCH_TAGS` として置く（`docs/data-model.md` の表を写したもの。コメントで「表を変えたら data-model.md も」）
     - `favorite`：`yes`（うまかった・お気に入りだけ）／`no`
-    - `period`：`today`・`this_week`・`this_month`・`earlier`（"before this month, e.g. 前に, 昔"）・`none`
+    - `period`：`today`・`this_week`・`this_month`・`this_year`（"since January 1 this year, e.g. 今年"）・`earlier`（"before this month, e.g. 前に, 昔"）・`none`
   - しきい値：`SEARCH_MIN = 0.5`（`/suggest` の `GENRE_MIN` と同じ考え）。確率がこれ未満、または `none` なら指定なし（`null`／`false`）
   - 時間切れ：2500ms（アプリの 3 秒より先に 502）
 - `index.ts`：`/search` を足す（`/suggest` と同じ順で 405・401・400・502）。ログは種類とエラーの文だけ（検索の言葉を出さない）
