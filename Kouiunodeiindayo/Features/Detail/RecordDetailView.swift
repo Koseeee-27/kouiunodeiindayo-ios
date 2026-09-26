@@ -87,11 +87,6 @@ struct RecordDetailPageView: View {
         }
     }
 
-    /// 写真と日付の間隔。近づけて、ひとまとまりに見せる（pt）
-    private static let photoToDateSpacing: CGFloat = 8
-    /// 「うまい」の絵の幅（pt）
-    private static let favoriteBadgeWidth: CGFloat = 150
-
     private var content: some View {
         VStack(spacing: 16) {
             HStack {
@@ -100,7 +95,7 @@ struct RecordDetailPageView: View {
                 moreMenu
             }
             // 写真と日付は、近づけて1組にする
-            VStack(spacing: Self.photoToDateSpacing) {
+            VStack(spacing: Theme.detailPhotoDateSpacing) {
                 photo
                 Text(verbatim: dateText)
                     .font(Theme.font(.headline, bold: true))
@@ -166,7 +161,7 @@ struct RecordDetailPageView: View {
         }
     }
 
-    /// 「うまい」。写真には重ねず、ジャンルの上に置く。押すたびに付け外しする
+    /// 「うまい」。一覧・ホームと同じ絵を、日付とジャンルのボタンの間の真ん中に置く（写真には重ねない）。押すたびに付け外しする
     private var favoriteButton: some View {
         Button {
             store.toggleFavorite(record)
@@ -175,8 +170,8 @@ struct RecordDetailPageView: View {
             Image(.umaiBadge)
                 .resizable()
                 .scaledToFit()
-                .frame(width: Self.favoriteBadgeWidth)
-                .frame(minHeight: 44)
+                .frame(width: Theme.detailFavoriteBadgeWidth)
+                .frame(minHeight: Theme.minTapHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -199,15 +194,15 @@ struct RecordDetailPageView: View {
                         .font(Theme.font(.headline))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .frame(maxWidth: .infinity, minHeight: Theme.minTapHeight)
                         .foregroundStyle(isSelected ? Theme.onMain : Theme.textPrimary)
                         .background(
                             isSelected ? AnyShapeStyle(Theme.main) : AnyShapeStyle(.regularMaterial),
-                            in: .rect(cornerRadius: 8)
+                            in: .rect(cornerRadius: Theme.cornerRadiusSmall)
                         )
                         // 墨の細い枠。選ばれているとき（墨の地）は、地と同じ色で見えない
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall)
                                 .strokeBorder(Theme.line, lineWidth: Theme.lineWidthThin)
                         }
                 }
