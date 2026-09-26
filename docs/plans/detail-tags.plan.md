@@ -25,10 +25,12 @@
 - `TagChipView` は中身を変えずに移した（仕分けのプレビューは移す前後でファイルが 1 バイトも違わない）。`TagAddChipView` のプレビューを `TagChipView.swift` に置いた
 - プレビュー用のコンテナ `HomePreviewData.makeTaggedContainer(tags:)` を足した（タグを付けた「食べ物」の記録 1 件だけ）
 - タグの一覧のプレビューは、シートで出すと静止画がシートの出る前になるので、中身をそのまま出す
+- （レビュー 1 周目）`RecordStore.setTags` で、今の `tags` にある知らないキーを消さずにうしろに残すようにした。画面は知らないキーを除いた `tagValues` から一覧を作って書くので、そのままだと知らないキーが消えていた（`docs/data-model.md` の「知らないキーは表示しない（落とさない）」）。仕分けの経路も同じ関数なので一緒に直る
+- （レビュー 2 周目）`FlowLayout` で幅を超える子を幅で止める直しは、レイアウトが報告する幅を変えておらず効いていなかったので戻した。今のタグ名・文字サイズの上限では起きないので、タグ名を増やすときに直す
 
 ## 前提・確認事項
 
-- `Record.tags`・`tagValues`・`RecordStore.setTags`（重複を除き `Tag.allCases` の順に並べ直して書く）は #81 で実装済み。`RecordStoreTagsTests` もある。**`RecordStore` と `Record` は変えない**
+- `Record.tags`・`tagValues`・`RecordStore.setTags`（重複を除き `Tag.allCases` の順に並べ直して書く）は #81 で実装済み。`RecordStoreTagsTests` もある。`Record` は変えない。`RecordStore` は `setTags` だけを直した（下の「実装で計画から変えたこと」）
 - 詳細は `@Model` の `Record` を直接読んでいる（`record.isFavorite` など）。`setTags` で書くと、その場で描き直される。閉じて開き直しても残る（`ModelContext` の自動保存。今の「うまい」・ジャンルと同じ）
 - 提案されたタグ（`suggestedTags`）は詳細では出さない。出すのは付いているタグ（`tags`）だけ（`docs/screen-design.md`）
 - 詳細は `sheet` で開き、中は左右スワイプのページャー（`TabView` の `.page`）。シートからさらにシートを開ける（iOS 26 で問題ない）。一覧のシートを開いている間は、ページャーは動かない
