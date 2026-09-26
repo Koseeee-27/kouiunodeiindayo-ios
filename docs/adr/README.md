@@ -22,6 +22,7 @@ ADR（Architecture Decision Record）は、「何を・なぜ決めたか」を1
 | [0003](0003-camera.md) | MVP は iPhone 標準のカメラ画面を使う | 採用 |
 | [0004](0004-min-ios-and-tools.md) | iOS 26 以上、Xcode 27、外部ライブラリ無し、同期フォルダ | 採用 |
 | [0005](0005-swipe-ui.md) | 仕分けのスワイプはライブラリを使わず自作する | 採用 |
+| [0006](0006-suggestion-vision-jev.md) | ジャンルとタグの提案は、端末の Vision と、Cloudflare Worker 経由の Jev で作る | 採用 |
 
 ## テンプレ
 

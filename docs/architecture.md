@@ -38,10 +38,16 @@ Kouiunodeiindayo/
 ├── Data/
 │   ├── Record.swift           ← SwiftData のモデル（docs/data-model.md のとおり）
 │   ├── Genre.swift            ← ジャンルの enum
+│   ├── Tag.swift              ← タグの enum（名前・種類・Vision のラベルとの対応。docs/data-model.md のとおり）
 │   ├── RecordStore.swift      ← 書き込みの入口（下の「書くとき」）
 │   ├── PhotoStorage.swift     ← 写真ファイルの保存・読み込み・サムネイル作成・削除
 │   ├── SampleData.swift       ← プレビュー用のサンプルデータ
 │   └── Logging.swift          ← ログ（os.Logger）の共通設定
+├── Suggestion/                ← ジャンルとタグの提案（機能26）、言葉で探す（機能28）。理由は docs/adr/0006
+│   ├── ImageLabeler.swift     ← Vision で写真からラベルを取り出す（端末の中だけ）
+│   ├── SuggestionClient.swift ← Worker への通信。URL と合言葉は Config/Local.xcconfig から読む
+│   ├── SuggestionService.swift ← まとめ役。プロトコルにして、プレビュー用のモックも用意する
+│   └── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
 ├── Design/
 │   ├── Theme.swift            ← 色・フォント・余白の定義
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
@@ -50,7 +56,8 @@ Kouiunodeiindayo/
 └── Resources/                 ← フォント、効果音、画像（Assets）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
-└── Local.xcconfig.example     ← 個人ごとの署名設定の見本（docs/setup.md）
+└── Local.xcconfig.example     ← 個人ごとの署名設定・Worker の URL と合言葉の見本（docs/setup.md）
+server/                        ← 中継サーバー（Cloudflare Worker）。Jev を呼んで、ジャンル・タグ・検索の条件を返す
 ```
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
@@ -75,6 +82,8 @@ Config/
 | 追加（写真、撮影日時） | 写真とサムネイルをファイルに保存し、`genre = unsorted` の記録を作る |
 | ジャンルを変える（記録、ジャンル） | `genre` を書き換える。仕分けのスワイプ、ラベルのタップ、詳細での付け直しが、どれもこれを呼ぶ |
 | うまいを切り替える（記録） | `isFavorite` を反転する |
+| タグを変える（記録、タグ） | `tags` を書き換える。仕分けでタグを付けたまま進んだとき、詳細での付け直しが、どれもこれを呼ぶ |
+| 提案を保存する（記録、ジャンル、タグ） | `suggestedGenre`・`suggestedTags`・`suggestedAt` を書く。`tags` には、提案したタグを最初から入れておく（仕分けで外したら「タグを変える」で消す）。届いたときにもう仕分け済みなら、何も書かない |
 | 撮影日時を変える（記録、日時） | `takenAt` を書き換える（機能13） |
 | 消す（記録） | 記録と、写真・サムネイルのファイルを消す（機能11） |
 | すべて消す | すべての記録と、写真・サムネイルのファイルを消す（機能20） |
@@ -87,9 +96,21 @@ Config/
 - ホームの今日の一枚、仕分けのカード、記録の詳細は、写真本体を使う
 - どちらも `PhotoStorage` から読む。画面でファイルの場所を組み立てない
 
+### 提案（機能26）の流れ
+
+```
+追加（写真を保存）→ 裏で SuggestionService：ImageLabeler（Vision）→ SuggestionClient（Worker → Jev）
+                  → メインスレッドで RecordStore の「提案を保存する」→ 仕分け画面は @Query で自動で更新される
+```
+
+- 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
+- 通信できない・時間切れ（目安 1.5 秒）・自信が低いときは、何も保存しない（`suggestedAt` は `nil` のまま。次に仕分け待ちを開いたときに、もう一度問い合わせてよい）
+- 画面から `SuggestionClient` を直接呼ばない。`SuggestionService` を `@Environment` で受け取る。プレビューではモックを渡す
+
 ## 並行して作るための約束
 
 - 最初に `Data/` の4ファイル（`Record`、`Genre`、`RecordStore`、`PhotoStorage`）と `SampleData` を作ってから、画面に分かれる
 - 画面は、サンプルデータを入れたプレビューで見た目を作れるようにする。カメラやほかの画面の完成を待たない
 - 効果音と色・フォントは、`SoundPlayer` と `Theme` の呼び方だけ先に決め、中身（音源・配色）はあとから差し替える
+- 提案は `SuggestionService` のモックで画面を先に作れる。Worker の完成を待たない
 - 見た目は、まず標準の部品のままシンプルに作る。デザインが決まった部分から、`Theme` と各画面に順に反映していく。最初から作り込まない
