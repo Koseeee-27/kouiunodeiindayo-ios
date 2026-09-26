@@ -120,12 +120,7 @@ struct SortView: View {
 
     /// カードに出す並び。おまかせで次に飛ばす写真を先頭に出す。それ以外は `visibleRecords` のまま
     private var displayedRecords: [Record] {
-        guard let autoTargetID, let index = visibleRecords.firstIndex(where: { $0.id == autoTargetID }) else {
-            return visibleRecords
-        }
-        var reordered = visibleRecords
-        reordered.insert(reordered.remove(at: index), at: 0)
-        return reordered
+        AutoSortPolicy.movingToFront(visibleRecords, id: autoTargetID)
     }
 
     /// おまかせのボタンを出すか。撮った直後の 1 枚だけのときは出さない（手でスワイプするほうが速い）
@@ -156,6 +151,10 @@ struct SortView: View {
                     onSort: { record, genre in
                         SortTagSelection.commit(record, genre: genre, removed: removed(for: record), store: store)
                         removedTags[record.id] = nil
+                        // おまかせを止めたあとに飛び切った 1 枚なら、先頭に出す指定をここで外す（保存が済んでから）
+                        if record.id == autoTargetID, !isAutoSorting {
+                            clearAutoTarget()
+                        }
                     },
                     onToggleFavorite: { record in store.toggleFavorite(record) }
                 ) {
@@ -264,15 +263,24 @@ struct SortView: View {
         return true
     }
 
+    /// 止めたとき・終わったとき。飛んでいる途中（止めの 0.25 秒を含む）なら、先頭に出す指定は残す。
+    /// ここで外すと並びが戻って先頭が変わり、飛んでいる写真が山に戻ってしまう。外すのは、その 1 枚が保存されたとき（`onSort`）
     private func finishAutoSort(flownCount: Int) {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            autoTargetID = nil
+        if !isCommitting {
+            clearAutoTarget()
         }
         isAutoSorting = false
         if flownCount > 0 {
             show("\(flownCount) 枚おまかせしました")
+        }
+    }
+
+    /// 先頭の入れ替えを、アニメーション無しで元の並びに戻す
+    private func clearAutoTarget() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            autoTargetID = nil
         }
     }
 

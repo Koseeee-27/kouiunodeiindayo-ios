@@ -81,8 +81,10 @@ struct SortCardStackView<BelowCard: View>: View {
             guard let request, request.recordID == records.first?.id else { return }
             commit(request.direction, pause: Self.autoFlightPause, screenSize: areaSize)
         }
-        .onChange(of: records.first?.id) {
-            if isCommitting {
+        // 飛ばしていた記録が並びから消えたら（保存されて `@Query` から外れたら）、飛び終わりとして戻す。
+        // 先頭が変わっただけ（おまかせの並べ替えが戻ったなど）では戻さない。飛んでいる途中のカードが山に戻らないように
+        .onChange(of: records.map(\.id)) { _, ids in
+            if isCommitting, let flyingRecordID, !ids.contains(flyingRecordID) {
                 resetAfterCommit()
             }
         }
@@ -167,7 +169,11 @@ struct SortCardStackView<BelowCard: View>: View {
                 SortCardView(
                     record: record,
                     isFavoriteEnabled: isFront && !isInteractionLocked,
-                    onToggleFavorite: { onToggleFavorite(record) }
+                    onToggleFavorite: {
+                        // 飛んでいる間・おまかせの間は、読み上げから押されても切り替えない
+                        guard !isInteractionLocked else { return }
+                        onToggleFavorite(record)
+                    }
                 )
                 // スタンプはカードと一緒に動く。真ん中だと、左右に動かしたときに左右のラベル（縦の真ん中）の下に潜るので、
                 // 上のラベルの下あたりに置く
@@ -276,6 +282,8 @@ struct SortCardStackView<BelowCard: View>: View {
         _ record: Record, _ direction: SwipeDirection, flight: (offset: CGSize, duration: TimeInterval)?,
         screenSize: CGSize
     ) {
+        // 止めの間に状態が戻されていたら（画面が閉じたなど）、飛ばさない・保存しない
+        guard flyingRecordID == record.id else { return }
         let animation: Animation = flight.map { .linear(duration: $0.duration) } ?? .easeIn(duration: 0.25)
         withAnimation(animation) {
             flyOffset = flight?.offset ?? direction.offscreenOffset(in: screenSize)
