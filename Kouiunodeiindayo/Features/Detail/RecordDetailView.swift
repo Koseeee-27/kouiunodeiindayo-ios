@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 記録の詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す、閉じるができる。
+/// 記録の詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す（右上の「…」から）、閉じるができる。
 /// 要素と操作は `docs/screen-design.md` の「記録の詳細」が正。
 /// ホーム・一覧から sheet で開く。sheet なので、閉じても元の画面のスクロール位置はそのまま残る。
 struct RecordDetailView: View {
@@ -35,17 +35,9 @@ struct RecordDetailView: View {
     private var content: some View {
         VStack(spacing: 16) {
             HStack {
+                closeButton
                 Spacer()
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(Theme.font(.title2))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("閉じる")
+                moreMenu
             }
             photo
             Text(verbatim: dateText)
@@ -53,7 +45,6 @@ struct RecordDetailView: View {
             favoriteButton
             genreButtons
             Spacer(minLength: 0)
-            deleteButton
         }
         .padding()
         .background(Theme.background)
@@ -143,17 +134,34 @@ struct RecordDetailView: View {
         }
     }
 
-    /// 外枠の無い、文字だけのボタン。押すと確認が出る
-    private var deleteButton: some View {
+    /// 左上の ✕。閉じる
+    private var closeButton: some View {
         Button {
-            isDeleteConfirmationShown = true
+            dismiss()
         } label: {
-            Text("記録を消す")
-                .underline(true, color: Theme.main)
+            Image(systemName: "xmark")
+                .font(Theme.font(.title2))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Theme.main)
-        .frame(minHeight: 44)
+        .accessibilityLabel("閉じる")
+    }
+
+    /// 右上の「…」。中に「記録を消す」を置く（日付を直す（機能13）を作ったら、ここに足す）。押すと確認が出る
+    private var moreMenu: some View {
+        Menu {
+            Button("記録を消す", role: .destructive) {
+                isDeleteConfirmationShown = true
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(Theme.font(.title2))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("その他")
     }
 
     private func delete() {
