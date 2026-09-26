@@ -30,6 +30,22 @@ struct PhotoImporterTests {
         #expect(minus5 == Date(timeIntervalSince1970: 1_790_393_696 + 14 * 60 * 60))
     }
 
+    @Test func 時差はOffsetTimeOriginalが無ければOffsetTimeで読む() throws {
+        let utc = try #require(TimeZone(identifier: "UTC"))
+        let date = PhotoImporter.takenAt(
+            fromImageProperties: Self.exif(["DateTimeOriginal": "2026:09:26 12:34:56", "OffsetTime": "+09:00"]),
+            timeZone: utc)
+        #expect(date == Date(timeIntervalSince1970: 1_790_393_696))
+    }
+
+    @Test func 時差の形が崩れていれば渡した時間帯で読む() throws {
+        let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+        let date = PhotoImporter.takenAt(
+            fromImageProperties: Self.exif(["DateTimeOriginal": "2026:09:26 12:34:56", "OffsetTimeOriginal": "+9"]),
+            timeZone: tokyo)
+        #expect(date == Date(timeIntervalSince1970: 1_790_393_696))
+    }
+
     @Test func 撮影日時が無い・形が崩れているとnil() {
         #expect(PhotoImporter.takenAt(fromImageProperties: [:]) == nil)
         #expect(PhotoImporter.takenAt(fromImageProperties: Self.exif(["ExposureTime": 0.01])) == nil)
@@ -130,6 +146,82 @@ struct PhotoImporterTests {
         #expect(result.importedIDs.count == 2)
         #expect(result.excludedCount == 0)
         #expect(result.failedCount == 0)
+    }
+
+    @Test func 受け取ったデータがnilなら読めなかったに数える() async {
+        let saved = SavedPhotos()
+        let runner = Self.makeRunner(saved: saved, loadData: { index in index == 0 ? nil : Data([UInt8(index)]) })
+        let result = await runner.run([0, 1], onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 1)
+        #expect(result.failedCount == 1)
+    }
+
+    @Test func 全部除外されると取り込みは0枚() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved)
+        runner.labels = { _ in [ImageLabel(name: "keyboard", confidence: 0.8)] }
+        let result = await runner.run([0, 1, 2], onProgress: { _, _ in })
+        #expect(result.importedIDs.isEmpty)
+        #expect(saved.ids.isEmpty)
+        #expect(result.excludedCount == 3)
+    }
+
+    @Test func 判定の失敗と除外と読めなかったが混ざっても別々に数える() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved, loadData: { index in index == 3 ? nil : Data([UInt8(index)]) })
+        var calls = 0
+        runner.labels = { _ in
+            calls += 1
+            switch calls {
+            case 1: throw CocoaError(.featureUnsupported)
+            case 2: return [ImageLabel(name: "keyboard", confidence: 0.8)]
+            default: return Self.foodLabels
+            }
+        }
+        let result = await runner.run([0, 1, 2, 3], onProgress: { _, _ in })
+        // 1 枚目（判定の失敗 → 取り込む）・3 枚目（食事）が取り込まれ、2 枚目は除外、4 枚目は読めなかった
+        #expect(result.importedIDs.count == 2)
+        #expect(result.excludedCount == 1)
+        #expect(result.failedCount == 1)
+    }
+
+    // MARK: 始めてよいか
+
+    @Test func 取り込み中は二重に始めない() {
+        #expect(PhotoImporter.shouldStart(selectedCount: 3, isImporting: false))
+        #expect(!PhotoImporter.shouldStart(selectedCount: 3, isImporting: true))
+        #expect(!PhotoImporter.shouldStart(selectedCount: 0, isImporting: false))
+    }
+
+    // MARK: 件数の文言
+
+    @Test func 件数の1行と読み上げ() {
+        let result = PhotoImportResult(importedIDs: [UUID(), UUID()], excludedCount: 1)
+        #expect(result.summaryText == "取り込み 2 枚 ／ 除外 1 枚")
+        #expect(result.summaryAccessibilityLabel == "取り込み 2 枚、除外 1 枚")
+        let failed = PhotoImportResult(importedIDs: [UUID()], excludedCount: 0, failedCount: 2)
+        #expect(failed.summaryText == "取り込み 1 枚 ／ 除外 0 枚 ／ 読めなかった 2 枚")
+        #expect(failed.summaryAccessibilityLabel == "取り込み 1 枚、除外 0 枚、読めなかった 2 枚")
+    }
+
+    @Test func 全部除外のアラート() {
+        let result = PhotoImportResult(excludedCount: 3)
+        #expect(result.emptyAlertTitle == "食事の写真が見つかりませんでした")
+        #expect(result.emptyAlertMessage == "除外 3 枚")
+        #expect(result.emptyAlertAccessibilityLabel == "除外 3 枚")
+    }
+
+    @Test func 全部読めなかったときのアラートは題を分ける() {
+        let result = PhotoImportResult(excludedCount: 0, failedCount: 2)
+        #expect(result.emptyAlertTitle == "写真を読み込めませんでした")
+        #expect(result.emptyAlertMessage == "除外 0 枚 ／ 読めなかった 2 枚")
+        #expect(result.emptyAlertAccessibilityLabel == "除外 0 枚、読めなかった 2 枚")
+    }
+
+    @Test func 除外と読めなかったが混ざったアラートは食事の題() {
+        let result = PhotoImportResult(excludedCount: 1, failedCount: 1)
+        #expect(result.emptyAlertTitle == "食事の写真が見つかりませんでした")
+        #expect(result.emptyAlertMessage == "除外 1 枚 ／ 読めなかった 1 枚")
     }
 
     // MARK: 道具

@@ -17,6 +17,45 @@ struct PhotoImportResult: Identifiable {
     var failedCount = 0
 }
 
+extension PhotoImportResult {
+    /// 仕分けの上の 1 行。「取り込み n 枚 ／ 除外 m 枚」。読めなかった写真があるときだけ「／ 読めなかった k 枚」を足す
+    var summaryText: String {
+        countTexts(includesImported: true).joined(separator: " ／ ")
+    }
+
+    /// `summaryText` の読み上げ。「／」を読ませず、読点でつなぐ
+    var summaryAccessibilityLabel: String {
+        countTexts(includesImported: true).joined(separator: "、")
+    }
+
+    /// 1 枚も取り込めなかったときのアラートの題。全部読めなかった（除外が 0）ときだけ分ける。文言は仮
+    var emptyAlertTitle: String {
+        excludedCount == 0 && failedCount > 0 ? "写真を読み込めませんでした" : "食事の写真が見つかりませんでした"
+    }
+
+    /// 1 枚も取り込めなかったときのアラートの本文。「除外 m 枚」（読めなかった写真があるときだけ、その枚数も足す）
+    var emptyAlertMessage: String {
+        countTexts(includesImported: false).joined(separator: " ／ ")
+    }
+
+    /// `emptyAlertMessage` の読み上げ
+    var emptyAlertAccessibilityLabel: String {
+        countTexts(includesImported: false).joined(separator: "、")
+    }
+
+    private func countTexts(includesImported: Bool) -> [String] {
+        var texts: [String] = []
+        if includesImported {
+            texts.append("取り込み \(importedIDs.count) 枚")
+        }
+        texts.append("除外 \(excludedCount) 枚")
+        if failedCount > 0 {
+            texts.append("読めなかった \(failedCount) 枚")
+        }
+        return texts
+    }
+}
+
 /// 1 枚ぶんの、裏で作ったもの。
 nonisolated struct PreparedPhoto: Sendable {
     /// 長辺 `PhotoImporter.maxPixelSize` に縮め、向きを直したもの
@@ -29,6 +68,11 @@ nonisolated struct PreparedPhoto: Sendable {
 /// 写真は `PhotosPicker` が選んだものだけを受け取るので、写真ライブラリの許可は要らない。撮影日時は画像データの EXIF から読む。
 enum PhotoImporter {
     static let maxSelectionCount = 30
+
+    /// 選ばれた写真で取り込みを始めてよいか。取り込み中は二重に始めない（読み上げなどから、幕の下の入口が押されたときのため）
+    static func shouldStart(selectedCount: Int, isImporting: Bool) -> Bool {
+        selectedCount > 0 && !isImporting
+    }
     /// 縮める長辺（px）。`PhotoStorage` が保存する大きさと同じ
     nonisolated static let maxPixelSize = 2000
 
@@ -52,7 +96,8 @@ enum PhotoImporter {
         return PreparedPhoto(image: image, takenAt: takenAt(fromImageProperties: properties))
     }
 
-    /// EXIF の撮影日時（`DateTimeOriginal`）を `Date` にする。時差（`OffsetTimeOriginal`）があればそれで、無ければ `timeZone` で読む。
+    /// EXIF の撮影日時（`DateTimeOriginal`）を `Date` にする。時差（`OffsetTimeOriginal`、無ければ `OffsetTime`）があればそれで、
+    /// 無い・形が崩れているときは `timeZone` で読む。
     /// 入っていない・形が崩れているときは nil。テストのために分けて出す。
     nonisolated static func takenAt(fromImageProperties properties: [CFString: Any], timeZone: TimeZone = .current)
         -> Date?
@@ -63,9 +108,9 @@ enum PhotoImporter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
-        if let offset = exif[kCGImagePropertyExifOffsetTimeOriginal] as? String {
-            formatter.dateFormat = "yyyy:MM:dd HH:mm:ssxxx"
-            if let date = formatter.date(from: original + offset) {
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ssxxx"
+        for key in [kCGImagePropertyExifOffsetTimeOriginal, kCGImagePropertyExifOffsetTime] {
+            if let offset = exif[key] as? String, let date = formatter.date(from: original + offset) {
                 return date
             }
         }
@@ -121,6 +166,8 @@ struct PhotoImportRunner<Item> {
             } catch {
                 Self.logger.error("取り込み: 食事らしいかを判定できなかったので取り込む: \(error.localizedDescription, privacy: .public)")
             }
+            // 保存（JPEG の書き出し）はメインで重いので、先に幕の描き直しに譲る
+            await Task.yield()
             do {
                 let id = try save(UIImage(cgImage: prepared.image), prepared.takenAt ?? now())
                 result.importedIDs.append(id)

@@ -3,7 +3,7 @@ import SwiftUI
 
 /// 仕分け。写真のカードを4方向にスワイプ（またはラベルを押す）してジャンルを付け、「う、うまい」でお気に入りを付け外しする。
 /// 要素と操作は `docs/screen-design.md` の「仕分け」、スワイプを自作する理由は `docs/adr/0005-swipe-ui.md` が正。
-/// 開き方は2つ。下タブには載らない。
+/// 開き方は3つ。下タブには載らない。
 /// - `recordID` なし：ホーム・一覧の仕分け待ちへの入口から。溜まっている仕分け待ちを、新しい順に1枚ずつ出す（残りの枚数と後ろのカードも出す）
 /// - `recordID` あり：撮った直後（カメラのカバーの中の `CameraFlowView`）から。今撮った1枚だけを出し、残りの枚数と後ろのカードは出さない
 /// - `importedIDs` あり：アルバムからの取り込みのあと（ホーム）。取り込んだ写真だけを新しい順に出し、上の行の下に取り込んだ枚数を 1 行で出す
@@ -188,16 +188,13 @@ struct SortView: View {
 
     /// 「取り込み n 枚 ／ 除外 m 枚」。読めなかった写真があるときだけ「／ 読めなかった k 枚」を足す
     private func importSummaryLine(_ summary: PhotoImportResult) -> some View {
-        var text = "取り込み \(summary.importedIDs.count) 枚 ／ 除外 \(summary.excludedCount) 枚"
-        if summary.failedCount > 0 {
-            text += " ／ 読めなかった \(summary.failedCount) 枚"
-        }
-        return Text(verbatim: text)
+        Text(verbatim: summary.summaryText)
             .font(Theme.font(.caption))
             .foregroundStyle(Theme.textSecondary)
             // 文字が大きくて折り返したときも真ん中にそろえる
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
+            .accessibilityLabel(Text(verbatim: summary.summaryAccessibilityLabel))
     }
 
     /// 開いた時点で仕分け待ちが0件のときの保険。
