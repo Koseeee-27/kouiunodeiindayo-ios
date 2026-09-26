@@ -35,6 +35,8 @@ struct SettingsView: View {
                     Button("閉じる") {
                         dismiss()
                     }
+                    // 上の `.font` が効いて、タイトルの「設定」より大きく見えるので、小さくする
+                    .font(Theme.font(.caption))
                 }
             }
         }
