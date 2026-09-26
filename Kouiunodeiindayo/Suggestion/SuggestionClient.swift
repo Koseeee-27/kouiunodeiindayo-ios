@@ -101,13 +101,14 @@ struct SuggestionClient {
     }
 
     /// どちらかが空・`$(…)` のまま（置き換わっていない）・URL として読めないときは `nil`。
+    /// 合言葉を平文で流さないよう https だけにする。http は手元の `wrangler dev`（localhost）を呼ぶときだけ許す。
     static func configuration(from info: [String: Any]) -> Configuration? {
         guard let urlString = trimmedValue(info[baseURLKey]),
             let token = trimmedValue(info[tokenKey]),
             let url = URL(string: urlString),
             let scheme = url.scheme?.lowercased(),
-            scheme == "https" || scheme == "http",
-            url.host() != nil
+            let host = url.host()?.lowercased(),
+            scheme == "https" || (scheme == "http" && host == "localhost")
         else { return nil }
         return Configuration(baseURL: url, token: token)
     }
