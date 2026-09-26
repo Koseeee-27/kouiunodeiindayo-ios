@@ -17,26 +17,19 @@
 - `project.pbxproj` は触らない。足すファイルは同期フォルダ（`Kouiunodeiindayo/`・`KouiunodeiindayoTests/`）の中に置くだけ
 - 同じ画面を触る #56（並び順の切り替え）・#22（効果音とアニメーション）・#63（仕分け待ちの入口）とは同時に進めない（#86「ほかの Issue とぶつかりやすいところ」）。先にマージされたほうに合わせる
 
-## 要判断（おすすめつき。返事をもらったら「決めたこと」に書き換える）
+## 決めたこと（2026-09-27 こうせい確認。計画のときの要判断は全部おすすめのほうに決めた）
 
-1. **赤を点線に使ってよいか。** `Theme.swift` の冒頭に「赤はハンコ・スタンプだけに使う」とある。1c は赤い点線なので、この決まりとぶつかる。
-   - **おすすめ：使う。** `Theme` の冒頭の決まりを「赤はハンコ・スタンプと、提案のしるし（点線の囲み）だけ」に直し、点線の色は `Theme.accent` を指す別名（`Theme.suggestionMark`）にする。赤をやめて墨の点線にすると、ラベルの墨の線と見分けにくい
-   - 別案：墨（`Theme.line`）の点線にする。決まりは変えずに済むが、1c の決定と違う見た目になる
-2. **点線の形。**
-   - **おすすめ：吹き出しの形（尻尾も含む）に沿わせ、4pt 外側に描く。** 今のラベルの形（`LabelBubbleShape`）をそのまま外側に広げて点線で描く。ワイヤーの `outline-offset: 3px` に近い
-   - 別案：尻尾を無視した角丸の四角で囲む。作りは少し簡単だが、尻尾だけ囲みの外に出て見える
-3. **タグの行の高さを、提案が無いときも空けておくか。**
-   - **おすすめ：いつも 1 行分を空けておく。** 提案は写真が出たあとに届く（撮った直後は 1 秒前後遅れる）。届いたときに行が現れてカードが縮むと、指で動かしている最中のカードが跳ねる。空けておけば、届いてもカードの大きさは変わらない。提案が無い写真では、カードの下が 1 行分空くだけ
-   - 別案：提案があるときだけ行を出す。空きは無くなるが、届いた瞬間にカードが縮む
-4. **文字サイズを最大にしたときのチップ。**
-   - **おすすめ：チップの文字は `.xxxLarge`（アクセシビリティサイズの手前）で止め、1 行に入りきらないときは横にスクロールする（折り返さない）。** ジャンルのラベルも同じ理由で `.large` で止めている。折り返すと行が 2〜3 段になり、カードが小さくなって写真が見えにくくなる
-   - 別案：上限を付けずに折り返す。文字サイズへの追従は完全になるが、最大の設定ではカードがかなり小さくなる
-5. **VoiceOver の読み上げ。**
-   - **おすすめ：**
-     - 提案されたジャンルのラベル：今のラベル「食べ物にする」はそのまま、値（`accessibilityValue`）に「提案」を足す →「食べ物にする、提案、ボタン」
-     - チップ：ラベルは「タグ 天ぷら」。付いているときは選択中（`.isSelected`。「う、うまい」と同じやり方）。ヒントは付いているとき「押すと外します」、外したとき「押すと付けます」
-     - チップの並び全体を「提案されたタグ」というまとまりにする（`accessibilityElement(children: .contain)` ＋ ラベル）
-   - 別案：値ではなくラベルに入れる（「食べ物にする（提案）」）。短いが、ほかの 3 つとの違いが言葉の途中に埋もれる
+1. **点線は赤で描く。** `Theme.swift` の冒頭の「赤はハンコ・スタンプだけに使う」に、例外として「提案のしるし（点線の囲み）」を書き足す。点線の色は `Theme.accent` を指す別名（`Theme.suggestionMark`）にする。墨の点線だと、ラベルの墨の線と見分けにくいため
+2. **点線は、吹き出しの形（尻尾も含む）に沿わせ、4pt 外側に描く。** 今のラベルの形（`LabelBubbleShape`）をそのまま外側に広げて点線で描く。ワイヤーの `outline-offset: 3px` に近い。角丸の四角で囲むと、尻尾だけ囲みの外に出て見える
+3. **タグの行は、提案が無いときも 1 行分を空けておく。** 提案は写真が出たあとに届く（撮った直後は 1 秒前後遅れる）。届いたときに行が現れてカードが縮むと、指で動かしている最中のカードが跳ねるため。提案が無い写真では、カードの下が 1 行分空くだけ
+4. **チップの文字は `.xxxLarge`（アクセシビリティサイズの手前）で止め、1 行に入りきらないときは横にスクロールする（折り返さない）。** ジャンルのラベルも同じ理由で `.large` で止めている。折り返すと行が 2〜3 段になり、カードが小さくなって写真が見えにくくなるため
+5. **VoiceOver の読み上げ：**
+   - 提案されたジャンルのラベル：今のラベル「食べ物にする」はそのまま、値（`accessibilityValue`）に「提案」を足す →「食べ物にする、提案、ボタン」
+   - チップ：ラベルは「タグ 天ぷら」。付いているときは選択中（`.isSelected`。「う、うまい」と同じやり方）。ヒントは付いているとき「押すと外します」、外したとき「押すと付けます」
+   - チップの並び全体を「提案されたタグ」というまとまりにする（`accessibilityElement(children: .contain)` ＋ ラベル）
+
+6. **（実装で変えたこと）タグの行は、`SortView` の `VStack` の最後ではなく、`SortCardStackView` の下のラベルのすぐ下に置く。** `SortView` の `VStack` の最後に置くと、大きい画面（iPhone 18 Pro）でタグの行がカードから離れて画面の下端に出た（ワイヤーは「カードの下」）。`SortCardStackView` を、下のラベルの下に置くビュー（`belowCard`）を受け取る汎用の型にし、`SortView` がそこに `SortSuggestedTagsView` を渡す。上下の余白は、上のラベルの高さ・下のラベルとタグの行を合わせた高さを、それぞれ `onGeometryChange` で測って空ける。汎用の型は `static let` を持てないので、`SortCardStackView` の定数は計算で返す形（`static var 〜: CGFloat { 8 }`）に変えた
+7. **（実装で変えたこと）テストでは `Tag` をモジュール名つき（`Kouiunodeiindayo.Tag`）で書く。** Swift Testing にも `Tag` という型があり、型を書くところでは曖昧になる
 
 ## 画面の状態（どれでも仕分けはいつも通りできる）
 
@@ -64,15 +57,15 @@
 ### タグのチップ（新しいファイル `Features/Sort/SortSuggestedTagsView.swift`）
 
 - 引数：`tags: [Tag]`（提案されたタグ。`record.suggestedTagValues`）、`removed: Set<Tag>`（外したタグ）、`isEnabled: Bool`（飛んでいる間は `false`）、`onToggle: (Tag) -> Void`
-- 1 行の横並び（`ScrollView(.horizontal)` の中の `HStack`。入りきるときは真ん中寄せ、入りきらないときだけスクロール。スクロールのインジケーターは出さない）。行の高さは、提案が無いときも 1 行分を空ける（要判断 3。空のときは見えないチップを 1 つ置いて高さを決め、読み上げからは隠す）
+- 1 行の横並び（`ScrollView(.horizontal)` の中の `HStack`。入りきるときは真ん中寄せ、入りきらないときだけスクロール。スクロールのインジケーターは出さない）。行の高さは、提案が無いときも 1 行分を空ける（決めたこと 3。空のときは見えないチップを 1 つ置いて高さを決め、読み上げからは隠す）
 - チップ 1 つ（ワイヤー 2b）：
   - 付いている：白地（`Theme.surface`）・墨の線（`Theme.line`、太さ `Theme.lineWidthBubble`）・カプセル形・墨の字・右に小さな丸の中の「−」（SF Symbols の `minus`）
   - 外した：地なし・`Theme.textSecondary` の点線の枠・同じ色の字・丸の中は「＋」（`plus`）
-  - 文字は `Theme.font(.subheadline, bold: true)`。`.dynamicTypeSize(...DynamicTypeSize.xxxLarge)`（要判断 4）
+  - 文字は `Theme.font(.subheadline, bold: true)`。`.dynamicTypeSize(...DynamicTypeSize.xxxLarge)`（決めたこと 4）
   - 見た目の高さはワイヤーどおり小さめ（約 32pt）、押せる範囲は上下に広げて `Theme.minTapHeight`（44pt）以上にする（`contentShape` と `frame(minHeight:)`）
   - 付け外しは `.animation(.easeOut(duration: 0.15))`。振動・効果音は付けない（#22 の範囲）
-- 足す `Theme` の定義：`suggestionMark`（赤。要判断 1）、`lineWidthSuggestion`、`suggestionDash`（点線の間隔）、`chipMinusBackground`（− の丸の地。`textSecondary` を薄くしたもの）。画面に色や数値を直書きしない
-- 読み上げは要判断 5 のとおり
+- 足す `Theme` の定義：`suggestionMark`（赤。決めたこと 1）、`lineWidthSuggestion`、`suggestionDash`（点線の間隔）、`chipMinusBackground`（− の丸の地。`textSecondary` を薄くしたもの）。画面に色や数値を直書きしない
+- 読み上げは決めたこと 5 のとおり
 
 ### 外したタグの持ち方と、書き込みの流れ
 
@@ -98,15 +91,15 @@
   - 書いたあと `removedTags[record.id]` は消す
 - `SortCardStackView` の引数は変えない（`onSort` の中身が変わるだけ）。点線のために `records.first` の提案を読む 1 行だけ足す
 
-### 画面の配置（`SortView`）
+### 画面の配置（`SortView`・`SortCardStackView`）
 
-- `SortView` の `VStack` を「上の行 → `SortCardStackView` → `SortSuggestedTagsView`」にする。タグの行は `records.first` の提案を出す
-- **下のラベルとタグの行が重ならないようにする。** 今の上下のラベルはカードの縁の外に `overlay` ではみ出して描いていて、`SortCardStackView` の枠の高さには入っていない。タグの行を足して枠が低くなると、狭い画面（幅 375pt・高さ 667pt）では下のラベルがタグの行に、上のラベルが上の行にかぶる。`SortCardStackView.sortArea` に、上下のラベルの分（`outerLabelGap` ＋ ラベルの高さ）の余白を足して、カードのほうを小さくする。ラベルは `.large` で止めているので高さは決まった値に近いが、定数で書かずに `onGeometryChange` で測った高さを使う
+- タグの行は、`SortCardStackView` の下のラベルのすぐ下に置く（決めたこと 6）。`SortView` が `SortSuggestedTagsView` を作って `belowCard` に渡す。タグの行は `records.first` の提案を出す
+- **下のラベルとタグの行が、上の行や画面の外にかぶらないようにする。** 上下のラベル（と、下のタグの行）はカードの縁の外に `overlay` ではみ出して描いていて、`SortCardStackView` の枠の高さには入っていない。そのままだと狭い画面（幅 375pt・高さ 667pt）で、上のラベルが上の行に、下のタグの行が画面の外にかぶる。上のラベルの高さと、下のラベル＋タグの行の高さを `onGeometryChange` で測り、その分を枠の上下に空けてカードのほうを小さくする
 - 右上の「う、うまい」・上のラベル・スタンプの位置は変えない
 
 ## ステップ
 
-1. `Design/Theme.swift` — 点線とチップの定義を足す（上の「足す `Theme` の定義」）。冒頭の「赤は〜だけ」を要判断 1 の答えに合わせて直す / ビルドが通る
+1. `Design/Theme.swift` — 点線とチップの定義を足す（上の「足す `Theme` の定義」）。冒頭の「赤は〜だけ」を決めたこと 1 のとおり、例外に「提案のしるし（点線）」を書き足す / ビルドが通る
 2. `Features/Sort/SortTagSelection.swift`（新規）— `attached`・`commit` / 下のテストで確かめる
 3. `KouiunodeiindayoTests/SortTagSelectionTests.swift`（新規）— `TestStore` を使う。確かめること：
    - 外したタグは `tags` に入らず、残りは一覧の順で入る
@@ -116,8 +109,8 @@
    - 外したタグを戻す（`removed` から抜く）と、また入る
 4. `Features/Sort/SortGenreLabelView.swift` — `isSuggested` と点線、読み上げの値。ファイルの最後に、4 つの向き × 提案あり・なし × 強調 3 種を並べたプレビューを足す / プレビューで見る
 5. `Features/Sort/SortSuggestedTagsView.swift`（新規）— チップの行と読み上げ。プレビュー：全部付いている／1 つ外した／5 個（入りきらない）／空（高さだけ）／文字サイズ `.accessibility5`（上限で止まるか）
-6. `Features/Sort/SortCardStackView.swift` — `genreLabel` に `isSuggested` を渡す。上下のラベルの分の余白（上の「画面の配置」） / 既存のプレビュー「幅 375pt・文字サイズ X Large」で、上のラベルが上の行に、下のラベルがタグの行にかぶらない
-7. `Features/Sort/SortView.swift` — `removedTags`、`SortSuggestedTagsView` を置く、`onSort` を `SortTagSelection.commit` に。プレビューを足す（下の「プレビュー」）
+6. `Features/Sort/SortCardStackView.swift` — `genreLabel` に `isSuggested` を渡す。`belowCard` を下のラベルの下に置き、上下の余白を空ける（上の「画面の配置」） / 既存のプレビュー「幅 375pt・文字サイズ X Large」で、上のラベルが上の行に、下のラベルがタグの行にかぶらない
+7. `Features/Sort/SortView.swift` — `removedTags`、`SortSuggestedTagsView` を `belowCard` に渡す、`onSort` を `SortTagSelection.commit` に。プレビューを足す（下の「プレビュー」）
 8. `docs/architecture.md` — フォルダ構成の `Sort/` に `SortSuggestedTagsView.swift`・`SortTagSelection.swift` の 1 行ずつを足す。`SortGenreLabelView` の説明に「提案の点線」を足す
 9. 検証（`docs/rules/verification.md` の 1〜3）→ `.verification/83/` にスクショと `notes.md`（実機の確認手順もここに書く）
 
@@ -139,8 +132,8 @@
 
 - **狭い画面でカードが小さくなる。** タグの行（約 44pt ＋ 間隔）と上下のラベルの分だけ、幅 375pt の機種ではカードが今より低くなる。スワイプの距離のしきい値（`SwipeDirection`）は pt で決まっているので手触りは変わらないはずだが、実機で確かめる。小さくなりすぎるなら、タグの行とカードの間隔・下のラベルとの間隔を詰める
 - **チップの横スクロールとスワイプの取り違え。** チップの行はカードの外なので、カードのドラッグとは別の場所。ただ、チップの行から指を動かし始めてカードに入る操作では、スクロールが先に取るのでカードは動かない（今と同じ：カードの外から始めたドラッグはカードを動かさない）。実機で「チップを押したつもりでカードが飛ぶ」「カードを払ったつもりでチップが切り替わる」が無いかを見る
-- **点線の赤が「うまい」のハンコと混ざる。** 上のラベルと右上の「う、うまい」は近い。上のラベルはカードの外、ハンコはカードの中なので重ならないが、赤が 2 か所に出る。スクショで見て、うるさければ要判断 1 の別案（墨）に戻す
-- **提案が届いた瞬間のちらつき。** 点線とチップは 0.15 秒で現れるだけにする。カードの大きさ・位置は変えない（要判断 3）
+- **点線の赤が「うまい」のハンコと混ざる。** 上のラベルと右上の「う、うまい」は近い。上のラベルはカードの外、ハンコはカードの中なので重ならないが、赤が 2 か所に出る。スクショで見て、うるさければ墨の点線に変えるかを相談する
+- **提案が届いた瞬間のちらつき。** 点線とチップは 0.15 秒で現れるだけにする。カードの大きさ・位置は変えない（決めたこと 3）
 - **#56 とのぶつかり。** #56 が先にマージされたら、`SortView` の並び順の切り替えの上に足す。外した状態は `id` ごとなので、並び替えても壊れない
 - **`suggestedTagValues` の知らないキー。** 知らないキーは `Record` 側で捨てているので、チップには出ない（落ちない）
 
