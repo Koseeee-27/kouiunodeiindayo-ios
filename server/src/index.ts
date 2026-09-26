@@ -1,7 +1,8 @@
 // Worker の入口。受け渡しの形とエラーの決まりは docs/suggestion-api.md。
-// 受け取った内容（ラベル・Jev の答え・API キー）はログに出さない（ADR 0006・0007）。console.error はエラーの種類と例外のメッセージだけ。
+// 受け取った内容（ラベル・検索の言葉・Jev の答え・API キー）はログに出さない（ADR 0006・0007）。console.error はエラーの種類と例外のメッセージだけ。
 
-import { BadRequestError, type Label, parseLabels, suggest } from "./suggest";
+import { parseQuery, search } from "./search";
+import { BadRequestError, parseLabels, suggest } from "./suggest";
 
 interface Env {
   SUGGEST_TOKEN: string;
@@ -39,8 +40,7 @@ async function isAuthorized(request: Request, token: string | undefined): Promis
 export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
-    // /search（機能28）は #85 で作る。それまでは 404。
-    if (url.pathname !== "/suggest") {
+    if (url.pathname !== "/suggest" && url.pathname !== "/search") {
       return errorResponse(404, "not_found", "no such endpoint");
     }
     if (request.method !== "POST") {
@@ -57,9 +57,16 @@ export default {
       return errorResponse(400, "bad_request", "body must be JSON");
     }
 
-    let labels: Label[];
+    // 本文を読んで、Jev に聞く処理を決める。形が違えば 400（Jev は呼ばない）。
+    let run: (apiKey: string) => Promise<unknown>;
     try {
-      labels = parseLabels(body);
+      if (url.pathname === "/suggest") {
+        const labels = parseLabels(body);
+        run = (apiKey) => suggest(apiKey, labels);
+      } else {
+        const query = parseQuery(body);
+        run = (apiKey) => search(apiKey, query);
+      }
     } catch (error) {
       if (error instanceof BadRequestError) {
         return errorResponse(400, "bad_request", error.message);
@@ -73,7 +80,7 @@ export default {
     }
 
     try {
-      return json(await suggest(env.AI_GATEWAY_API_KEY, labels));
+      return json(await run(env.AI_GATEWAY_API_KEY));
     } catch (error) {
       console.error("upstream_failed", error instanceof Error ? error.message : String(error));
       return errorResponse(502, "upstream_failed", "model call failed");
