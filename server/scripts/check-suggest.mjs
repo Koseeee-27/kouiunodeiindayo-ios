@@ -107,6 +107,24 @@ const cases = [
     expect: { genre: "food", genreConfidence: null, tags: ["ramen", "noodles", "chinese"] },
   },
   {
+    name: "Jev のジャンルが 0.50 未満 → ジャンルなし。料理のタグは絞らない（飲み物でもコーヒーが付く）",
+    labels: [["food", 0.8], ["coffee", 0.6]],
+    jev: { genre: ["food", 0.4] },
+    expect: { genre: null, genreConfidence: null, tags: ["coffee"] },
+  },
+  {
+    name: "一番強い料理のタグがジャンルと違う → 2 番目に強い、種類の合うタグには替えない",
+    labels: [["drink", 0.6], ["ramen", 0.7], ["coffee", 0.5]],
+    jev: { genre: ["drink", 0.9] },
+    expect: { genre: "drink", genreConfidence: 0.9, tags: [] },
+  },
+  {
+    name: "麺の写真に spaghetti 0.23 → パスタは付かない（パスタだけ 0.30 以上）",
+    labels: [["food", 0.79], ["spaghetti", 0.23], ["pasta", 0.16], ["ramen", 0.13]],
+    jev: { genre: ["food", 0.97], category: ["noodles", 0.9] },
+    expect: { genre: "food", genreConfidence: 0.97, tags: ["noodles"] },
+  },
+  {
     name: "ジャンルなし（other）＋ ramen → ラーメンは付く（絞らない）",
     labels: [["food", 0.2], ["ramen", 0.62]],
     jev: { genre: ["other", 0.9] },
