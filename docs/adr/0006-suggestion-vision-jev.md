@@ -1,6 +1,6 @@
 # 0006: ジャンルとタグの提案は、端末の Vision と、Cloudflare Worker 経由の Jev で作る
 
-- 状態：採用
+- 状態：採用（Jev を Cloudflare Workers AI の binding で呼ぶ部分は 0007 で置き換え。Vercel AI Gateway 経由になった）
 - 日付：2026-09-26
 
 ## 決めたこと

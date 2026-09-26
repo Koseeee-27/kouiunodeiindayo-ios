@@ -36,3 +36,9 @@ Config/Local.xcconfig
 # エディタ
 .vscode/
 .idea/
+
+# Worker（server/）の生成物と手元の合言葉（docs/setup.md を参照）
+server/node_modules/
+server/.wrangler/
+server/.dev.vars
+server/worker-configuration.d.ts
