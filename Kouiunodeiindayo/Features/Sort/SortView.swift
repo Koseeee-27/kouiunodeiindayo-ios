@@ -88,8 +88,13 @@ struct SortView: View {
         ZStack {
             // 撮った直後は今撮った1枚だけなので、残りの枚数は出さない
             if singleRecordID == nil {
-                Text("あと \(records.count) 枚")
-                    .font(Theme.font(.headline, bold: true))
+                // 数字だけ大きくする（色は黒のまま）。数字は `verbatim` にして「1,000」のような桁区切りを入れない
+                Text(
+                    "あと \(Text(verbatim: "\(records.count)").font(Theme.font(.title, bold: true)).foregroundStyle(Theme.textPrimary)) 枚"
+                )
+                .font(Theme.font(.headline, bold: true))
+                // 読み上げは、今までどおり「あと N 枚」
+                .accessibilityLabel("あと \(records.count) 枚")
             }
             HStack {
                 // 位置は仮（画面設計で抜ける手段の形はまだ決まっていない）

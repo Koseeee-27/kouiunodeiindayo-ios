@@ -65,8 +65,10 @@ struct SortCardStackView: View {
         let highlighted = isCommitting ? flyingDirection : SwipeDirection.direction(for: cardOffset)
         return cardStack(screenSize: screenSize)
             .overlay(alignment: .top) {
+                // 上のラベルは、カードの上の縁の外に出す（右上の「う、うまい」のハンコと重ならないように）
                 genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
-                    .padding(.top, Self.labelInset)
+                    .padding(.bottom, Self.outerLabelGap)
+                    .alignmentGuide(.top) { $0[.bottom] }
             }
             .overlay(alignment: .leading) {
                 genreLabel(.left, highlighted: highlighted, screenSize: screenSize)
@@ -77,13 +79,17 @@ struct SortCardStackView: View {
                     .padding(.trailing, Self.labelInset)
             }
             .overlay(alignment: .bottom) {
+                // 下のラベルも、カードの下の縁の外に出す
                 genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
-                    .padding(.bottom, Self.labelInset)
+                    .padding(.top, Self.outerLabelGap)
+                    .alignmentGuide(.bottom) { $0[.top] }
             }
             // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
             .padding(.bottom, SwipeDirection.backCardPeek)
     }
 
+    /// 上と下のラベルを、カードの縁からどれだけ外に離すか（pt）
+    private static let outerLabelGap: CGFloat = 8
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
     private static let labelInset: CGFloat = 12
     /// スタンプをカードの上端からどれだけ下に置くか（pt）。上のラベルと「う、うまい」に重ならない高さ
@@ -163,6 +169,7 @@ struct SortCardStackView: View {
         -> some View
     {
         SortGenreLabelView(
+            direction: direction,
             genre: direction.genre,
             emphasis: highlighted.map { $0 == direction ? .strong : .weak } ?? .normal
         ) {

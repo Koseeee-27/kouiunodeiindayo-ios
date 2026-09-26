@@ -45,6 +45,9 @@ enum Theme {
     /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けとホーム・一覧で同じ値を使う
     static let favoriteTilt = Angle.degrees(-6)
 
+    /// 仕分けの画面の「う、うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
+    static let sortFavoriteTilt = Angle.degrees(18)
+
     /// 文字。游ゴシックは iOS に入っていないので、見た目の近いヒラギノ角ゴで代わりにする。
     /// 文字サイズの設定に追従させるため、`relativeTo:` で標準の文字の種類に合わせる
     static func font(_ style: Font.TextStyle, bold: Bool = false) -> Font {
