@@ -77,6 +77,45 @@ struct RecordSearchFilterTests {
         #expect(!RecordSearchFilter.matches(Self.date(2026, 9, 1, 0), period: .earlier, now: Self.now, calendar: c))
     }
 
+    @Test func 週の始まりが月曜なら月曜から() {
+        var monday = Self.calendar
+        monday.firstWeekday = 2
+        // 2026-09-14（月）が週の始まり
+        #expect(
+            RecordSearchFilter.matches(Self.date(2026, 9, 14, 0), period: .thisWeek, now: Self.now, calendar: monday))
+        #expect(
+            !RecordSearchFilter.matches(Self.date(2026, 9, 13, 23), period: .thisWeek, now: Self.now, calendar: monday))
+    }
+
+    @Test func 別の時間帯でも月の境目は端末の時間帯で分かれる() throws {
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = try #require(TimeZone(identifier: "America/New_York"))
+        let now = try #require(newYork.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 1)))
+        let before = try #require(
+            newYork.date(from: DateComponents(year: 2026, month: 8, day: 31, hour: 23, minute: 59)))
+        let start = try #require(newYork.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 0)))
+        #expect(RecordSearchFilter.matches(before, period: .earlier, now: now, calendar: newYork))
+        #expect(!RecordSearchFilter.matches(before, period: .thisMonth, now: now, calendar: newYork))
+        #expect(RecordSearchFilter.matches(start, period: .thisMonth, now: now, calendar: newYork))
+    }
+
+    @Test func 年をまたぐ週() {
+        let c = Self.calendar
+        // 2026-12-31（木）。週の始まりは 2026-12-27（日）
+        let now = Self.date(2026, 12, 31)
+        #expect(RecordSearchFilter.matches(Self.date(2026, 12, 27, 0), period: .thisWeek, now: now, calendar: c))
+        #expect(!RecordSearchFilter.matches(Self.date(2026, 12, 26, 23), period: .thisWeek, now: now, calendar: c))
+        #expect(RecordSearchFilter.matches(Self.date(2027, 1, 1), period: .thisWeek, now: now, calendar: c))
+    }
+
+    @Test func 知らないタグのキーだけの記録は当たらない() throws {
+        let context = TestStore()
+        let record = try addRecord(context)
+        record.tags = ["future_tag"]
+        #expect(!RecordSearchFilter.matches(record, tag: .ramen))
+        #expect(RecordSearchFilter.filter([record], by: SearchCondition(tag: .ramen)).isEmpty)
+    }
+
     @Test func 条件を組み合わせると全部を満たすものだけで並びは変えない() throws {
         let context = TestStore()
         let a = try addRecord(context, tags: [.ramen], favorite: true, takenAt: Self.date(2026, 8, 20))
