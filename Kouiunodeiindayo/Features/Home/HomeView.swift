@@ -71,7 +71,7 @@ struct HomeView: View {
     /// 1画面に収める版で、今日の一枚をこれより小さくしない（pt）。これを取れないときはスクロールする版にする
     private static let todayPhotoMinHeight: CGFloat = 200
 
-    /// `fillsHeight` が true のときは、今日の一枚に残りの高さを渡し、余りは一番下に空ける
+    /// `fillsHeight` が true のときは、今日の一枚に残りの高さを渡す。余りは、今日の一枚と最近の写真の間に空ける（最近の写真が一番下）
     private func content(fillsHeight: Bool) -> some View {
         VStack(alignment: .leading, spacing: Self.headerToContentSpacing) {
             // 仕分け待ちの吹き出しの有無で位置が変わらないよう、吹き出しより上に置く
