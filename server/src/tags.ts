@@ -14,44 +14,50 @@ export type CategoryKey =
 
 export type CuisineKey = "japanese" | "western" | "chinese" | "korean" | "ethnic";
 
+// 料理のタグの種類。ジャンル（jev.ts の Genre）と同じ値で、ジャンルと食い違うタグを除くのに使う。
+export type DishKind = "food" | "drink" | "dessert";
+
 export interface DishTag {
   key: string;
+  kind: DishKind;
   labels: string[];
   category: CategoryKey | null;
   cuisine: CuisineKey | null;
 }
 
 export const DISH_TAGS: DishTag[] = [
-  { key: "ramen", labels: ["ramen"], category: "noodles", cuisine: "chinese" },
-  { key: "pasta", labels: ["pasta", "spaghetti"], category: "noodles", cuisine: "western" },
-  { key: "sushi", labels: ["sushi"], category: "rice_dish", cuisine: "japanese" },
-  { key: "curry", labels: ["curry"], category: "rice_dish", cuisine: null },
-  { key: "gyoza", labels: ["gyoza", "dumpling"], category: null, cuisine: "chinese" },
-  { key: "tempura", labels: ["tempura"], category: "fried", cuisine: "japanese" },
-  { key: "karaage", labels: ["fried_chicken"], category: "fried", cuisine: null },
-  { key: "pizza", labels: ["pizza"], category: null, cuisine: "western" },
-  { key: "hamburger", labels: ["hamburger"], category: "bread", cuisine: "western" },
-  { key: "steak", labels: ["steak"], category: "meat", cuisine: "western" },
-  { key: "sandwich", labels: ["sandwich"], category: "bread", cuisine: "western" },
-  { key: "coffee", labels: ["coffee"], category: null, cuisine: null },
-  { key: "tea", labels: ["tea_drink"], category: null, cuisine: null },
+  { key: "ramen", kind: "food", labels: ["ramen"], category: "noodles", cuisine: "chinese" },
+  { key: "pasta", kind: "food", labels: ["pasta", "spaghetti"], category: "noodles", cuisine: "western" },
+  { key: "sushi", kind: "food", labels: ["sushi"], category: "rice_dish", cuisine: "japanese" },
+  { key: "curry", kind: "food", labels: ["curry"], category: "rice_dish", cuisine: null },
+  { key: "gyoza", kind: "food", labels: ["gyoza", "dumpling"], category: null, cuisine: "chinese" },
+  { key: "tempura", kind: "food", labels: ["tempura"], category: "fried", cuisine: "japanese" },
+  { key: "karaage", kind: "food", labels: ["fried_chicken"], category: "fried", cuisine: null },
+  { key: "pizza", kind: "food", labels: ["pizza"], category: null, cuisine: "western" },
+  { key: "hamburger", kind: "food", labels: ["hamburger"], category: "bread", cuisine: "western" },
+  { key: "steak", kind: "food", labels: ["steak"], category: "meat", cuisine: "western" },
+  { key: "sandwich", kind: "food", labels: ["sandwich"], category: "bread", cuisine: "western" },
+  { key: "coffee", kind: "drink", labels: ["coffee"], category: null, cuisine: null },
+  { key: "tea", kind: "drink", labels: ["tea_drink"], category: null, cuisine: null },
   {
     key: "alcohol",
+    kind: "drink",
     labels: ["beer", "wine", "red_wine", "white_wine", "sparkling_wine", "cocktail", "liquor"],
     category: null,
     cuisine: null,
   },
-  { key: "juice", labels: ["juice", "smoothie"], category: null, cuisine: null },
-  { key: "bubble_tea", labels: ["bubble_tea"], category: null, cuisine: null },
+  { key: "juice", kind: "drink", labels: ["juice", "smoothie"], category: null, cuisine: null },
+  { key: "bubble_tea", kind: "drink", labels: ["bubble_tea"], category: null, cuisine: null },
   {
     key: "cake",
+    kind: "dessert",
     labels: ["cake", "cake_regular", "birthday_cake", "cheesecake", "cupcake"],
     category: null,
     cuisine: null,
   },
-  { key: "ice_cream", labels: ["ice_cream"], category: null, cuisine: null },
-  { key: "donut", labels: ["donut"], category: null, cuisine: null },
-  { key: "baked_sweets", labels: ["cookie", "muffin", "pie"], category: null, cuisine: null },
+  { key: "ice_cream", kind: "dessert", labels: ["ice_cream"], category: null, cuisine: null },
+  { key: "donut", kind: "dessert", labels: ["donut"], category: null, cuisine: null },
+  { key: "baked_sweets", kind: "dessert", labels: ["cookie", "muffin", "pie"], category: null, cuisine: null },
 ];
 
 // Jev に見せる選択肢の説明（英語で一言）。
@@ -84,10 +90,18 @@ export const LABEL_MIN = 0.05;
 // これ以上を「強い」、未満を「弱い」として Jev に伝える。
 // 0.30：うどんの例（最大 0.22、全部「弱い」）でも Jev は food 0.97・noodles 0.87 を返したので、弱い扱いでも推せる。料理名のラベル（0.55〜0.8）は「強い」に入る。
 export const STRONG_MIN = 0.3;
-// 料理のタグを付けるのに要る、対応するラベルの確信度。弱すぎる料理名で決めつけないように。
-// 0.30：実機の Vision は、写っていない料理名を 0.1〜0.2 で出す（うどんに ramen 0.14・spaghetti 0.11、天ぷらに fried_chicken 0.13）。
-// 正しい料理名は 0.5 以上が多い（弁当の sushi 0.70）。Mac の Vision で無料素材 6 枚を見て 0.10 から上げた。ラベルは scripts/real-labels.tsv。
-export const DISH_LABEL_MIN = 0.3;
+// 料理のタグを付けるのに要る、対応するラベルの確信度。料理のタグは、対応するラベルが一番強い 1 つだけを付ける。
+// 0.15（#114。0.30 から下げた）：こうせいの写真 77 枚で、0.30 以上を全部付けると、料理のタグが付くのは 34 枚で、
+// 2 つ以上付く写真が 5 枚（ラーメン＋パスタなど）あった。一番強い 1 つに絞り、ジャンルと食い違うタグを除くのとセットで
+// 0.15 に下げると、付くのは 46 枚・2 つ以上は 0 枚。写っていない料理名は 0.1〜0.2 で出る（うどんに ramen 0.14）ので、
+// 0.15 未満は付けない。ラベルは scripts/real-labels.tsv と、作業用のメモ（photos-0927）。
+export const DISH_LABEL_MIN = 0.15;
+// おまかせ（アプリが自信のある写真を勝手に仕分ける）に回してよい根拠の強さ。
+// Vision の食べ物系のラベル（GENERAL_FOOD_LABELS）の最大がこれ未満なら、ジャンルは返すが genreConfidence を null にする。
+// 0.30（#114）：Jev はラベルが弱くても food 0.97 のように言い切るので、Jev の確率だけでは任せられない。
+// こうせいの写真 77 枚で、食べ物・飲み物・デザートの 66 枚中 59 枚は残り、料理でない画像は 1 枚も通らなかった。
+export const AUTO_EVIDENCE_MIN = 0.3;
+export const GENERAL_FOOD_LABELS = ["food", "drink", "beverage", "dessert", "baked_goods"];
 // Jev のジャンルの probabilities[choice] がこれ未満なら提案しない。
 // 0.50：7 例の答えは 0.97〜1.0（食べ物でない例は other 1.0）と偏っていて、0.5〜0.9 のどこでも結果は同じ。4 択で「残り全部より高い」意味の 0.5 にした。
 export const GENRE_MIN = 0.5;
