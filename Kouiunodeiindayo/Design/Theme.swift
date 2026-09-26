@@ -27,16 +27,21 @@ enum Theme {
     /// 線・区切り
     static let line = ink
 
-    /// 細い線（写真の枠など）。太さは仮。Figma の 4px は強いので細くしている
-    static let lineWidthThin: CGFloat = 1
     /// 太い線（見出しの下の区切りなど）。太さは仮
     static let lineWidthThick: CGFloat = 2
     /// 仕分けのスタンプの枠。形と一緒に仮
     static let lineWidthStamp: CGFloat = 4
+    /// 写真のコマ枠（主役：ホームの今日の一枚・仕分けのカード・記録の詳細）
+    static let photoFrameWidthMain: CGFloat = 2
+    /// 写真のコマ枠（小さい写真：ホームの最近の写真・一覧）
+    static let photoFrameWidthSmall: CGFloat = 1.5
 
     /// 写真の縦横比（幅 3・高さ 4。iPhone の標準のカメラで縦に構えて撮ったときと同じ）。
     /// 仕分けのカード・ホームの今日の一枚・記録の詳細で使う。一覧とホームの最近の写真は正方形
     static let photoAspectRatio: CGFloat = 3.0 / 4.0
+
+    /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けとホーム・一覧で同じ値を使う
+    static let favoriteTilt = Angle.degrees(-6)
 
     /// 文字。游ゴシックは iOS に入っていないので、見た目の近いヒラギノ角ゴで代わりにする。
     /// 文字サイズの設定に追従させるため、`relativeTo:` で標準の文字の種類に合わせる

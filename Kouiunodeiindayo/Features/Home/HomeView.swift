@@ -57,7 +57,7 @@ struct HomeView: View {
         .background(Theme.background)
         // sheet で開くので、閉じてもホームの位置は残る
         .sheet(item: $selectedRecord) { record in
-            RecordDetailView(record: record)
+            RecordDetailView(records: records, initial: record)
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
@@ -138,7 +138,7 @@ struct HomeView: View {
                     // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
                     RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
                         .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
-                        .clipShape(.rect(cornerRadius: 16))
+                        .photoFrame(.main)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
@@ -184,7 +184,7 @@ struct HomeView: View {
                     } label: {
                         RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
                             .aspectRatio(1, contentMode: .fit)
-                            .clipShape(.rect(cornerRadius: 8))
+                            .photoFrame(.small)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(

@@ -14,8 +14,9 @@
 | 言語・UI | Swift + SwiftUI（UIKit はカメラを包む部分だけ） |
 | 開発環境 | Xcode 27（Swift 6.4）。Apple silicon の Mac |
 | 対応 OS | iOS 26 以上。iPhone のみ・縦画面のみ |
-| データ | 端末内に保存（SwiftData + 写真ファイル）。サーバー・ログイン無し |
-| 外部ライブラリ | 使わない。足したいときは先に ADR（技術的な決定の記録。`docs/adr/`）を書いて相談する |
+| データ | 端末内に保存（SwiftData + 写真ファイル）。ログイン無し |
+| 通信 | ジャンルとタグの提案・言葉で探すのためだけに、中継サーバー（Cloudflare Worker。コードは `server/`）経由で AI（Jev）を呼ぶ。送るのは写っているものの名前と検索の言葉だけ |
+| 外部ライブラリ | アプリには使わない。`server/` も実行時のライブラリは使わない（開発・デプロイの道具 `wrangler` は除く）。足したいときは先に ADR（技術的な決定の記録。`docs/adr/`）を書いて相談する |
 
 根拠は `docs/adr/`。ADR の決定が変わったら、この表も直す。
 
@@ -28,6 +29,7 @@
 | 「記録」のデータの形、写真ファイルの置き場所 | `docs/data-model.md` |
 | フォルダ構成、画面からデータを読み書きするときの決まり | `docs/architecture.md` |
 | 技術的な決定と、その理由 | `docs/adr/` |
+| 中継サーバー（Cloudflare Worker）のコードと、アプリとの受け渡しの形 | `server/`、`docs/suggestion-api.md` |
 | 環境構築、実機に入れる手順、AI ツールの設定 | `docs/setup.md` |
 | Swift / SwiftUI / SwiftData の書き方の決まり | `docs/rules/swift.md` |
 | 言語を問わないコーディング原則 | `docs/rules/coding-style.md` |

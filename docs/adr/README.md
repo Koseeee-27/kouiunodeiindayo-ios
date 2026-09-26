@@ -18,10 +18,11 @@ ADR（Architecture Decision Record）は、「何を・なぜ決めたか」を1
 | # | 決定 | 状態 |
 |---|---|---|
 | [0001](0001-swift-swiftui.md) | Swift + SwiftUI で作る | 採用 |
-| [0002](0002-local-storage.md) | データは端末内に保存する（SwiftData + 写真ファイル）。サーバー無し | 採用 |
+| [0002](0002-local-storage.md) | データは端末内に保存する（SwiftData + 写真ファイル）。サーバー無し | 採用（「サーバー無し」は 0006 で変更） |
 | [0003](0003-camera.md) | MVP は iPhone 標準のカメラ画面を使う | 採用 |
 | [0004](0004-min-ios-and-tools.md) | iOS 26 以上、Xcode 27、外部ライブラリ無し、同期フォルダ | 採用 |
 | [0005](0005-swipe-ui.md) | 仕分けのスワイプはライブラリを使わず自作する | 採用 |
+| [0006](0006-suggestion-vision-jev.md) | ジャンルとタグの提案は、端末の Vision と、Cloudflare Worker 経由の Jev で作る | 採用 |
 
 ## テンプレ
 

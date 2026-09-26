@@ -17,6 +17,10 @@
 | `photoFileName` | `String` | 写真のファイル名（例：`<id>.jpg`）。フォルダを含むフルの場所は保存しない（アプリの置き場所は変わることがある） |
 | `genre` | `String` | ジャンル。下の表の値のどれか |
 | `isFavorite` | `Bool` | お気に入り（うまい）が付いているか。既定は `false` |
+| `tags` | `[String]` | 付いているタグのキー（下の「タグの値」）。既定は空 |
+| `suggestedGenre` | `String?` | 提案したジャンル（`food`／`drink`／`dessert`）。問い合わせたが提案が無かったとき（自信が低い）と、まだ問い合わせていないときは `nil`（機能26） |
+| `suggestedTags` | `[String]` | 提案したタグのキー。既定は空（機能26） |
+| `suggestedAt` | `Date?` | 提案を問い合わせ終えた日時。提案が無かったときも書く。`nil` はまだ問い合わせていない（通信できなかった・時間切れのときも `nil` のまま） |
 
 ### ジャンルの値
 
@@ -34,6 +38,44 @@
 - 「まだ仕分けていない」を空（nil）にしない。`unsorted` という値で持つ
 - 記録の詳細で、選択中のジャンルをもう一度押して外したときは `none` にする（仕分け待ちには戻さない）
 
+### タグの値
+
+タグの一覧（名前と3つの種類）は `docs/requirements.md` の「タグの一覧」が正。ここには保存するキーと、提案に使う対応を書く。
+
+- 文字列のキーで保存する。コードでは `Tag` という enum に、日本語名・種類・下の対応を持たせる
+- 知らないキーが入っていたら、表示しない（落とさない）
+- 料理のタグは、Vision のラベル（右の列）のどれかが出たときだけ提案する。大分類と系統は、料理のタグから決まるものに加えて、Jev の判断でも提案する
+- 記録の詳細で料理のタグを手で付けたときは、大分類・系統を自動では足さない
+
+**料理**
+
+| キー | 名前 | Vision のラベル | 大分類 | 系統 |
+|---|---|---|---|---|
+| `ramen` | ラーメン | `ramen` | `noodles` | `chinese` |
+| `pasta` | パスタ | `pasta` `spaghetti` | `noodles` | `western` |
+| `sushi` | 寿司 | `sushi` | `rice_dish` | `japanese` |
+| `curry` | カレー | `curry` | `rice_dish` | — |
+| `gyoza` | 餃子 | `gyoza` `dumpling` | — | `chinese` |
+| `tempura` | 天ぷら | `tempura` | `fried` | `japanese` |
+| `karaage` | 唐揚げ | `fried_chicken` | `fried` | — |
+| `pizza` | ピザ | `pizza` | — | `western` |
+| `hamburger` | ハンバーガー | `hamburger` | `bread` | `western` |
+| `steak` | ステーキ | `steak` | `meat` | `western` |
+| `sandwich` | サンドイッチ | `sandwich` | `bread` | `western` |
+| `coffee` | コーヒー | `coffee` | — | — |
+| `tea` | お茶 | `tea_drink` | — | — |
+| `alcohol` | お酒 | `beer` `wine` `red_wine` `white_wine` `sparkling_wine` `cocktail` `liquor` | — | — |
+| `juice` | ジュース | `juice` `smoothie` | — | — |
+| `bubble_tea` | タピオカ | `bubble_tea` | — | — |
+| `cake` | ケーキ | `cake` `cake_regular` `birthday_cake` `cheesecake` `cupcake` | — | — |
+| `ice_cream` | アイス | `ice_cream` | — | — |
+| `donut` | ドーナツ | `donut` | — | — |
+| `baked_sweets` | 焼き菓子 | `cookie` `muffin` `pie` | — | — |
+
+**大分類**：`noodles`（麺類）、`rice_dish`（ご飯もの）、`bread`（パン）、`meat`（肉料理）、`seafood`（魚介）、`fried`（揚げ物）、`egg`（卵料理）、`vegetables`（野菜・サラダ）、`soup`（汁物）
+
+**系統**：`japanese`（和食）、`western`（洋食）、`chinese`（中華）、`korean`（韓国）、`ethnic`（エスニック）
+
 ## よく使う取り出し方
 
 | 使う場面 | 条件 | 並び |
@@ -43,6 +85,8 @@
 | カメラで撮った直後の仕分け | 今撮った1件（`id` で指定） | — |
 | 一覧（機能6） | `genre` が `unsorted` 以外（仕分け待ちの写真は一覧に出さない。「なし」は出す） | `takenAt` の新しい順 |
 | ホームの今日の一枚（機能23） | `genre` が `unsorted` 以外で、`takenAt` が今日。複数あるときは `takenAt` が一番新しい1枚 | — |
+| 言葉で探す（機能28） | `genre` が `unsorted` 以外を `@Query` で取り、タグ・うまい・時期での絞り込みは取ったあとに Swift 側で行う（`tags` のような配列は `#Predicate` の中で使うと実行時に失敗する報告があるため）。料理のタグは、対応表で大分類・系統にも当てはめて判定する（「ラーメン」だけの記録も「麺類」「中華」で当たる） | `takenAt` の新しい順 |
+| 提案を問い合わせる写真（機能26） | `genre` が `unsorted` で、`suggestedAt` が `nil` | `takenAt` の新しい順 |
 | ホームの最近の写真（機能23） | `genre` が `unsorted` 以外で、今日の一枚を除く。4件 | `takenAt` の新しい順 |
 
 ## 写真ファイル

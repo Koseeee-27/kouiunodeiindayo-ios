@@ -15,7 +15,8 @@ struct CameraFlowView: View {
         case accessGuide(isRestricted: Bool)
         /// 案内から「アルバムから選ぶ」。キャンセルで同じ文言の案内に戻るため `isRestricted` を持つ
         case library(isRestricted: Bool)
-        case sort
+        /// 今撮った（選んだ）1枚の id。溜まっている仕分け待ちは出さない
+        case sort(recordID: UUID)
     }
 
     private static let logger = Logger(category: "CameraFlowView")
@@ -75,8 +76,8 @@ struct CameraFlowView: View {
                     onCancel: { step = .accessGuide(isRestricted: isRestricted) }
                 )
                 .ignoresSafeArea()
-            case .sort:
-                SortView()
+            case .sort(let recordID):
+                SortView(recordID: recordID)
             }
         }
         .alert("保存できませんでした", isPresented: $isSaveFailed) {
@@ -94,8 +95,9 @@ struct CameraFlowView: View {
     private func save(_ image: UIImage) {
         do {
             // 撮影日時は常に今。アルバムから選んだ写真も、写真の撮影日時ではなく選んだ時刻にする（`docs/data-model.md`）
-            try RecordStore(modelContext: modelContext, photoStorage: photoStorage).add(image: image, takenAt: .now)
-            step = .sort
+            let record = try RecordStore(modelContext: modelContext, photoStorage: photoStorage)
+                .add(image: image, takenAt: .now)
+            step = .sort(recordID: record.id)
         } catch {
             Self.logger.error("撮った写真を保存できなかった: \(error.localizedDescription, privacy: .public)")
             isSaveFailed = true
@@ -116,8 +118,10 @@ struct CameraFlowView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
+// 仕分け待ちが3件ある中で、今撮った1枚に見立てた1件だけを出す
 #Preview("仕分け") {
-    CameraFlowView(step: .sort)
-        .modelContainer(SampleData.makePreviewContainer())
+    let container = SortPreviewData.makeManyUnsortedContainer()
+    CameraFlowView(step: .sort(recordID: SortPreviewData.newestUnsortedID(in: container)))
+        .modelContainer(container)
         .environment(\.photoStorage, SampleData.photoStorage)
 }

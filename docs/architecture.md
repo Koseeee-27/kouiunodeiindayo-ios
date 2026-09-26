@@ -9,6 +9,7 @@
 Kouiunodeiindayo/
 ├── App/
 │   ├── KouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
+│   ├── LaunchSplashView.swift ← 起動画面の絵を1秒見せてから、本物の画面（RootView）に切り替える
 │   ├── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
 │   ├── RootTab.swift          ← 下タブの行き先の enum（並び順・文言・アイコン）
 │   ├── RootTabBar.swift       ← 自作の下タブのバー（見た目と押したときの通知）
@@ -23,7 +24,7 @@ Kouiunodeiindayo/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
 │   ├── Sort/                  ← 仕分け
-│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段
+│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
 │   │   ├── SortGenreLabelView.swift ← 縁に重ねるチップ。押すと仕分け・ドラッグ中の強調
@@ -38,18 +39,26 @@ Kouiunodeiindayo/
 ├── Data/
 │   ├── Record.swift           ← SwiftData のモデル（docs/data-model.md のとおり）
 │   ├── Genre.swift            ← ジャンルの enum
+│   ├── Tag.swift              ← タグの enum（名前・種類・Vision のラベルとの対応。docs/data-model.md のとおり）
 │   ├── RecordStore.swift      ← 書き込みの入口（下の「書くとき」）
 │   ├── PhotoStorage.swift     ← 写真ファイルの保存・読み込み・サムネイル作成・削除
 │   ├── SampleData.swift       ← プレビュー用のサンプルデータ
 │   └── Logging.swift          ← ログ（os.Logger）の共通設定
+├── Suggestion/                ← ジャンルとタグの提案（機能26）、言葉で探す（機能28）。理由は docs/adr/0006
+│   ├── ImageLabeler.swift     ← Vision で写真からラベルを取り出す（端末の中だけ）
+│   ├── SuggestionClient.swift ← Worker への通信。URL と合言葉は Config/Local.xcconfig から読む
+│   ├── SuggestionService.swift ← まとめ役。プロトコルにして、プレビュー用のモックも用意する
+│   └── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
 ├── Design/
 │   ├── Theme.swift            ← 色・フォント・余白の定義
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
+│   ├── PhotoFrame.swift       ← 写真の墨のコマ枠（`.photoFrame(.main / .small)`）
 │   └── SoundPlayer.swift      ← 効果音の再生
-└── Resources/                 ← フォント、効果音、画像（Assets）
+└── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
-└── Local.xcconfig.example     ← 個人ごとの署名設定の見本（docs/setup.md）
+└── Local.xcconfig.example     ← 個人ごとの署名設定・Worker の URL と合言葉の見本（docs/setup.md）
+server/                        ← 中継サーバー（Cloudflare Worker）。Jev を呼んで、ジャンル・タグ・検索の条件を返す
 ```
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
@@ -74,6 +83,8 @@ Config/
 | 追加（写真、撮影日時） | 写真とサムネイルをファイルに保存し、`genre = unsorted` の記録を作る |
 | ジャンルを変える（記録、ジャンル） | `genre` を書き換える。仕分けのスワイプ、ラベルのタップ、詳細での付け直しが、どれもこれを呼ぶ |
 | うまいを切り替える（記録） | `isFavorite` を反転する |
+| タグを変える（記録、タグ） | `tags` を書き換える。仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）、詳細での付け直しが、どれもこれを呼ぶ |
+| 提案を保存する（記録の `id`、ジャンル、タグ） | `id` で記録を取り直し、`suggestedGenre`・`suggestedTags`・`suggestedAt` を書く。`tags` には触らない（仕分けの画面が `suggestedTags` を最初の状態として持ち、次に進むときに「タグを変える」で書く）。記録が消えていた・もう仕分け済みなら、何も書かない |
 | 撮影日時を変える（記録、日時） | `takenAt` を書き換える（機能13） |
 | 消す（記録） | 記録と、写真・サムネイルのファイルを消す（機能11） |
 | すべて消す | すべての記録と、写真・サムネイルのファイルを消す（機能20） |
@@ -86,9 +97,25 @@ Config/
 - ホームの今日の一枚、仕分けのカード、記録の詳細は、写真本体を使う
 - どちらも `PhotoStorage` から読む。画面でファイルの場所を組み立てない
 
+### 提案（機能26）の流れ
+
+```
+追加（写真を保存）→ 裏で SuggestionService：ImageLabeler（Vision）→ SuggestionClient（Worker → Jev）
+                  → メインスレッドで RecordStore の「提案を保存する」→ 仕分け画面は @Query で自動で更新される
+```
+
+- 問い合わせを始めるのは2か所：撮った直後（`CameraFlowView` が `RecordStore` の「追加」のあとに呼ぶ）と、仕分けの画面を開いたとき（`SortView` が、仕分け待ちのうち `suggestedAt` が `nil` の写真を問い合わせる）
+- 裏の処理には、`Record` そのものではなく `id` と `photoFileName` だけを渡す（`@Model` はスレッドをまたいで渡せない）。結果を保存するときに、メインスレッドで `id` から記録を取り直す
+- アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`
+- 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
+- 自信が低いとき（Worker が「提案なし」と返したとき）も問い合わせ済みにする：`suggestedAt` を書き、`suggestedGenre` は `nil`、`suggestedTags` は空
+- 通信できない・時間切れ（目安 1.5 秒）のときだけ、何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる
+- 画面から `SuggestionClient` を直接呼ばない。`SuggestionService` を `@Environment` で受け取る。プレビューではモックを渡す
+
 ## 並行して作るための約束
 
 - 最初に `Data/` の4ファイル（`Record`、`Genre`、`RecordStore`、`PhotoStorage`）と `SampleData` を作ってから、画面に分かれる
 - 画面は、サンプルデータを入れたプレビューで見た目を作れるようにする。カメラやほかの画面の完成を待たない
 - 効果音と色・フォントは、`SoundPlayer` と `Theme` の呼び方だけ先に決め、中身（音源・配色）はあとから差し替える
+- 提案は `SuggestionService` のモックで画面を先に作れる。Worker の完成を待たない
 - 見た目は、まず標準の部品のままシンプルに作る。デザインが決まった部分から、`Theme` と各画面に順に反映していく。最初から作り込まない
