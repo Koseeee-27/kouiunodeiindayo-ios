@@ -115,14 +115,18 @@ struct RecordListView: View {
         Button {
             selectedRecord = record
         } label: {
-            RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
+            RecordPhotoView(record: record, kind: .thumbnail)
                 .aspectRatio(1, contentMode: .fit)
                 .photoFrame(.small)
+                // 「うまい」は、枠の切り抜きの外に重ねる（枠から少しはみ出させる）
+                .listFavoriteBadge(isFavorite: record.isFavorite)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
             "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")。記録の詳細を開く"
         )
+        // はみ出した「うまい」が、右隣の写真の下に隠れないよう、お気に入りの写真を手前に描く
+        .zIndex(record.isFavorite ? 1 : 0)
     }
 }
 
