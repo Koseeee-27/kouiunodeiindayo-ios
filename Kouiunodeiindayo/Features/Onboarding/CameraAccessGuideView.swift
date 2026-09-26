@@ -19,34 +19,37 @@ struct CameraAccessGuideView: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityHidden(true)
 
-                VStack(spacing: 12) {
+                VStack(spacing: 20) {
                     Text("カメラが使えません")
                         .font(Theme.font(.title2, bold: true))
                         .accessibilityAddTraits(.isHeader)
                     Text(message)
-                        .font(Theme.font(.body))
+                        // 「設定アプリで『カメラ』をオンにすると撮れます」を、SE の幅でも1行に収める大きさ
+                        .font(Theme.font(.subheadline))
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
 
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     // 制限はこのアプリの設定では外せないので、制限されているときはアルバムのほうを目立たせる
-                    wideButton("設定を開く", isProminent: !isRestricted) {
+                    wideButton("設定を開く", style: isRestricted ? .normal : .prominent) {
                         openSettings()
                     }
                     .accessibilityHint("設定アプリに移ります")
 
-                    wideButton("アルバムから選ぶ", isProminent: isRestricted) {
+                    wideButton("アルバムから選ぶ", style: isRestricted ? .prominent : .normal) {
                         onPickFromLibrary()
                     }
 
-                    Button("ホームへ") {
+                    // 文字だけだと押せると分かりにくいので、ほかの2つと同じ形の枠線だけのボタンにする
+                    wideButton("ホームへ", style: .outlined) {
                         onGoHome()
                     }
                 }
                 .controlSize(.large)
             }
-            .padding(24)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 24)
             .frame(maxWidth: .infinity)
         }
         .background(Theme.background)
@@ -56,26 +59,58 @@ struct CameraAccessGuideView: View {
 
     private var message: String {
         if isRestricted {
-            "スクリーンタイムなどでカメラが制限されているため、撮れません。アルバムから選んで記録できます。"
+            // 文の区切りで改行する。ほかの画面の文言に合わせて、最後の「。」は付けない
+            "スクリーンタイムなどでカメラが制限されているため、撮れません。\nアルバムから選んで記録できます"
         } else {
-            "カメラへのアクセスがオフになっています。設定アプリで「カメラ」をオンにすると撮れます。"
+            "カメラへのアクセスがオフになっています。\n設定アプリで「カメラ」をオンにすると撮れます"
         }
     }
 
-    /// 横いっぱいのボタン。目立たせる1つだけ `.borderedProminent`、ほかは `.bordered`。
+    private enum WideButtonStyle {
+        /// 塗りつぶし（`.borderedProminent`）。目立たせる1つだけ
+        case prominent
+        /// うすい地（`.bordered`）
+        case normal
+        /// 枠線だけ。一番控えめ
+        case outlined
+    }
+
+    /// 横いっぱいのボタン。
     @ViewBuilder
-    private func wideButton(_ title: String, isProminent: Bool, action: @escaping () -> Void) -> some View {
+    private func wideButton(_ title: String, style: WideButtonStyle, action: @escaping () -> Void) -> some View {
+        let label = Text(title)
+            .frame(maxWidth: .infinity)
         // `Button(action: action)` と関数を直接渡すと、Xcode 27 のプレビューがビルドに失敗する。クロージャで包むと通る
-        let button = Button {
-            action()
-        } label: {
-            Text(title)
-                .frame(maxWidth: .infinity)
-        }
-        if isProminent {
-            button.buttonStyle(.borderedProminent)
-        } else {
-            button.buttonStyle(.bordered)
+        switch style {
+        case .prominent:
+            Button {
+                action()
+            } label: {
+                label
+            }
+            .buttonStyle(.borderedProminent)
+        case .normal:
+            Button {
+                action()
+            } label: {
+                label
+            }
+            .buttonStyle(.bordered)
+        case .outlined:
+            // `.bordered` と同じ高さ・形にして、地を消して枠線を引く。文字は強調色ではなく、ふつうの文字の色にする
+            Button {
+                action()
+            } label: {
+                label
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .buttonStyle(.bordered)
+            .tint(.clear)
+            .overlay {
+                Capsule()
+                    .strokeBorder(Theme.line, lineWidth: Theme.lineWidthThin)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
