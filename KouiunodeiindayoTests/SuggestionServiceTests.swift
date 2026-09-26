@@ -287,15 +287,16 @@ struct SuggestionServiceTests {
         let first = try context.addRecord()
         let later = try context.addRecord()
         let probe = SuggesterProbe(failuresBeforeSuccess: 1)
-        var policy = Self.fastPolicy(backoffStart: .milliseconds(300), backoffMax: .milliseconds(300))
-        policy.idleReset = .milliseconds(100)
+        // 戻す境目は、負荷で問い合わせ直しが遅れても当たらないよう、間（100ms）より十分長くする
+        var policy = Self.fastPolicy(backoffStart: .milliseconds(100), backoffMax: .milliseconds(100))
+        policy.idleReset = .seconds(1)
         let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest, policy: policy)
         service.requestSuggestion(for: first.id, photoFileName: first.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { first.suggestedAt != nil }
         // 失敗 1 回で広がり、成功 1 回ではまだ戻らない
-        #expect(service.interval == .milliseconds(300))
+        #expect(service.interval == .milliseconds(100))
 
-        try await Task.sleep(for: .milliseconds(400))
+        try await Task.sleep(for: .milliseconds(1200))
         service.requestSuggestion(for: later.id, photoFileName: later.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { later.suggestedAt != nil }
         #expect(service.interval == .zero)
