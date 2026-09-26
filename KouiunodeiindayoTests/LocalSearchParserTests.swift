@@ -55,6 +55,12 @@ struct LocalSearchParserTests {
         #expect(LocalSearchParser.parse("昔のラーメン").period == .earlier)
     }
 
+    @Test func 今年を読む() {
+        let condition = LocalSearchParser.parse("今年のラーメン")
+        #expect(condition == SearchCondition(tag: Kouiunodeiindayo.Tag.ramen, period: .thisYear))
+        #expect(LocalSearchParser.parse("ことしのうまいもの").period == nil)
+    }
+
     @Test func 呼び名でも当たる() {
         #expect(LocalSearchParser.parse("すし").tag == .sushi)
         #expect(LocalSearchParser.parse("ビール").tag == .alcohol)

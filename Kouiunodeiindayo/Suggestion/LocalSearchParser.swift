@@ -35,6 +35,7 @@ enum LocalSearchParser {
         (.today, ["今日"]),
         (.thisWeek, ["今週"]),
         (.thisMonth, ["今月"]),
+        (.thisYear, ["今年"]),
         (.earlier, ["前に", "前の", "昔"]),
     ]
 

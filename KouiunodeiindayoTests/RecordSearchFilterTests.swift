@@ -77,6 +77,13 @@ struct RecordSearchFilterTests {
         #expect(!RecordSearchFilter.matches(Self.date(2026, 9, 1, 0), period: .earlier, now: Self.now, calendar: c))
     }
 
+    @Test func 今年は1月1日以降で未来も入る() {
+        let c = Self.calendar
+        #expect(RecordSearchFilter.matches(Self.date(2026, 1, 1, 0), period: .thisYear, now: Self.now, calendar: c))
+        #expect(!RecordSearchFilter.matches(Self.date(2025, 12, 31, 23), period: .thisYear, now: Self.now, calendar: c))
+        #expect(RecordSearchFilter.matches(Self.date(2026, 12, 1), period: .thisYear, now: Self.now, calendar: c))
+    }
+
     @Test func 週の始まりが月曜なら月曜から() {
         var monday = Self.calendar
         monday.firstWeekday = 2
