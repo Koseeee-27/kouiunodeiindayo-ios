@@ -141,3 +141,11 @@
 - Issue の完成の条件との対応：1つ目 → ステップ 7／2つ目 → ステップ 5 の `RecordStoreTagsTests`／3つ目 → ステップ 5 の `RecordTests`
 - 実機での確認：要らない（Issue のとおり。画面・カメラ・手触りを触らない）
 - PR を出す前に `docs/rules/self-review.md` のセルフレビュー。`Data/` の変更で #82〜#85 が全部乗るので、別のツールにも見せることを勧める
+
+## 実装で変えたこと（2026-09-26）
+
+- テストは計画の3ファイルに加えて `KouiunodeiindayoTests/TestSupport.swift`（メモリ上のコンテナ・一時フォルダの `PhotoStorage`・`RecordStore` をまとめて作る `TestStore`）を足した。テストのターゲットは既定のアクター分離がアプリと違う（MainActor でない）ので、テストの `struct` には `@MainActor` を付けた。`SampleData.makeImage(color:)` の `UIColor` を使うため `import UIKit` が要る（`MemberImportVisibility` でエラーになる）
+- `SampleData` の仕分け待ちへの `saveSuggestion` は、ループの後ではなくループの中（`setTags` の後、`genre == .unsorted` のとき）で呼んだ。記録を取り直す手間が無いため。結果は計画と同じ
+- `Tag.visionLabels`・`category`・`cuisine` の `switch` は、料理以外をまとめて `default:` にした
+- `docs/architecture.md` は、ステップ 8 の1文に加えて、「タグを変える」の行に「重複を除き、タグの一覧の順に並べ直して書く」（決めたこと 3）を足し、フォルダ構成に `KouiunodeiindayoTests/` を足した
+- ステップ 7 は、アルバムから選ぶ操作の代わりに、main の版が作った `default.store` の `ZRECORD` に sqlite3 で古い形の記録を4件入れて行った（アプリの入っていないシミュレータ iPhone 17 で。普段使いのシミュレータのデータを消さないため）。開いたときの画面は `simctl spawn … defaults write <bundle id> launchScreen home` でホームにした。結果は落ちず、4 列が足されて4件とも残った
