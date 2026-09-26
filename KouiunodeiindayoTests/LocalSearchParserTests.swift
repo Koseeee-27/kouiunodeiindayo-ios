@@ -43,6 +43,27 @@ struct LocalSearchParserTests {
         #expect(LocalSearchParser.parse("今月のご飯もの").period == .thisMonth)
     }
 
+    @Test func 今月より前と以前は今月にならない() {
+        #expect(LocalSearchParser.parse("今月より前のうまいもの").period == .earlier)
+        #expect(LocalSearchParser.parse("今月以前").period == .earlier)
+        #expect(LocalSearchParser.parse("昔のラーメン").period == .earlier)
+    }
+
+    @Test func 呼び名でも当たる() {
+        #expect(LocalSearchParser.parse("すし").tag == .sushi)
+        #expect(LocalSearchParser.parse("ビール").tag == .alcohol)
+        #expect(LocalSearchParser.parse("酒").tag == .alcohol)
+    }
+
+    @Test func 料理が2つ当たったらタグの一覧の順で先のもの() {
+        // 「アイスコーヒー」は「アイス」と「コーヒー」の両方に当たる。一覧の順（コーヒーが先）で 1 つ
+        #expect(LocalSearchParser.parse("アイスコーヒー").tag == .coffee)
+    }
+
+    @Test func カタカナのウマイでも当たる() {
+        #expect(LocalSearchParser.parse("ウマイ").favoriteOnly)
+    }
+
     @Test func 読み取れない言葉は空() {
         #expect(LocalSearchParser.parse("こんにちは").isEmpty)
         #expect(LocalSearchParser.parse("").isEmpty)
