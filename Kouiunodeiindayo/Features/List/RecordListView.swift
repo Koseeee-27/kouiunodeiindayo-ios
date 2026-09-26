@@ -25,13 +25,16 @@ struct RecordListView: View {
         ScrollView {
             // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
             VStack(alignment: .leading, spacing: 16) {
-                TitleLogoView()
-                    .padding(.horizontal)
-                // タイトルと下の内容の区切り線
-                Rectangle()
-                    .fill(Theme.line)
-                    .frame(height: Theme.lineWidthThick)
-                    .accessibilityHidden(true)
+                // ロゴと区切り線は、近づけて1組にする
+                VStack(alignment: .leading, spacing: 4) {
+                    TitleLogoView()
+                        .padding(.horizontal)
+                    // タイトルと下の内容の区切り線
+                    Rectangle()
+                        .fill(Theme.line)
+                        .frame(height: Theme.lineWidthThick)
+                        .accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 16) {
                     if !unsortedRecords.isEmpty {
                         sortEntry
