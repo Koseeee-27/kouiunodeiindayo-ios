@@ -32,15 +32,16 @@ struct RecordStoreTagsTests {
 
     // MARK: 提案を保存する
 
-    @Test func 仕分け待ちには提案が入りタグは空のまま() throws {
+    @Test func 仕分け待ちには提案が入り付いているタグは変わらない() throws {
         let context = TestStore()
         let record = try context.addRecord()
+        context.store.setTags([.coffee], for: record)
         let date = Date(timeIntervalSince1970: 1_000)
         context.store.saveSuggestion(genre: .food, tags: [.chinese, .ramen, .ramen], for: record.id, at: date)
         #expect(record.suggestedGenre == "food")
         #expect(record.suggestedTags == ["ramen", "chinese"])
         #expect(record.suggestedAt == date)
-        #expect(record.tags.isEmpty)
+        #expect(record.tags == ["coffee"])
     }
 
     @Test func 仕分け済みの記録には何も書かない() throws {
