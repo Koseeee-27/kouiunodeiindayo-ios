@@ -63,20 +63,9 @@ struct RecordListView: View {
     }
 
     private var sortEntry: some View {
-        Button {
+        SortEntryBubbleView(count: unsortedRecords.count) {
             isSortShown = true
-        } label: {
-            HStack {
-                Image(systemName: "tray.full")
-                Text("仕分け待ち \(unsortedRecords.count) 枚")
-                Spacer()
-                Image(systemName: "chevron.right")
-            }
-            .padding()
-            .background(.regularMaterial, in: .rect(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("仕分け待ち \(unsortedRecords.count) 枚。仕分けを始める")
     }
 
     /// 写真どうしの隙間（上下左右とも同じ）
