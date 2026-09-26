@@ -29,6 +29,11 @@ struct RecordListView: View {
     /// 読み取れなかったときの知らせ。一覧はそのまま
     @State private var message: String?
     @FocusState private var isSearchFocused: Bool
+    /// 詳細を開いた時点の並び。詳細で「うまい」などを変えて絞り込みから外れても、開いている詳細のページが飛ばないように、開いたときの並びを渡す
+    @State private var detailRecords: [Record] = []
+    /// 時期で絞るときの「今」。日付が変わったとき・アプリに戻ったとき・探したときに取り直す
+    @State private var now = Date.now
+    @Environment(\.scenePhase) private var scenePhase
 
     /// プレビューで、欄に言葉を入れて探した状態を見るための言葉。開いたときに一度だけ探す
     private let previewSearchText: String?
@@ -40,7 +45,7 @@ struct RecordListView: View {
 
     /// 画面に出す記録。絞り込み中は、条件に合うものだけ（並びは新しい順のまま）
     private var displayed: [Record] {
-        condition.map { RecordSearchFilter.filter(records, by: $0) } ?? records
+        condition.map { RecordSearchFilter.filter(records, by: $0, now: now) } ?? records
     }
 
     var body: some View {
@@ -68,12 +73,13 @@ struct RecordListView: View {
                     if !unsortedRecords.isEmpty && condition == nil {
                         sortEntry
                     }
-                    if records.isEmpty {
+                    // 絞り込み中を先に見る（仕分け済みが 0 件のときも「合う記録がありません」とやめるボタンを出す）
+                    if condition != nil && displayed.isEmpty {
+                        noMatchView
+                    } else if records.isEmpty {
                         Text("まだ記録がありません")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 48)
-                    } else if displayed.isEmpty {
-                        noMatchView
                     } else {
                         grid
                     }
@@ -85,12 +91,30 @@ struct RecordListView: View {
         .background(Theme.background)
         // sheet で開くので、閉じても一覧のスクロール位置は残る
         .sheet(item: $selectedRecord) { record in
-            // 絞り込み中は、絞り込んだ中で左右にめくる
-            RecordDetailView(records: displayed, initial: record)
+            // 絞り込み中は、絞り込んだ中で左右にめくる（開いた時点の並び）
+            RecordDetailView(records: detailRecords, initial: record)
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
             SortView()
+        }
+        // 欄を手で空にしたら、絞り込みもやめる（✕ が消えて戻す手段が見えなくならないように）。キーボードは閉じない
+        .onChange(of: searchText) { _, text in
+            if text.isEmpty {
+                condition = nil
+                message = nil
+            }
+        }
+        // 「今日」「今週」「今月」で絞ったまま日付をまたいでも、古い結果が残らないように取り直す
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                now = .now
+            }
+        }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+                now = .now
+            }
         }
         .onAppear {
             if let previewSearchText {
@@ -157,6 +181,7 @@ struct RecordListView: View {
             clear()
             return
         }
+        now = .now
         let parsed = LocalSearchParser.parse(text)
         if parsed.isEmpty {
             condition = nil
@@ -165,6 +190,16 @@ struct RecordListView: View {
             condition = parsed
             message = nil
         }
+        // 結果は画面が変わるだけで読み上げの位置は欄に残るので、件数か知らせを読み上げる
+        let announcement: String
+        if let message {
+            announcement = message
+        } else if displayed.isEmpty {
+            announcement = "合う記録がありません"
+        } else {
+            announcement = "\(displayed.count) 件"
+        }
+        AccessibilityNotification.Announcement(announcement).post()
     }
 
     /// 絞り込みをやめて、元の一覧に戻す
@@ -226,6 +261,7 @@ struct RecordListView: View {
 
     private func photoButton(_ record: Record) -> some View {
         Button {
+            detailRecords = displayed
             selectedRecord = record
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail)
