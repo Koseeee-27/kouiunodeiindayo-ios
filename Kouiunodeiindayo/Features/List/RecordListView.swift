@@ -125,6 +125,8 @@ struct RecordListView: View {
         .accessibilityLabel(
             "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")。記録の詳細を開く"
         )
+        // はみ出した「うまい」が、右隣の写真の下に隠れないよう、お気に入りの写真を手前に描く
+        .zIndex(record.isFavorite ? 1 : 0)
     }
 }
 

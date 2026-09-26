@@ -53,15 +53,17 @@ enum Theme {
     /// 仕分けのカード・ホームの今日の一枚・記録の詳細で使う。一覧とホームの最近の写真は正方形
     static let photoAspectRatio: CGFloat = 3.0 / 4.0
 
-    /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けとホーム・一覧で同じ値を使う
+    /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けの画面と一覧は、それぞれ `sortFavoriteTilt`・`listFavoriteTilt` を使う。この値はホームで使う
     static let favoriteTilt = Angle.degrees(-6)
 
     /// 一覧の「うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
     static let listFavoriteTilt = Angle.degrees(20)
     /// 一覧の「うまい」のハンコの幅
     static let listFavoriteBadgeWidth: CGFloat = 48
-    /// 一覧の「うまい」のハンコを、右上の角から右と下へずらす量
-    static let listFavoriteBadgeOffset = CGSize(width: 6, height: 2)
+    /// 一覧の「うまい」のハンコを、右上の角から右へずらす量
+    static let listFavoriteBadgeOffsetX: CGFloat = 6
+    /// 一覧の「うまい」のハンコを、右上の角から下へずらす量
+    static let listFavoriteBadgeOffsetY: CGFloat = 2
 
     /// 仕分けの画面の「う、うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
     static let sortFavoriteTilt = Angle.degrees(18)

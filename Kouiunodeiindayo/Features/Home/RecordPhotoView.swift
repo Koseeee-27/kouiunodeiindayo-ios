@@ -3,7 +3,8 @@ import SwiftUI
 import UIKit
 
 /// 記録1件の写真を `PhotoStorage` から読んで出す。写真本体かサムネイルかは `kind` で選ぶ。
-/// `SortCardView` と同じ型（地の上に重ねてから切り抜く・記録が変わったときだけ読む）。一覧（#12）のグリッドでも使える。
+/// `SortCardView` と同じ型（地の上に重ねてから切り抜く・記録が変わったときだけ読む）。一覧（#12）のグリッドでも使う。
+/// 一覧の「うまい」のハンコは、枠からはみ出させるため、この部品の中ではなく、`listFavoriteBadge` で枠のあとに重ねる。
 /// 大きさと枠（`photoFrame`）は呼ぶ側が決める。押せる場所の `accessibilityLabel` も呼ぶ側の `Button` に付ける。
 struct RecordPhotoView: View {
     enum Kind {
@@ -74,7 +75,8 @@ struct RecordPhotoView: View {
 
 extension View {
     /// 一覧のサムネイルの右上に、お気に入りの「うまい」の絵を、写真の枠から少しはみ出るように重ねる。
-    /// 枠（`photoFrame`）は中身を切り抜くので、枠を付けたあとに呼ぶ。絵は右下がりに傾ける
+    /// 枠（`photoFrame`）は中身を切り抜くので、枠を付けたあとに呼ぶ。絵は右下がりに傾ける。
+    /// 右隣の写真より手前に描くには、呼ぶ側で、グリッドの直下の `Button` に `zIndex` を付ける（`Button` の中の `zIndex` は、グリッドの並びに効かない）
     func listFavoriteBadge(isFavorite: Bool) -> some View {
         overlay(alignment: .topTrailing) {
             if isFavorite {
@@ -84,14 +86,12 @@ extension View {
                     .frame(width: Theme.listFavoriteBadgeWidth)
                     .rotationEffect(Theme.listFavoriteTilt)
                     // 右上の角から、右と下へずらす（傾きで、上と右の枠を少し越える）
-                    .offset(x: Theme.listFavoriteBadgeOffset.width, y: Theme.listFavoriteBadgeOffset.height)
+                    .offset(x: Theme.listFavoriteBadgeOffsetX, y: Theme.listFavoriteBadgeOffsetY)
                     // 隣の写真のタップを奪わない。読み上げは呼ぶ側の `Button` のラベルに含める
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
         }
-        // 右隣の写真より手前に描く（グリッドは後ろの写真が上に重なるため）
-        .zIndex(isFavorite ? 1 : 0)
     }
 }
 

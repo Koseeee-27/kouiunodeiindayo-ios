@@ -17,7 +17,7 @@ Kouiunodeiindayo/
 ├── Features/                  ← 画面ごとに1フォルダ
 │   ├── Home/
 │   │   ├── HomeView.swift         ← 今日の一枚・最近の写真・仕分け待ちの入口・撮るボタン
-│   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使える
+│   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使う（一覧の「うまい」は枠からはみ出させるので、枠のあとに重ねる）
 │   │   └── HomePreviewData.swift  ← ホームのプレビュー用のサンプルデータ
 │   ├── List/
 │   ├── Camera/
