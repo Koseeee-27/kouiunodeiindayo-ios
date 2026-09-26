@@ -85,8 +85,9 @@ private struct LabelBubbleShape: Shape {
         case .right: frame = CGRect(x: frame.minX, y: frame.minY, width: frame.width - tailLength, height: frame.height)
         }
         let base = Self.tailBase
-        // 角の丸みは、尻尾の根元が入るまっすぐな部分（左右の辺）が残る大きさにする
-        let radius = (min(frame.width, frame.height) - base) / 2
+        // 角の丸みは、尻尾の根元が入るまっすぐな部分（左右の辺の長さ = 高さ - 半径 × 2）が、ちょうど根元の幅になる大きさにする。
+        // 小さすぎて負になるときは 0（角なし）にする
+        let radius = max(0, (min(frame.width, frame.height) - base) / 2)
         let midX = frame.midX
         let midY = frame.midY
         var path = Path()

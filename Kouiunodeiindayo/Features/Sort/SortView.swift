@@ -94,7 +94,7 @@ struct SortView: View {
                 )
                 .font(Theme.font(.headline, bold: true))
                 // 読み上げは、今までどおり「あと N 枚」
-                .accessibilityLabel("あと \(records.count) 枚")
+                .accessibilityLabel(Text(verbatim: "あと \(records.count) 枚"))
             }
             HStack {
                 // 位置は仮（画面設計で抜ける手段の形はまだ決まっていない）

@@ -27,7 +27,7 @@ Kouiunodeiindayo/
 │   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
-│   │   ├── SortGenreLabelView.swift ← 縁に重ねるチップ。押すと仕分け・ドラッグ中の強調
+│   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調
 │   │   ├── SortStampView.swift    ← ドラッグ中のスタンプ（見た目は仮）
 │   │   ├── SortPreviewData.swift  ← 仕分けのプレビュー用のサンプルデータ
 │   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数
