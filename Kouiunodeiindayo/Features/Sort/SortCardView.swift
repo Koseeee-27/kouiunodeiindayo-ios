@@ -12,7 +12,7 @@ struct SortCardView: View {
     let onToggleFavorite: () -> Void
     /// 写真を読み込んだとき、その縦横比（幅 ÷ 高さ）を知らせる。`SortCardStackView` が縁のラベルをカードの形に合わせるのに使う
     var onPhotoAspect: (CGFloat) -> Void = { _ in }
-    /// カードを収める枠の縦横比。nil なら渡された場所いっぱいに収める。
+    /// カードを収める枠の縦横比。nil なら渡された場所（3:4）いっぱいに収める。
     /// 後ろのカードは手前のカードの形を渡し、その中に収めて、手前の縁からはみ出さないようにする（`SortCardStackView`）
     var boxAspectRatio: CGFloat? = nil
 
@@ -26,15 +26,14 @@ struct SortCardView: View {
 
     var body: some View {
         // 場所いっぱいを取り、その真ん中に写真の形のカードを置く。余りは透明で、押しても何も起きない（ドラッグも始まらない）
+        // 枠は、あり・なしで別のビューにせず、いつも同じ形のビューで比だけを変える。後ろのカードが手前に来て枠が外れるとき、
+        // 別のビューだと 2 枚が薄く重なって切り替わるが、同じビューなら大きさがバネで広がる（`SortCardStackView` の `withAnimation`）。
+        // 枠なしは場所と同じ 3:4 なので、今までと同じ大きさになる
         Color.clear
             .overlay {
-                if let boxAspectRatio {
-                    Color.clear
-                        .aspectRatio(boxAspectRatio, contentMode: .fit)
-                        .overlay { card }
-                } else {
-                    card
-                }
+                Color.clear
+                    .aspectRatio(boxAspectRatio ?? Theme.photoAspectRatio, contentMode: .fit)
+                    .overlay { card }
             }
             // ドラッグ中は毎フレーム `body` が呼ばれるので、ファイルは記録が変わったときだけ読む
             .task(id: record.id) {
