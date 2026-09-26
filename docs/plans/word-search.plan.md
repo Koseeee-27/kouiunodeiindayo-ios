@@ -47,6 +47,13 @@
 - （レビュー 1・2 周目）詳細には、開いた時点の並びを渡す（絞り込みから外れてもページが飛ばないように）。並びは記録の id で持ち、渡すときに今の `@Query`（絞る前）から引き直す（詳細で消した記録を読まないように）。開く記録と並びは 1 つの値（`DetailSelection`。開いた記録も id で持つ）にまとめて sheet の `item` にし、sheet の中で今の `@Query` から開いた記録と並びを引き直す。開いた記録が消えていたら詳細を作らない（レビュー 3 周目。ホームの詳細も同じ形にした）（別々の `@State` だと、sheet の中身を作るときに並びが空のまま読まれ、詳細が 1 件だけになった。シミュレータで確認）
 - （レビュー 1 周目）`docs/suggestion-api.md` の時期の表を「始まり以降」に直した（日付を未来に直した記録も今週・今月に入る）
 
+## M2 で決めたこと（2026-09-27。こうせいの指示と、実装の前に決めたこと）
+
+- 端末で読み取れた言葉は通信せずに絞る。読み取れないときだけ Worker に聞く。通信できなければ、その旨を出して一覧はそのまま（決めたこと 5 のとおり）
+- ブランチは `feat/85-word-search-m2`（origin/main から。M1 は未マージ）。M1 とぶつからないよう、アプリの `SearchPeriod` には触らない（「今年」は M1 で足す）。Worker と `suggestion-api.md` は `this_year` も返す形にし、`suggestion-api.md` の `this_year` の行は M1 と同じ文にする（マージでぶつからないように）。M1 が入るまでは、アプリは `this_year` を読めずに時期の指定なしとして扱う
+- Worker の確かめは `npm run check` と、偽の Jev で `/search` を呼ぶスクリプト（`scripts/check-search.mjs`、`npm run check:search`）。本番の Worker と Jev は呼ばない。`try-search.sh` は、デプロイ後にこうせいが本番に向けて使う
+- 11:30 でコードを止める。1.5 時間を超えそうなら、アプリ側を後に回して Worker 側（`server/` と `suggestion-api.md`）を先に仕上げる
+
 ## 前提・確認事項
 
 - `docs/suggestion-api.md` に `POST /search` の形（送る `{ query }`・返る `{ tag, favoriteOnly, period }`・時間切れ 3 秒・エラー）は #79 で決まっている。Worker は今 `/search` を 404 で返す（`server/src/index.ts`）
