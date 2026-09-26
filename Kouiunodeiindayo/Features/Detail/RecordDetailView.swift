@@ -196,13 +196,14 @@ struct RecordDetailPageView: View {
     /// 付け直せるジャンル。「なし」は選択肢に置かず、選択中のジャンルをもう一度押して外す
     private static let selectableGenres: [Genre] = [.food, .drink, .dessert]
 
-    /// 写真の場所。3:4 の場所を取り、写真はその真ん中に、切らずに写真の形のまま置く（縦長・横長・正方形のどれでも）。
+    /// 写真の場所。3:4 の場所を取り、写真はその下にそろえて、切らずに写真の形のまま置く（縦長・横長・正方形のどれでも）。
+    /// 写真と日付がいつもくっつき、横長・正方形の空きは写真の上だけに出る。
     /// 場所の形がどの記録でも同じなので、前後にめくっても日付から下の位置が変わらない。
     /// 枠は写真に付ける。ホームの今日の一枚・仕分けのカード（`.main`）より少し細い `.small`
     private var photoArea: some View {
         Color.clear
             .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
-            .overlay {
+            .overlay(alignment: .bottom) {
                 if let image {
                     Image(uiImage: image)
                         .resizable()
@@ -215,7 +216,7 @@ struct RecordDetailPageView: View {
                         .photoFrame(.small)
                 }
             }
-            // 場所は横幅いっぱいまで。高さで決まるときは、真ん中に置く
+            // 場所は横幅いっぱいまで。高さで決まるときは、左右の真ん中に置く
             .frame(maxWidth: .infinity)
     }
 
@@ -411,4 +412,9 @@ private let aspectTags: [Tag] = [.ramen, .noodles, .chinese]
 #Preview("正方形・文字サイズ最大") {
     taggedDetailPreview(tags: aspectTags, photoSize: squareSize)
         .dynamicTypeSize(.accessibility5)
+}
+
+/// 「縦長・ふつう」（タグ 3 個＝1 行）と並べて、タグが 2 行の記録にめくったときに写真と日付から下が跳ねないかを見る
+#Preview("縦長・ふつう・タグ 6 個") {
+    taggedDetailPreview(tags: [.ramen, .gyoza, .noodles, .fried, .chinese, .japanese], photoSize: portraitSize)
 }
