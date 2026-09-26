@@ -125,6 +125,39 @@ struct SuggestionClientTests {
         #expect(try SuggestionClient.decodeResult(from: data) == SuggestionResult(genre: .dessert, tags: [.cake]))
     }
 
+    // MARK: ジャンルの確率
+
+    @Test func ジャンルの確率を読む() throws {
+        let data = Data(#"{"genre":"food","genreConfidence":0.93,"tags":[]}"#.utf8)
+        let result = try SuggestionClient.decodeResult(from: data)
+        #expect(result == SuggestionResult(genre: .food, genreConfidence: 0.93, tags: []))
+    }
+
+    @Test func 確率の項目が無ければnil() throws {
+        let data = Data(#"{"genre":"food","tags":[]}"#.utf8)
+        #expect(try SuggestionClient.decodeResult(from: data).genreConfidence == nil)
+    }
+
+    @Test func ジャンルがnullなら確率だけあってもnil() throws {
+        let data = Data(#"{"genre":null,"genreConfidence":0.9,"tags":[]}"#.utf8)
+        #expect(try SuggestionClient.decodeResult(from: data) == .empty)
+    }
+
+    @Test(arguments: [1.5, -0.1])
+    func 範囲の外の確率はnil(confidence: Double) throws {
+        let data = Data(#"{"genre":"drink","genreConfidence":\#(confidence),"tags":[]}"#.utf8)
+        let result = try SuggestionClient.decodeResult(from: data)
+        #expect(result.genre == .drink)
+        #expect(result.genreConfidence == nil)
+    }
+
+    @Test func 提案できないジャンルなら確率もnil() throws {
+        let data = Data(#"{"genre":"unsorted","genreConfidence":0.9,"tags":[]}"#.utf8)
+        let result = try SuggestionClient.decodeResult(from: data)
+        #expect(result.genre == nil)
+        #expect(result.genreConfidence == nil)
+    }
+
     @Test func 壊れたJSONはthrowする() {
         #expect(throws: (any Error).self) {
             try SuggestionClient.decodeResult(from: Data("not json".utf8))

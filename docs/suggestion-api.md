@@ -58,29 +58,32 @@ Worker を挟む理由と構成は `docs/adr/0006-suggestion-vision-jev.md`。�
 
 ### 確信度の扱い
 
-- 確信度を「強い・弱い」の言葉に分けるのは Worker。Jev には数値を渡さない（ADR 0006）。境目の値は Worker に置く。アプリを入れ直さずに調整できるようにするため
+- 確信度を「強い・弱い」の言葉に分けるのは Worker。Jev には数値を渡さない（ADR 0006）。提案を出すかの境目は Worker に置く。アプリを入れ直さずに調整できるようにするため
+- おまかせ（機能26）で任せるかの境目は、アプリに置く（返りの `genreConfidence` を記録に保存して、アプリの定数と比べる。境目を変えると、提案が届き済みの写真にもすぐ効く）
 
 ### 返る
 
 提案があるとき：
 
 ```json
-{ "genre": "food", "tags": ["ramen", "noodles", "chinese"] }
+{ "genre": "food", "genreConfidence": 0.93, "tags": ["ramen", "noodles", "chinese"] }
 ```
 
 自信が低いとき（提案なし）：
 
 ```json
-{ "genre": null, "tags": [] }
+{ "genre": null, "genreConfidence": null, "tags": [] }
 ```
 
 | 項目 | 型 | 内容 |
 |---|---|---|
 | `genre` | 文字列か `null` | `food`／`drink`／`dessert` のどれか。提案しないときは `null`。`unsorted`・`none` は返さない |
+| `genreConfidence` | 数値か `null` | `genre` を返すときの確率（0〜1、小数第2位）。`genre` が `null` なら `null`。アプリはおまかせで任せるかの判定に使う（`docs/data-model.md` の `suggestedGenreConfidence`） |
 | `tags` | 文字列の配列 | タグのキー。重複なし。空でもよい。`genre` が `null` でも、`tags` があることはある |
 
 - 提案なしも **200** で返す。アプリはこれを受けて `suggestedAt` を書く（問い合わせ済みにする）
 - Worker は、`docs/data-model.md` にあるキーだけを返す。アプリは、知らないキーが来たら捨てる（落とさない）
+- 古いアプリは知らない項目（`genreConfidence`）を読み飛ばす。新しいアプリが古い Worker を呼ぶと、確率が無い＝おまかせの対象にならないだけ。Worker のデプロイとアプリの入れ替えは、どちらが先でもよい
 - 料理のタグは、対応する Vision のラベルが `labels` にあるときだけ返す（`docs/data-model.md` の「タグの値」）
 
 ## `POST /search`（機能28）

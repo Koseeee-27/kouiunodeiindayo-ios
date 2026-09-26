@@ -27,13 +27,14 @@ Kouiunodeiindayo/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
 │   ├── Sort/                  ← 仕分け
-│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す。`importedIDs` を渡すと、アルバムから取り込んだ写真だけを出す
+│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す。`importedIDs` を渡すと、アルバムから取り込んだ写真だけを出す。右上の「おまかせ」（任せられる写真を先頭に出して、`SortCardStackView` に 1 枚ずつ飛ばしてもらう）
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理。下のラベルの下に、提案されたタグの行を置く
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
 │   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調・提案されたジャンルの点線
 │   │   ├── SortSuggestedTagsView.swift ← 提案されたタグの − つきのチップの行。押すと外す・付ける
 │   │   ├── SortTagSelection.swift ← 付いているタグ（提案 − 外したもの）と、次に進むときの書き込み（タグ → ジャンル）
 │   │   ├── SortStampView.swift    ← ドラッグ中のスタンプ（見た目は仮）
+│   │   ├── AutoSortPolicy.swift   ← おまかせで任せる写真の決まりと、確率の境目（アプリの定数）
 │   │   ├── SortPreviewData.swift  ← 仕分けのプレビュー用のサンプルデータ
 │   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数
 │   ├── Detail/
@@ -93,7 +94,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 | ジャンルを変える（記録、ジャンル） | `genre` を書き換える。仕分けのスワイプ、ラベルのタップ、詳細での付け直しが、どれもこれを呼ぶ |
 | うまいを切り替える（記録） | `isFavorite` を反転する |
 | タグを変える（記録、タグ） | `tags` を書き換える。仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）、詳細での付け直しが、どれもこれを呼ぶ。重複を除き、タグの一覧の順（`Tag.allCases`）に並べ直して書く |
-| 提案を保存する（記録の `id`、ジャンル、タグ） | `id` で記録を取り直し、`suggestedGenre`・`suggestedTags`・`suggestedAt` を書く。`tags` には触らない（仕分けの画面が `suggestedTags` を最初の状態として持ち、次に進むときに「タグを変える」で書く）。記録が消えていた・もう仕分け済みなら、何も書かない。もう問い合わせ済み（`suggestedAt` が入っている）なら、何も書かない（先に届いたほうを使う。仕分けの画面で外したタグが、あとから届いた提案で戻らないように） |
+| 提案を保存する（記録の `id`、ジャンル、タグ） | `id` で記録を取り直し、`suggestedGenre`・`suggestedGenreConfidence`（ジャンルがあるときだけ）・`suggestedTags`・`suggestedAt` を書く。`tags` には触らない（仕分けの画面が `suggestedTags` を最初の状態として持ち、次に進むときに「タグを変える」で書く）。記録が消えていた・もう仕分け済みなら、何も書かない。もう問い合わせ済み（`suggestedAt` が入っている）なら、何も書かない（先に届いたほうを使う。仕分けの画面で外したタグが、あとから届いた提案で戻らないように） |
 | 撮影日時を変える（記録、日時） | `takenAt` を書き換える（機能13） |
 | 消す（記録） | 記録と、写真・サムネイルのファイルを消す（機能11） |
 | すべて消す | すべての記録と、写真・サムネイルのファイルを消す（機能20） |
@@ -115,6 +116,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 
 - 問い合わせを始めるのは2か所：撮った直後（`CameraFlowView` が `RecordStore` の「追加」のあとに呼ぶ）と、仕分けの画面を開いたとき（`SortView` が、仕分け待ちのうち `suggestedAt` が `nil` の写真を問い合わせる）
   - アルバムからの取り込みでは頼まない。取り込み後に開く仕分けの画面が、画面に出る順に頼む（取り込み側からも頼むと、選んだ順で待ち行列に入り、先頭の写真の提案が遅れる）
+- Worker はジャンルの確率（`genreConfidence`）も返し、`suggestedGenreConfidence` に保存する。おまかせは、仕分けの画面に出ている写真のうち確率が境目（`AutoSortPolicy.threshold`）以上のものだけを、手で仕分けたときと同じ書き込み（タグ → ジャンル。`SortTagSelection.commit`）で確定する。おまかせ専用の書き込みの関数は作らない
 - 裏の処理には、`Record` そのものではなく `id` と `photoFileName` だけを渡す（`@Model` はスレッドをまたいで渡せない）。結果を保存するときに、メインスレッドで `id` から記録を取り直す
 - アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`
 - 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る

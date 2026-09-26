@@ -43,6 +43,8 @@ struct SortCardView: View {
 
     private var favoriteButton: some View {
         Button {
+            // `allowsHitTesting` は指のタップだけを止めるので、読み上げから押されたときもここで止める
+            guard isFavoriteEnabled else { return }
             onToggleFavorite()
         } label: {
             // 2 つの絵は縦横比が少し違うので、幅をそろえて `scaledToFit` にし、切り替わっても位置がずれないようにする
