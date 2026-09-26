@@ -64,7 +64,7 @@ enum HomePreviewData {
     static func makeTaggedContainer(tags: [Tag], photoSize: CGSize? = nil) -> ModelContainer {
         let container = SampleData.makeContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
-        let image = photoSize.map(makeShapedImage) ?? SampleData.makeImage(color: .systemOrange)
+        let image = photoSize.map { makeShapedImage(size: $0) } ?? SampleData.makeImage(color: .systemOrange)
         // プレビュー用なので、作れなければ落として気づく
         let record = try! store.add(image: image, takenAt: .now)
         store.setGenre(.food, for: record)
@@ -72,13 +72,13 @@ enum HomePreviewData {
         return container
     }
 
-    /// 形の分かる写真の代わり。橙の地に格子と、真ん中の丸（縦横比が崩れると丸がつぶれる）
-    private static func makeShapedImage(size: CGSize) -> UIImage {
+    /// 形の分かる写真の代わり。`color`（既定は橙）の地に格子と、真ん中の丸（縦横比が崩れると丸がつぶれる）。仕分けのプレビューでも使う
+    static func makeShapedImage(size: CGSize, color: UIColor = .systemOrange) -> UIImage {
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1
         format.opaque = true
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
-            UIColor.systemOrange.setFill()
+            color.setFill()
             context.fill(CGRect(origin: .zero, size: size))
             UIColor.systemBrown.setFill()
             for x in stride(from: 0, to: size.width, by: 200) {
