@@ -139,6 +139,33 @@ struct PhotoImporterTests {
         #expect(result.failedCount == 0)
     }
 
+    @Test func 選んだのが1枚だけなら判定せずに取り込む() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved)
+        var labelCalls = 0
+        runner.labels = { _ in
+            labelCalls += 1
+            return [ImageLabel(name: "desk", confidence: 0.9)]
+        }
+        let result = await runner.run([0], onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 1)
+        #expect(result.excludedCount == 0)
+        #expect(labelCalls == 0)
+    }
+
+    @Test func 選んだのが2枚なら食事らしくない写真を除く() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved)
+        var calls = 0
+        runner.labels = { _ in
+            calls += 1
+            return calls == 1 ? Self.foodLabels : [ImageLabel(name: "desk", confidence: 0.9)]
+        }
+        let result = await runner.run([0, 1], onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 1)
+        #expect(result.excludedCount == 1)
+    }
+
     @Test func 判定に失敗した写真は食事扱いで取り込む() async {
         let saved = SavedPhotos()
         var runner = Self.makeRunner(saved: saved)
