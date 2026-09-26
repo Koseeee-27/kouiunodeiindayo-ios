@@ -17,13 +17,15 @@ struct RecordDetailView: View {
     }
 
     var body: some View {
+        // ページごとに探し直さないよう、今の位置は1回だけ求める
+        let currentIndex = selectedIndex
         // 指についてくる横スワイプにするため、記録を `.page` スタイルのページャーに横に並べる
         TabView(selection: $selectedID) {
             ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
                 RecordDetailPageView(
                     record: record, position: index + 1, total: records.count,
                     // 今のページと、その前後1件だけ写真を読む（全件の写真本体を一度に持つと、メモリ不足で落ちる）
-                    shouldLoadPhoto: abs(index - selectedIndex) <= 1
+                    shouldLoadPhoto: abs(index - currentIndex) <= 1
                 ) { delta in
                     move(from: index, by: delta)
                 }
