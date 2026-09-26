@@ -13,18 +13,19 @@ enum SampleData {
         return try! ModelContainer(for: Record.self, configurations: configuration)
     }
 
-    /// サンプルを 5 件入れたコンテナ。ジャンルと「うまい」を一通り含む。
+    /// サンプルを 5 件入れたコンテナ。ジャンル・「うまい」・タグ・提案を一通り含む。
+    /// 仕分け待ちの1件には提案（食べ物・ラーメン・麺類・中華）が届いている。
     static func makePreviewContainer() -> ModelContainer {
         _ = cleanedPhotoDirectory
         let container = makeContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: photoStorage)
 
-        let samples: [(color: UIColor, genre: Genre, isFavorite: Bool, daysAgo: Int)] = [
-            (.systemOrange, .unsorted, false, 0),
-            (.systemRed, .food, true, 0),
-            (.systemTeal, .drink, false, 1),
-            (.systemPink, .dessert, true, 2),
-            (.systemGray, .noGenre, false, 3),
+        let samples: [(color: UIColor, genre: Genre, isFavorite: Bool, tags: [Tag], daysAgo: Int)] = [
+            (.systemOrange, .unsorted, false, [], 0),
+            (.systemRed, .food, true, [.ramen, .noodles, .chinese], 0),
+            (.systemTeal, .drink, false, [.coffee], 1),
+            (.systemPink, .dessert, true, [.cake], 2),
+            (.systemGray, .noGenre, false, [], 3),
         ]
         for sample in samples {
             let takenAt = Date.now.addingTimeInterval(-oneDay * Double(sample.daysAgo))
@@ -33,6 +34,10 @@ enum SampleData {
             store.setGenre(sample.genre, for: record)
             if sample.isFavorite {
                 store.toggleFavorite(record)
+            }
+            store.setTags(sample.tags, for: record)
+            if sample.genre == .unsorted {
+                store.saveSuggestion(genre: .food, tags: [.ramen, .noodles, .chinese], for: record.id)
             }
         }
         return container
