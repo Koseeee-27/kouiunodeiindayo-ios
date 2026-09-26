@@ -8,6 +8,10 @@ struct SuggestionMock: SuggestionService {
     let result: SuggestionResult?
     /// 提案が後から届く様子を見るための待ち時間。
     var delay: Duration = .milliseconds(300)
+    /// 何も保存せず、ずっと「待っている」にする。プレビューで「提案を待っています…」を見るため
+    var waitsForever = false
+    /// 届くのを待っている写真（`delay` の間）
+    private let pending = SuggestionPendingIDs()
 
     /// 何もしない。`@Environment` の既定値。
     static let disabled = SuggestionMock(result: nil)
@@ -19,11 +23,17 @@ struct SuggestionMock: SuggestionService {
         result: SuggestionResult(genre: .food, genreConfidence: 0.6, tags: [.ramen, .noodles, .chinese]))
     /// 提案なし（Worker が自信が低いと返したとき）。問い合わせ済みにはなる。
     static let noSuggestion = SuggestionMock(result: .empty)
+    /// 届かないまま待ち続ける
+    static let waiting = SuggestionMock(result: nil, waitsForever: true)
 
     /// 待たずに、その場で保存する版。プレビューの静止画（スナップショット）は開いた直後に撮られ、
     /// 裏で保存するのを待たないので、確認用のプレビューではこれを使う。
     var immediate: SuggestionMock {
         SuggestionMock(result: result, delay: .zero)
+    }
+
+    func isPending(_ id: UUID) -> Bool {
+        waitsForever || pending.ids.contains(id)
     }
 
     func requestSuggestion(for id: UUID, photoFileName: String, store: RecordStore) {
@@ -33,8 +43,10 @@ struct SuggestionMock: SuggestionService {
                 genre: result.genre, genreConfidence: result.genreConfidence, tags: result.tags, for: id)
             return
         }
+        pending.ids.insert(id)
         Task {
             try? await Task.sleep(for: delay)
+            pending.ids.remove(id)
             store.saveSuggestion(
                 genre: result.genre, genreConfidence: result.genreConfidence, tags: result.tags, for: id)
         }

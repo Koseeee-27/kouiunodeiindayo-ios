@@ -163,7 +163,9 @@ struct SortView: View {
                         SortSuggestedTagsView(
                             tags: record.suggestedTagValues,
                             removed: removed(for: record),
-                            isEnabled: !isCommitting && !isAutoSorting
+                            isEnabled: !isCommitting && !isAutoSorting,
+                            // 先頭の写真だけ読む（待っている写真が変わるたびの描き直しを小さくする）
+                            isWaiting: record.suggestedAt == nil && suggestionService.isPending(record.id)
                         ) { tag in
                             toggle(tag, for: record)
                         }
@@ -584,6 +586,14 @@ struct SortView: View {
         .modelContainer(SortPreviewData.makeUnsuggestedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
         .environment(\.suggestionService, SuggestionMock.disabled)
+}
+
+/// 提案が届くのを待っている間。タグの行に「提案を待っています…」が薄く出る
+#Preview("提案を待っている") {
+    SortView()
+        .modelContainer(SortPreviewData.makeUnsuggestedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.waiting)
 }
 
 /// 静止画では「届く前」になる。キャンバスで動かして、0.3 秒後に届いたときにカードが跳ねないかを見る
