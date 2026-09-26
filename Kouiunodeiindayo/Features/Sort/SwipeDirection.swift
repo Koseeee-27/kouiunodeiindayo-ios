@@ -39,6 +39,17 @@ enum SwipeDirection {
         }
     }
 
+    /// 提案のジャンルから向きを引く（おまかせで、提案のジャンルの向きへ飛ばすため）。
+    /// 提案できるジャンル（食べ物・飲み物・デザート）だけ。「なし」と仕分け待ちは提案されないので nil。
+    init?(suggestedGenre genre: Genre) {
+        switch genre {
+        case .food: self = .up
+        case .drink: self = .left
+        case .dessert: self = .right
+        case .noGenre, .unsorted: return nil
+        }
+    }
+
     /// ドラッグ中の移動量から、いま向いている向き。縦横の大きいほうを採る。動きが小さければ nil。
     static func direction(for translation: CGSize) -> SwipeDirection? {
         guard let direction = mainDirection(of: translation),
