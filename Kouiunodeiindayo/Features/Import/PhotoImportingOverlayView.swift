@@ -22,6 +22,8 @@ struct PhotoImportingOverlayView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.opacity(0.85))
         .accessibilityElement(children: .combine)
+        // 読み上げでも幕だけを対象にし、下のホーム・一覧・下タブに移れなくする
+        .accessibilityAddTraits(.isModal)
     }
 }
 

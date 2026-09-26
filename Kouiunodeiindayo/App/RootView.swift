@@ -40,6 +40,8 @@ struct RootView: View {
             .contentMargins(.bottom, tabBarHeight + bottomSafeArea, for: .scrollContent)
             // `contentMargins` はスクロールする中身にしか効かない。スクロールしない版のホームは、この値で下を空ける
             .environment(\.tabBarInset, tabBarHeight + bottomSafeArea)
+            // 取り込み中は、幕の下のホーム・一覧を読み上げの対象から外す（幕の `isModal` と二重に）
+            .accessibilityHidden(isImporting)
             // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
             // （`ambiguous use of '__designTimeSelection'`）。クロージャで包むと通る
             RootTabBar(selected: isCameraShown ? .camera : page) { tab in
