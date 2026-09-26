@@ -50,13 +50,18 @@ struct PhotoStorage {
 
     /// 写真本体を読む。ホームの今日の一枚・仕分けのカード・記録の詳細で使う。
     func photo(fileName: String) -> UIImage? {
-        let url = directory.appending(path: fileName)
+        let url = photoURL(fileName: fileName)
         guard let image = UIImage(contentsOfFile: url.path(percentEncoded: false)) else {
             // 記録を消した直後の再描画などでも通るので、error にはしない
             Self.logger.notice("写真を読めなかった: \(fileName, privacy: .public)")
             return nil
         }
         return image
+    }
+
+    /// 写真ファイルの場所。画像を読まずにファイルのまま渡したいとき（Vision に渡すなど）に使う。
+    func photoURL(fileName: String) -> URL {
+        directory.appending(path: fileName)
     }
 
     /// 一覧のグリッドなど、小さく並べる場所で使う。
