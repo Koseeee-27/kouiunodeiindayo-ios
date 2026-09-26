@@ -43,8 +43,12 @@ struct RecordStore {
 
     /// 「タグを変える」。仕分けで次に進むときと、詳細での付け外しが呼ぶ。
     /// 重複を除き、タグの一覧の順に並べ直して書く（付け外しした順で並びがぶれないように）。`suggestedTags` には触らない。
+    /// 今の `tags` にある知らないキー（新しい版のアプリが付けたタグなど）は、消さずにうしろに残す
+    /// （`docs/data-model.md` の「知らないキーは表示しない（落とさない）」。画面は `tagValues` で知らないキーを除いて渡してくるため）。
     func setTags(_ tags: [Tag], for record: Record) {
-        record.tags = Self.normalized(tags)
+        var seen = Set<String>()
+        let unknownKeys = record.tags.filter { Tag(rawValue: $0) == nil && seen.insert($0).inserted }
+        record.tags = Self.normalized(tags) + unknownKeys
     }
 
     /// 「提案を保存する」。裏の問い合わせの結果を、メインスレッドで `id` から記録を取り直して書く。

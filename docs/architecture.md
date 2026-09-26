@@ -31,14 +31,17 @@ Kouiunodeiindayo/
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理。下のラベルの下に、提案されたタグの行を置く
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
 │   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調・提案されたジャンルの点線
-│   │   ├── SortSuggestedTagsView.swift ← 提案されたタグの − つきのチップの行。押すと外す・付ける
+│   │   ├── SortSuggestedTagsView.swift ← 提案されたタグの − つきのチップ（`TagChipView`）の行。押すと外す・付ける
 │   │   ├── SortTagSelection.swift ← 付いているタグ（提案 − 外したもの）と、次に進むときの書き込み（タグ → ジャンル）
 │   │   ├── SortStampView.swift    ← ドラッグ中のスタンプ（見た目は仮）
 │   │   ├── AutoSortPolicy.swift   ← おまかせで任せる写真の決まりと、確率の境目（アプリの定数）
 │   │   ├── SortPreviewData.swift  ← 仕分けのプレビュー用のサンプルデータ
 │   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数
 │   ├── Detail/
-│   │   └── RecordDetailView.swift ← 記録の詳細
+│   │   ├── RecordDetailView.swift ← 記録の詳細。入り切らないとき（タグが多い・文字が大きい）だけ縦にスクロールする
+│   │   ├── RecordDetailTagsView.swift ← 詳細の、付いているタグの行（− で外す・「＋ タグ」で一覧を開く。折り返す）
+│   │   ├── TagPickerView.swift    ← タグの一覧のシート（種類ごとの見出し。押すと付け外し。押した時点で保存）
+│   │   └── TagEditing.swift       ← タグの付け外しの計算（書き込みは `RecordStore` の「タグを変える」）
 │   ├── Onboarding/            ← 初めて開いたときの説明、カメラの許可を断られたときの案内
 │   │   └── CameraAccessGuideView.swift ← カメラの許可を断られた・制限されているときの案内。設定を開く・アルバムから選ぶ・ホームへ
 │   └── Settings/
@@ -61,6 +64,8 @@ Kouiunodeiindayo/
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
 │   ├── SortEntryBubbleView.swift ← 仕分け待ちへの入口の吹き出し（ホームと一覧で共通）
 │   ├── PhotoFrame.swift       ← 写真の墨のコマ枠（`.photoFrame(.main / .small)`）
+│   ├── TagChipView.swift      ← タグのチップ（付いている：− ／ 外した：点線と ＋）と、タグを足す入口のチップ。仕分け・詳細・タグの一覧で共通
+│   ├── FlowLayout.swift       ← 子を左から並べて、入らなければ次の行に送るレイアウト（タグのチップの折り返し）
 │   └── SoundPlayer.swift      ← 効果音の再生
 └── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
 Config/
@@ -93,7 +98,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 | 追加（写真、撮影日時） | 写真とサムネイルをファイルに保存し、`genre = unsorted` の記録を作る |
 | ジャンルを変える（記録、ジャンル） | `genre` を書き換える。仕分けのスワイプ、ラベルのタップ、詳細での付け直しが、どれもこれを呼ぶ |
 | うまいを切り替える（記録） | `isFavorite` を反転する |
-| タグを変える（記録、タグ） | `tags` を書き換える。仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）、詳細での付け直しが、どれもこれを呼ぶ。重複を除き、タグの一覧の順（`Tag.allCases`）に並べ直して書く |
+| タグを変える（記録、タグ） | `tags` を書き換える。仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）、詳細での付け直しが、どれもこれを呼ぶ。重複を除き、タグの一覧の順（`Tag.allCases`）に並べ直して書く。今の `tags` にある知らないキーは消さずにうしろに残す（画面は知らないキーを除いたタグで渡してくるため） |
 | 提案を保存する（記録の `id`、ジャンル、タグ） | `id` で記録を取り直し、`suggestedGenre`・`suggestedGenreConfidence`（ジャンルがあるときだけ）・`suggestedTags`・`suggestedAt` を書く。`tags` には触らない（仕分けの画面が `suggestedTags` を最初の状態として持ち、次に進むときに「タグを変える」で書く）。記録が消えていた・もう仕分け済みなら、何も書かない。もう問い合わせ済み（`suggestedAt` が入っている）なら、何も書かない（先に届いたほうを使う。仕分けの画面で外したタグが、あとから届いた提案で戻らないように） |
 | 撮影日時を変える（記録、日時） | `takenAt` を書き換える（機能13） |
 | 消す（記録） | 記録と、写真・サムネイルのファイルを消す（機能11） |

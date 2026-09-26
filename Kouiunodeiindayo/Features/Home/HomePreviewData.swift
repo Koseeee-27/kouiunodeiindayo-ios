@@ -59,5 +59,16 @@ enum HomePreviewData {
         return container
     }
 
+    /// 記録の詳細のプレビュー用。「食べ物」の記録 1 件に `tags` を付けたもの（ほかの記録は入れない）。
+    static func makeTaggedContainer(tags: [Tag]) -> ModelContainer {
+        let container = SampleData.makeContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        // プレビュー用なので、作れなければ落として気づく
+        let record = try! store.add(image: SampleData.makeImage(color: .systemOrange), takenAt: .now)
+        store.setGenre(.food, for: record)
+        store.setTags(tags, for: record)
+        return container
+    }
+
     private static let oneDay: TimeInterval = 60 * 60 * 24
 }
