@@ -28,6 +28,9 @@
 - 飛ぶ時間は、ラベルを押したときと同じ 0.25 秒のまま（計画の 0.3 秒にしていない。止め 0.25 秒と次まで 0.2 秒は計画どおり）
 - `SwipeDirection` の逆引きは `init?(suggestedGenre:)`（食べ物・飲み物・デザートだけ。なし・仕分け待ちは nil）。任せられる枚数を数える `AutoSortPolicy.eligibleCount(in:)` を足した
 - `SuggestionResult` は `init(genre:genreConfidence:tags:)` の `genreConfidence` を既定 nil にした（今の呼び出しを直さずに済む）
+- （レビュー 1 周目）止めたときは、飛んでいる 1 枚が保存されてから `autoTargetID` を外す。すぐ外すと並びが戻って先頭が変わり、飛んでいるカードが山に戻っていた
+- （レビュー 1 周目）`SortCardStackView` の飛び終わりの戻しを、`onChange(of: records.first?.id)`（先頭が変わったとき）から `onChange(of: records.map(\.id))` で「飛ばしていた記録が並びから消えたとき」に変えた。先頭が変わっただけでは戻さない。おまかせの並べ替えが戻ったときに、飛んでいるカードが山に戻るため。手のスワイプ・ラベルでも、仕分けた記録が消えるときに先頭も変わるので、戻すタイミングは今までと同じ。古い計画（`sort.plan.md`・`sort-feel.plan.md`）の書き方には戻さない
+- （レビュー 2 周目）止めたとき・飛び始めの待ちが時間切れのときは、まだ飛び始めていない頼みを取り消す。`SortCardStackView` も、おまかせ中で・飛んでいなくて・先頭が頼みの写真のときだけ飛ばす（`AutoSortPolicy.shouldStartFlight`。テストあり）。先頭がもともと頼みの写真だと、止めたあとに遅れて届いた頼みで飛んでしまうため
 - 動きは、確認のときだけアプリの入口に提案のモックを渡す仮の変更（コミットしない）で、シミュレータで確かめた（`.verification/103/notes.md`）
 
 ## 前提・確認事項
@@ -155,9 +158,9 @@ let isAutoSorting: Bool
   1. `guard let next = AutoSortPolicy.nextTarget(in: displayedRecords)` が無ければ終わる（`isAutoSorting = false`、要判断 7 の知らせ）
   2. `autoTargetID = next.id` → 先頭が入れ替わるのを待つ（`await Task.yield()` のあと 0.05 秒）
   3. `autoFlightRequest = AutoFlightRequest(token: UUID(), recordID: next.id, direction: SwipeDirection(genre: next.suggestedGenreValue))`（`Genre` → 向きの逆引きを `SwipeDirection` に足す。`food`→上・`drink`→左・`dessert`→右）
-  4. 飛び終わって先頭が変わるまで待つ（`isCommitting` が true → false になるのを 0.05 秒ごとに見る。上限 2 秒で打ち切り、止める）
+  4. 飛び終わるまで待つ（`isCommitting` が true → false になるのを 0.05 秒ごとに見る。上限 2 秒で打ち切り、止める）。飛び終わりは、飛ばしていた記録が保存されて並びから消えたとき
   5. `autoSortedCount += 1`、0.2 秒待って 1 に戻る
-- 止めたとき（ボタン・✕）：`isAutoSorting = false`。飛んでいる 1 枚は飛び切って保存される（取り消さない）。`autoTargetID = nil` に戻し、並びを元に戻す
+- 止めたとき（ボタン・✕）：`isAutoSorting = false`。まだ飛び始めていない頼み（`autoFlightRequest`）は取り消し、遅れて届いても飛ばさない。飛んでいる 1 枚（止めの 0.25 秒を含む）は飛び切って保存される（取り消さない）。`autoTargetID` はその 1 枚が保存されたとき（`onSort`）に外し、並びを元に戻す。飛んでいなければすぐ外す。✕ は保存のあとで閉じる
 - 飛ばした写真の外したタグ：`removed(for:)` の今の値を使う（おまかせを押す前に、先頭の写真のチップを外していたら、それを守る）
 - 0 枚のとき（要判断 3）：`notice = "自信のある写真がまだありません"`、2 秒後に消す
 - 最後の 1 枚を飛ばして 0 枚になったら、今の `.onChange(of: records.isEmpty)` で閉じる（変えない。#102 の取り込みの版は `visibleRecords.isEmpty` に合わせてあるはず。合わせてなければ #102 に合わせる）
