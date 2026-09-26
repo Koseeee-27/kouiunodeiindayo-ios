@@ -106,7 +106,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 
 - 問い合わせを始めるのは2か所：撮った直後（`CameraFlowView` が `RecordStore` の「追加」のあとに呼ぶ）と、仕分けの画面を開いたとき（`SortView` が、仕分け待ちのうち `suggestedAt` が `nil` の写真を問い合わせる）
 - 裏の処理には、`Record` そのものではなく `id` と `photoFileName` だけを渡す（`@Model` はスレッドをまたいで渡せない）。結果を保存するときに、メインスレッドで `id` から記録を取り直す
-- アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`（#79 で作る）
+- アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`
 - 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
 - 自信が低いとき（Worker が「提案なし」と返したとき）も問い合わせ済みにする：`suggestedAt` を書き、`suggestedGenre` は `nil`、`suggestedTags` は空
 - 通信できない・時間切れ（目安 1.5 秒）のときだけ、何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる
