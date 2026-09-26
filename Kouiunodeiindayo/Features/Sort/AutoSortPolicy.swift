@@ -18,7 +18,8 @@ enum AutoSortPolicy {
 
     /// 任せられる写真のうち、並び順で最初のもの。無ければ nil。
     static func nextTarget(in records: [Record]) -> Record? {
-        records.first(where: isEligible)
+        // 関数をそのまま渡すと、メインのアクターの外から呼ぶ扱いになって警告が出るので、クロージャで包む
+        records.first { isEligible($0) }
     }
 
     /// `id` の写真を先頭に出した並び（おまかせで次に飛ばす写真を先頭に出す）。`id` が nil・並びに無いときはそのまま。
@@ -41,6 +42,6 @@ enum AutoSortPolicy {
 
     /// 任せられる写真の枚数（ボタンに添える数）。
     static func eligibleCount(in records: [Record]) -> Int {
-        records.count(where: isEligible)
+        records.count { isEligible($0) }
     }
 }
