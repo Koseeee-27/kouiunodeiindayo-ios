@@ -154,9 +154,11 @@ struct RecordDetailPageView: View {
                     onAdd: { isTagPickerShown = true }
                 )
             }
-            Spacer(minLength: Self.blockGap)
+            // 下はタグの行が 2 行分の高さを取っている（めくっても跳ねないように）ので、1 画面に収める版では下の空きを詰める
+            Spacer(minLength: fillsHeight ? 0 : Self.blockGap)
         }
-        .padding()
+        .padding([.horizontal, .top])
+        .padding(.bottom, fillsHeight ? Self.bottomPaddingWhenFilled : nil)
     }
 
     /// 日付。文字が大きいときは折り返す（切れないように）
@@ -178,6 +180,9 @@ struct RecordDetailPageView: View {
                 }
             }
     }
+
+    /// 1 画面に収める版の、画面の下の余白（pt）。タグの行の 2 行分の高さが下の空きを兼ねるので小さくする
+    private static let bottomPaddingWhenFilled: CGFloat = 4
 
     /// まとまりの中の、要素と要素の間隔（pt）
     private static let blockSpacing: CGFloat = 16
