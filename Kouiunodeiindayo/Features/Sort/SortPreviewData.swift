@@ -41,6 +41,28 @@ enum SortPreviewData {
         return try! container.mainContext.fetch(descriptor).first!.id
     }
 
+    /// おまかせのプレビュー用。仕分け待ち 4 件を新しい順に：自信の無い食べ物（0.6）→ 自信のある食べ物（0.95）→
+    /// 自信のある飲み物（0.9）→ 提案なし。自信の無い写真が先頭に来るので、おまかせが任せられる写真を先頭に出す様子を見られる。
+    /// `sureCount` を 0 にすると、自信のある 2 件も 0.6 にする（任せられる写真が 0 枚）
+    static func makeAutoSortContainer(sureCount: Int = 2) -> ModelContainer {
+        let container = SampleData.makeContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        let items: [(UIColor, Genre?, Double, [Tag])] = [
+            (.systemOrange, .food, 0.6, [.ramen, .noodles]),
+            (.systemRed, .food, sureCount > 0 ? 0.95 : 0.6, [.karaage, .fried]),
+            (.systemTeal, .drink, sureCount > 1 ? 0.9 : 0.6, [.coffee]),
+            (.systemGray, nil, 0, []),
+        ]
+        for (index, item) in items.enumerated() {
+            let takenAt = Date.now.addingTimeInterval(-60 * 60 * Double(index))
+            // プレビュー用なので、作れなければ落として気づく
+            let record = try! store.add(image: SampleData.makeImage(color: item.0), takenAt: takenAt)
+            store.saveSuggestion(
+                genre: item.1, genreConfidence: item.1 == nil ? nil : item.2, tags: item.3, for: record.id)
+        }
+        return container
+    }
+
     /// 仕分け待ちの id を新しい順に（取り込みから開いた仕分けのプレビューで、取り込んだ写真に見立てる）。
     static func unsortedIDs(in container: ModelContainer) -> [UUID] {
         let unsorted = Genre.unsorted.rawValue
