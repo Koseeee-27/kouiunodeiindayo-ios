@@ -4,6 +4,9 @@
 // Local.xcconfig が無くても、シミュレータ向けのビルドは通るようにしておく。
 BUNDLE_ID_PREFIX = com.example.unset
 DEVELOPMENT_TEAM =
+// Worker（中継サーバー）の URL と合言葉。空なら提案を問い合わせない（撮る・仕分けるはそのまま）。書き方は docs/setup.md の 7
+SUGGESTION_BASE_URL =
+SUGGESTION_TOKEN =
 
 #include? "Local.xcconfig"
 
@@ -30,3 +33,9 @@ INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
 // OS は起動画面を名前ごとに覚える（キャッシュする）ので、絵や配置を変えたときは、storyboard と絵の名前の数字を上げる（V3、V4…）。そうしないと、前の絵が一瞬出る
 // project.pbxproj 側の INFOPLIST_KEY_UILaunchScreen_Generation（画像なしの自動生成）は NO にしてある。YES に戻すと、この storyboard とぶつかる
 INFOPLIST_KEY_UILaunchStoryboardName = LaunchTitleV2
+
+// Apple が決めていない独自のキー（Worker の URL と合言葉）は INFOPLIST_KEY_ では入れられないので、Config/Info.plist に書く。
+// 中身の $(SUGGESTION_BASE_URL) などは、ビルド時に上の値（Local.xcconfig）に置き換わる。できた Info.plist は、上の INFOPLIST_KEY_ の分とまとめられる。
+// Kouiunodeiindayo/（同期フォルダ）に置くと、リソースとしてもコピーされてビルドが失敗するので Config/ に置く。
+// ターゲットの Info タブで独自キーを足さない（project.pbxproj に書き戻される）。足すときは Config/Info.plist を直す
+INFOPLIST_FILE = Config/Info.plist

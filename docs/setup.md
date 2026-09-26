@@ -173,6 +173,28 @@ Jev は Vercel AI Gateway の HTTP API 経由で呼ぶ（理由は `docs/adr/000
 - 提案が全部 502 になる（`wrangler dev` のログに `AI_GATEWAY_API_KEY not set`）：キーを `--var` で渡さずに起動している（環境変数で渡しても届かない）。上の 5 のとおり起動し直す
 - `wrangler dev` のログに `jev http 402` が出る：Vercel のクレジットが尽きている。AI Gateway の画面で残高を足す（自動チャージは初期設定でオフ）
 
+### アプリから Worker を呼ぶ（人ごとに1回）
+
+アプリは、Worker の URL と合言葉を `Config/Local.xcconfig`（git に入れない）から読む。書かなければ、提案が出ないだけで、撮る・仕分けるはいつもどおり動く。
+
+1. `Config/Local.xcconfig` に2行を足す（見本は `Config/Local.xcconfig.example`）
+
+   ```
+   SUGGESTION_BASE_URL = https:/$()/<worker>.workers.dev
+   SUGGESTION_TOKEN = <合言葉>
+   ```
+
+   - xcconfig では `//` 以降がコメントになる。URL の `//` は `$()`（空の値）で区切って `https:/$()/…` と書く。末尾に `/` は付けない
+   - 合言葉は、上の 6 で本番の Worker に `wrangler secret put SUGGEST_TOKEN` で入れた値。手元の `wrangler dev` を呼ぶときは、URL を `http:/$()/localhost:8787`、合言葉を `.dev.vars` の値にする（実機からは Mac の `localhost` に届かないので、シミュレータだけ）
+2. Xcode を終了（Cmd+Q）して開き直す
+3. ターゲット `Kouiunodeiindayo` → Build Settings（All・Combined）で「Info.plist File」を検索し、`Config/Info.plist` が細字で出ていることを見る。太字なら、その行を選んで Delete キーで消す（ターゲット側の値が xcconfig より優先されるため）
+4. Product → Clean Build Folder（Shift+Cmd+K）のあと、ビルドし直す
+
+仕組み：`Config/Base.xcconfig` が `INFOPLIST_FILE = Config/Info.plist` を指定し、`Config/Info.plist` の `$(SUGGESTION_BASE_URL)`・`$(SUGGESTION_TOKEN)` がビルド時に `Local.xcconfig` の値に置き換わる。アプリは `Bundle.main` から読む。独自のキーは `INFOPLIST_KEY_〜` では入れられないため、この形にしている。ターゲットの Info タブでキーを足さない（`project.pbxproj` に書き戻される）。
+
+- 合言葉はアプリの中（Info.plist）に入るので、抜き取れる。デモの間だけの簡易的な対策（`docs/adr/0006-suggestion-vision-jev.md`）。ハッカソンが終わったら、Worker の `SUGGEST_TOKEN` を変える
+- 提案が保存されたかは、Xcode のコンソールで `SuggestionService` のログを見る。URL・合言葉は、ログにもコミットにも出さない
+
 ## 付録：プロジェクトを作る人が、最初に1回だけやること
 
 Xcode でプロジェクトを新規作成した直後は、Bundle ID と Team ID がプロジェクトファイル（`project.pbxproj`）のターゲット側に書かれている。ターゲット側の値は xcconfig より優先されるので、そのままでは `Config/Local.xcconfig` が効かない。
