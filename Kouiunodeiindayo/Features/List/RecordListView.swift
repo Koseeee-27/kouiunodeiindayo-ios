@@ -115,9 +115,11 @@ struct RecordListView: View {
         Button {
             selectedRecord = record
         } label: {
-            RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
+            RecordPhotoView(record: record, kind: .thumbnail)
                 .aspectRatio(1, contentMode: .fit)
                 .photoFrame(.small)
+                // 「うまい」は、枠の切り抜きの外に重ねる（枠から少しはみ出させる）
+                .listFavoriteBadge(isFavorite: record.isFavorite)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

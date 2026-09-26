@@ -56,6 +56,13 @@ enum Theme {
     /// 「うまい」のハンコの傾き。左下がり（SwiftUI は左回りがマイナス）。仕分けとホーム・一覧で同じ値を使う
     static let favoriteTilt = Angle.degrees(-6)
 
+    /// 一覧の「うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
+    static let listFavoriteTilt = Angle.degrees(20)
+    /// 一覧の「うまい」のハンコの幅
+    static let listFavoriteBadgeWidth: CGFloat = 48
+    /// 一覧の「うまい」のハンコを、右上の角から右と下へずらす量
+    static let listFavoriteBadgeOffset = CGSize(width: 6, height: 2)
+
     /// 仕分けの画面の「う、うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
     static let sortFavoriteTilt = Angle.degrees(18)
 

@@ -72,6 +72,29 @@ struct RecordPhotoView: View {
     }
 }
 
+extension View {
+    /// 一覧のサムネイルの右上に、お気に入りの「うまい」の絵を、写真の枠から少しはみ出るように重ねる。
+    /// 枠（`photoFrame`）は中身を切り抜くので、枠を付けたあとに呼ぶ。絵は右下がりに傾ける
+    func listFavoriteBadge(isFavorite: Bool) -> some View {
+        overlay(alignment: .topTrailing) {
+            if isFavorite {
+                Image(.umaiBadge)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: Theme.listFavoriteBadgeWidth)
+                    .rotationEffect(Theme.listFavoriteTilt)
+                    // 右上の角から、右と下へずらす（傾きで、上と右の枠を少し越える）
+                    .offset(x: Theme.listFavoriteBadgeOffset.width, y: Theme.listFavoriteBadgeOffset.height)
+                    // 隣の写真のタップを奪わない。読み上げは呼ぶ側の `Button` のラベルに含める
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        // 右隣の写真より手前に描く（グリッドは後ろの写真が上に重なるため）
+        .zIndex(isFavorite ? 1 : 0)
+    }
+}
+
 #Preview {
     let container = SampleData.makePreviewContainer()
     // お気に入りの記録で「うまい」を見る。プレビュー用なので、無ければ落として気づく
