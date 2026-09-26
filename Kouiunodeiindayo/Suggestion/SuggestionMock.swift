@@ -16,8 +16,18 @@ struct SuggestionMock: SuggestionService {
     /// 提案なし（Worker が自信が低いと返したとき）。問い合わせ済みにはなる。
     static let noSuggestion = SuggestionMock(result: .empty)
 
+    /// 待たずに、その場で保存する版。プレビューの静止画（スナップショット）は開いた直後に撮られ、
+    /// 裏で保存するのを待たないので、確認用のプレビューではこれを使う。
+    var immediate: SuggestionMock {
+        SuggestionMock(result: result, delay: .zero)
+    }
+
     func requestSuggestion(for id: UUID, photoFileName: String, store: RecordStore) {
         guard let result else { return }
+        guard delay > .zero else {
+            store.saveSuggestion(genre: result.genre, tags: result.tags, for: id)
+            return
+        }
         Task {
             try? await Task.sleep(for: delay)
             store.saveSuggestion(genre: result.genre, tags: result.tags, for: id)
@@ -79,14 +89,14 @@ struct SuggestionCheckView: View {
     SuggestionCheckView()
         .modelContainer(SortPreviewData.makeManyUnsortedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
-        .environment(\.suggestionService, SuggestionMock.ramen)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
 }
 
 #Preview("提案なし") {
     SuggestionCheckView()
         .modelContainer(SortPreviewData.makeManyUnsortedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
-        .environment(\.suggestionService, SuggestionMock.noSuggestion)
+        .environment(\.suggestionService, SuggestionMock.noSuggestion.immediate)
 }
 
 #Preview("通信できない") {
