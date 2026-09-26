@@ -9,6 +9,7 @@
 Kouiunodeiindayo/
 ├── App/
 │   ├── KouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
+│   ├── LaunchSplashView.swift ← 起動画面の絵を1秒見せてから、本物の画面（RootView）に切り替える
 │   ├── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
 │   ├── RootTab.swift          ← 下タブの行き先の enum（並び順・文言・アイコン）
 │   ├── RootTabBar.swift       ← 自作の下タブのバー（見た目と押したときの通知）
@@ -53,7 +54,7 @@ Kouiunodeiindayo/
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
 │   ├── PhotoFrame.swift       ← 写真の墨のコマ枠（`.photoFrame(.main / .small)`）
 │   └── SoundPlayer.swift      ← 効果音の再生
-└── Resources/                 ← フォント、効果音、画像（Assets）
+└── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
 └── Local.xcconfig.example     ← 個人ごとの署名設定・Worker の URL と合言葉の見本（docs/setup.md）

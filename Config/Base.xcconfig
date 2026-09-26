@@ -25,3 +25,8 @@ INFOPLIST_KEY_CFBundleDisplayName = いいんだよ
 
 // 独自の暗号化をしていないという申告。無いと App Store Connect へのアップロードのたびに質問される
 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
+
+// 起動画面（Kouiunodeiindayo/Resources/LaunchTitleV2.storyboard。絵は Assets.xcassets/LaunchTitleV2）。
+// OS は起動画面を名前ごとに覚える（キャッシュする）ので、絵や配置を変えたときは、storyboard と絵の名前の数字を上げる（V3、V4…）。そうしないと、前の絵が一瞬出る
+// project.pbxproj 側の INFOPLIST_KEY_UILaunchScreen_Generation（画像なしの自動生成）は NO にしてある。YES に戻すと、この storyboard とぶつかる
+INFOPLIST_KEY_UILaunchStoryboardName = LaunchTitleV2
