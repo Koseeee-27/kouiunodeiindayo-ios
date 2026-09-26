@@ -60,6 +60,11 @@ enum Theme {
     static let listFavoriteTilt = Angle.degrees(20)
     /// 一覧の「うまい」のハンコの幅
     static let listFavoriteBadgeWidth: CGFloat = 48
+    /// ホームの今日の一枚の幅の、画面の横幅に対する割合（デザインの画像の比率。3:4 なので、高さは幅の 4/3）
+    static let todayPhotoWidthRatio: CGFloat = 0.95
+    /// ホームの今日の一枚の「うまい」のハンコの幅の、画面の横幅に対する割合（傾き・ずらす割合は一覧と同じ）。傾けると横に広がるので、デザインの大きさより少し小さく取る
+    static let todayFavoriteBadgeWidthRatio: CGFloat = 0.42
+
     /// 一覧の「うまい」のハンコを、右上の角から右へずらす量
     static let listFavoriteBadgeOffsetX: CGFloat = 6
     /// 一覧の「うまい」のハンコを、右上の角から下へずらす量
