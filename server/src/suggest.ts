@@ -76,17 +76,20 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
     answers.genre.choice === "other" || answers.genre.confidence < GENRE_MIN
       ? null
       : answers.genre.choice;
-  // Jev はラベルが弱くても言い切ることがあるので、Vision の食べ物系のラベルが弱い写真はおまかせに回さない（#114）。
+  // 料理のタグは 1 つだけ。ジャンルと種類が違うもの（飲み物にラーメンなど）は付けない。ジャンルが無いときは絞らない（#114）。
+  const strongest = strongestDish(labels);
+  const kept = strongest && (genre === null || strongest.dish.kind === genre) ? strongest : null;
+  const dishes = kept ? [kept.dish] : [];
+
+  // Jev はラベルが弱くても言い切ることがあるので、Vision の根拠が弱い写真はおまかせに回さない（#114）。
+  // 根拠は、食べ物系のラベルと、料理のタグに選んだラベル（ジャンルと種類が合うもの）の強い方。
+  // 料理名のラベルだけが強い写真（coffee 0.8・drink 0.25 のコーヒーなど）も、おまかせに回す。
   const evidence = Math.max(
-    0,
+    kept?.confidence ?? 0,
     ...labels.filter((label) => GENERAL_FOOD_LABELS.includes(label.name)).map((label) => label.confidence),
   );
   const genreConfidence =
     genre === null || evidence < AUTO_EVIDENCE_MIN ? null : Math.round(answers.genre.confidence * 100) / 100;
-
-  // 料理のタグは 1 つだけ。ジャンルと種類が違うもの（飲み物にラーメンなど）は付けない。ジャンルが無いときは絞らない（#114）。
-  const dish = strongestDish(labels);
-  const dishes = dish && (genre === null || dish.kind === genre) ? [dish] : [];
 
   // 大分類・系統は料理のためのタグなので、飲み物・デザートのときは付けない（Jev の答えも）。
   const categories: string[] = [];
@@ -109,9 +112,9 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
   return { genre, genreConfidence, tags };
 }
 
-// 対応するラベルの確信度が一番強い料理のタグ。DISH_LABEL_MIN（タグに labelMin があればそれ）未満のラベルは見ない。
+// 対応するラベルの確信度が一番強い料理のタグと、その確信度。DISH_LABEL_MIN（タグに labelMin があればそれ）未満のラベルは見ない。
 // 同じ強さなら DISH_TAGS の順で先のもの。
-function strongestDish(labels: Label[]): DishTag | null {
+function strongestDish(labels: Label[]): { dish: DishTag; confidence: number } | null {
   let best: { dish: DishTag; confidence: number } | null = null;
   for (const dish of DISH_TAGS) {
     for (const label of labels) {
@@ -121,5 +124,5 @@ function strongestDish(labels: Label[]): DishTag | null {
       }
     }
   }
-  return best?.dish ?? null;
+  return best;
 }

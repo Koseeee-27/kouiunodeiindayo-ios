@@ -115,7 +115,9 @@ export const STRONG_MIN = 0.3;
 // ラベルは scripts/real-labels.tsv と、作業用のメモ（photos-0927）。
 export const DISH_LABEL_MIN = 0.15;
 // おまかせ（アプリが自信のある写真を勝手に仕分ける）に回してよい根拠の強さ。
-// Vision の食べ物系のラベル（GENERAL_FOOD_LABELS）の最大がこれ未満なら、ジャンルは返すが genreConfidence を null にする。
+// Vision の食べ物系のラベル（GENERAL_FOOD_LABELS）と、料理のタグに選んだラベル（ジャンルと種類が合うもの）の
+// 強い方がこれ未満なら、ジャンルは返すが genreConfidence を null にする。料理のタグのラベルも見るのは、
+// コーヒー（coffee 0.8・drink 0.25）のように料理名だけが強い写真を、おまかせから外さないため（#114 の追いかけ）。
 // 0.30（#114）：Jev はラベルが弱くても food 0.97 のように言い切るので、Jev の確率だけでは任せられない。
 // こうせいの写真 77 枚で、食べ物・飲み物・デザートの 66 枚中 59 枚は残り、料理でない画像は 1 枚も通らなかった。
 export const AUTO_EVIDENCE_MIN = 0.3;

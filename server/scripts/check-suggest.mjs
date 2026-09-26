@@ -101,10 +101,28 @@ const cases = [
     expect: { genre: "drink", genreConfidence: 0.9, tags: [] },
   },
   {
-    name: "食べ物系のラベルが無い（料理名だけ）→ genreConfidence は null",
+    name: "食べ物系のラベルが無くても、料理名が強い（ramen 0.7）→ genreConfidence を返す",
     labels: [["ramen", 0.7]],
     jev: { genre: ["food", 0.97] },
-    expect: { genre: "food", genreConfidence: null, tags: ["ramen", "noodles", "chinese"] },
+    expect: { genre: "food", genreConfidence: 0.97, tags: ["ramen", "noodles", "chinese"] },
+  },
+  {
+    name: "コーヒー（coffee 0.8・cup 0.3・drink 0.25）＋ drink → 料理名が根拠になり genreConfidence を返す",
+    labels: [["coffee", 0.8], ["cup", 0.3], ["drink", 0.25]],
+    jev: { genre: ["drink", 0.95] },
+    expect: { genre: "drink", genreConfidence: 0.95, tags: ["coffee"] },
+  },
+  {
+    name: "料理名も食べ物系も弱い（cake 0.2・food 0.21）＋ dessert → genreConfidence は null",
+    labels: [["tableware", 0.8], ["food", 0.21], ["cake", 0.2]],
+    jev: { genre: ["dessert", 0.9] },
+    expect: { genre: "dessert", genreConfidence: null, tags: ["cake"] },
+  },
+  {
+    name: "料理名が強くてもジャンルと種類が違う（ramen 0.7 ＋ drink）→ 根拠にしない",
+    labels: [["ramen", 0.7], ["drink", 0.2]],
+    jev: { genre: ["drink", 0.9] },
+    expect: { genre: "drink", genreConfidence: null, tags: [] },
   },
   {
     name: "Jev のジャンルが 0.50 未満 → ジャンルなし。料理のタグは絞らない（飲み物でもコーヒーが付く）",

@@ -78,7 +78,7 @@ Worker を挟む理由と構成は `docs/adr/0006-suggestion-vision-jev.md`。�
 | 項目 | 型 | 内容 |
 |---|---|---|
 | `genre` | 文字列か `null` | `food`／`drink`／`dessert` のどれか。提案しないときは `null`。`unsorted`・`none` は返さない |
-| `genreConfidence` | 数値か `null` | `genre` を返すときの確率（0〜1、小数第2位）。`genre` が `null` なら `null`。Vision の食べ物系のラベル（`food` `drink` `beverage` `dessert` `baked_goods`）の最大が 0.30 未満のときも `null`（ジャンルは返す。根拠の弱い写真をおまかせで飛ばさないため）。アプリはおまかせで任せるかの判定に使う（`docs/data-model.md` の `suggestedGenreConfidence`） |
+| `genreConfidence` | 数値か `null` | `genre` を返すときの確率（0〜1、小数第2位）。`genre` が `null` なら `null`。Vision の根拠が弱いとき（食べ物系のラベル（`food` `drink` `beverage` `dessert` `baked_goods`）と、料理のタグに選んだラベルの強い方が 0.30 未満）も `null`（ジャンルは返す。根拠の弱い写真をおまかせで飛ばさないため。料理名のラベルだけが強いコーヒーなどは、おまかせに回る）。アプリはおまかせで任せるかの判定に使う（`docs/data-model.md` の `suggestedGenreConfidence`） |
 | `tags` | 文字列の配列 | タグのキー。重複なし。空でもよい。`genre` が `null` でも、`tags` があることはある。ジャンルと食い違うタグは返さない（飲み物・デザートのときは、その種類の料理のタグだけで、大分類・系統は返さない） |
 
 - 提案なしも **200** で返す。アプリはこれを受けて `suggestedAt` を書く（問い合わせ済みにする）
