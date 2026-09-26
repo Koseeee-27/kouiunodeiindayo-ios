@@ -19,4 +19,12 @@ enum ImageLabeler {
         let observations = try await ClassifyImageRequest().perform(on: url)
         return observations.map { ImageLabel(name: $0.identifier, confidence: $0.confidence) }
     }
+
+    /// 画像のラベルを取る。メインスレッドの外で動く。
+    /// アルバムからの取り込みで、ファイルに書く前の画像（縮めて向きを直したもの）が食事らしいかを決めるのに使う。
+    @concurrent
+    nonisolated static func labels(of image: CGImage) async throws -> [ImageLabel] {
+        let observations = try await ClassifyImageRequest().perform(on: image)
+        return observations.map { ImageLabel(name: $0.identifier, confidence: $0.confidence) }
+    }
 }

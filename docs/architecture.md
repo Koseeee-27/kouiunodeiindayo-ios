@@ -16,15 +16,18 @@ Kouiunodeiindayo/
 │   └── StartTab.swift         ← 開いたときにどのタブから始めるかの設定値（機能25）の enum とキー
 ├── Features/                  ← 画面ごとに1フォルダ
 │   ├── Home/
-│   │   ├── HomeView.swift         ← 今日の一枚・最近の写真・仕分け待ちの入口・撮るボタン
+│   │   ├── HomeView.swift         ← 今日の一枚・最近の写真・仕分け待ちの入口・撮るボタン・アルバムからの取り込みの入口と取り込み中の幕
 │   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使う（一覧の「うまい」は枠からはみ出させるので、枠のあとに重ねる）
 │   │   └── HomePreviewData.swift  ← ホームのプレビュー用のサンプルデータ
+│   ├── Import/
+│   │   ├── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ。画面は持たない
+│   │   └── PhotoImportingOverlayView.swift ← 取り込み中の幕（`RootView` が重ねる）
 │   ├── List/
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
 │   ├── Sort/                  ← 仕分け
-│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す
+│   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す。`importedIDs` を渡すと、アルバムから取り込んだ写真だけを出す
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理。下のラベルの下に、提案されたタグの行を置く
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
 │   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調・提案されたジャンルの点線
@@ -48,6 +51,7 @@ Kouiunodeiindayo/
 │   └── Logging.swift          ← ログ（os.Logger）の共通設定
 ├── Suggestion/                ← ジャンルとタグの提案（機能26）、言葉で探す（機能28）。理由は docs/adr/0006
 │   ├── ImageLabeler.swift     ← Vision で写真からラベルを取り出す（端末の中だけ）
+│   ├── FoodPhotoFilter.swift  ← Vision のラベルから、食事らしい写真かを決める（アルバムからの取り込みの除外）
 │   ├── SuggestionClient.swift ← Worker への通信。URL と合言葉は Config/Local.xcconfig から読む
 │   ├── SuggestionService.swift ← まとめ役。プロトコルにして、プレビュー用のモックも用意する
 │   └── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
@@ -68,7 +72,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
 - ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。カメラは `RootView` が `fullScreenCover` で出す。撮ったあとの仕分けも同じカバーの中で `CameraFlowView` が切り替える。仕分けは `dismiss()` で閉じ、閉じるとホームに戻る。設定はホーム右上のアイコンから、ホームが `sheet` で `SettingsView` を出す
-- ホーム・一覧の仕分け待ちの入口は、それぞれの画面が `fullScreenCover` で `SortView` を出す。記録の詳細は、ホーム・一覧のそれぞれが `sheet` で開く（閉じても、元の画面のスクロール位置が残る）
+- ホーム・一覧の仕分け待ちの入口は、それぞれの画面が `fullScreenCover` で `SortView` を出す。アルバムからの取り込みは、ホーム右上の入口から `PhotosPicker` で選び、取り込み後にホームが `fullScreenCover` で `SortView(importedIDs:importSummary:)` を出す。取り込み中は、ホームが進み具合を `RootView` に知らせ、`RootView` がページャーと下タブの上に幕（`PhotoImportingOverlayView`）を重ねて、どちらも触れなくする（終わったときの仕分けのカバーが、カメラ・一覧の仕分けのカバーと重ならないように）。記録の詳細は、ホーム・一覧のそれぞれが `sheet` で開く（閉じても、元の画面のスクロール位置が残る）
 - ビューの型名は `〜View` にする（`List/` フォルダのビューは `RecordListView` など。SwiftUI の `List` と同じ名前にしない）
 - ファイルを足すときは、このフォルダの中に置くだけでよい（同期フォルダなので、Xcode が自動で認識する）
 
@@ -110,6 +114,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 ```
 
 - 問い合わせを始めるのは2か所：撮った直後（`CameraFlowView` が `RecordStore` の「追加」のあとに呼ぶ）と、仕分けの画面を開いたとき（`SortView` が、仕分け待ちのうち `suggestedAt` が `nil` の写真を問い合わせる）
+  - アルバムからの取り込みでは頼まない。取り込み後に開く仕分けの画面が、画面に出る順に頼む（取り込み側からも頼むと、選んだ順で待ち行列に入り、先頭の写真の提案が遅れる）
 - 裏の処理には、`Record` そのものではなく `id` と `photoFileName` だけを渡す（`@Model` はスレッドをまたいで渡せない）。結果を保存するときに、メインスレッドで `id` から記録を取り直す
 - アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`
 - 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
