@@ -78,7 +78,11 @@ struct SortCardStackView<BelowCard: View>: View {
         .onGeometryChange(for: CGSize.self, of: \.size) { areaSize = $0 }
         // おまかせ：飛ぶ前に 0.25 秒止めて、スタンプとラベルの強調を見せる
         .onChange(of: autoFlightRequest) { _, request in
-            guard let request, request.recordID == records.first?.id else { return }
+            guard
+                AutoSortPolicy.shouldStartFlight(
+                    request, isAutoSorting: isAutoSorting, isCommitting: isCommitting, frontID: records.first?.id),
+                let request
+            else { return }
             commit(request.direction, pause: Self.autoFlightPause, screenSize: areaSize)
         }
         // 飛ばしていた記録が並びから消えたら（保存されて `@Query` から外れたら）、飛び終わりとして戻す。
@@ -288,10 +292,10 @@ struct SortCardStackView<BelowCard: View>: View {
         withAnimation(animation) {
             flyOffset = flight?.offset ?? direction.offscreenOffset(in: screenSize)
         } completion: {
-            // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
+            // 位置は、`@Query` から飛ばしていた記録が消えたとき（`onChange(of: records.map(\.id))`）に戻す（`resetAfterCommit`）。
             // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
             onSort(record, direction.genre)
-            // 保険：先頭が変わらず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
+            // 保険：記録が並びから消えず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
                 if flyingRecordID == record.id {

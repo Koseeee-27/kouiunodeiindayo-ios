@@ -1,3 +1,5 @@
+import Foundation
+
 /// おまかせで任せてよい写真の決まり（機能26）。取り出し方は `docs/data-model.md` の「よく使う取り出し方」。
 enum AutoSortPolicy {
     /// 任せる確率の境目。0.8 から始めて実機で調整する（#80 の計測で、Jev の正しい答えは 0.87〜1.0 に集まっていた）。
@@ -26,6 +28,15 @@ enum AutoSortPolicy {
         var reordered = items
         reordered.insert(reordered.remove(at: index), at: 0)
         return reordered
+    }
+
+    /// 届いた飛ばす頼みで、今飛ばし始めてよいか。止めたあと・時間切れのあとに遅れて届いた頼み（おまかせ中でない）、
+    /// 別の写真を飛ばしている間、先頭が頼みの写真でないときは飛ばさない（止めたら次からは飛ばさない約束を守る）
+    static func shouldStartFlight(
+        _ request: AutoFlightRequest?, isAutoSorting: Bool, isCommitting: Bool, frontID: UUID?
+    ) -> Bool {
+        guard let request, isAutoSorting, !isCommitting else { return false }
+        return request.recordID == frontID
     }
 
     /// 任せられる写真の枚数（ボタンに添える数）。

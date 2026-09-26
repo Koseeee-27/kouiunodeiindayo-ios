@@ -266,6 +266,8 @@ struct SortView: View {
     /// 止めたとき・終わったとき。飛んでいる途中（止めの 0.25 秒を含む）なら、先頭に出す指定は残す。
     /// ここで外すと並びが戻って先頭が変わり、飛んでいる写真が山に戻ってしまう。外すのは、その 1 枚が保存されたとき（`onSort`）
     private func finishAutoSort(flownCount: Int) {
+        // まだ飛び始めていない頼みは取り消す（遅れて届いても飛ばさない。飛んでいる 1 枚は飛び切らせる）
+        autoFlightRequest = nil
         if !isCommitting {
             clearAutoTarget()
         }

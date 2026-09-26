@@ -83,6 +83,29 @@ struct AutoSortPolicyTests {
         #expect(AutoSortPolicy.movingToFront([Item](), id: 1).isEmpty)
     }
 
+    // MARK: 飛ばし始めてよいか
+
+    @Test func おまかせ中で先頭が頼みの写真なら飛ばす() {
+        let id = UUID()
+        let request = AutoFlightRequest(token: UUID(), recordID: id, direction: .up)
+        #expect(AutoSortPolicy.shouldStartFlight(request, isAutoSorting: true, isCommitting: false, frontID: id))
+    }
+
+    @Test func 止めたあとに遅れて届いた頼みでは飛ばさない() {
+        // 先頭がもともと頼みの写真（並べ替えが要らない）で、頼んだ直後に止めた場合
+        let id = UUID()
+        let request = AutoFlightRequest(token: UUID(), recordID: id, direction: .up)
+        #expect(!AutoSortPolicy.shouldStartFlight(request, isAutoSorting: false, isCommitting: false, frontID: id))
+    }
+
+    @Test func 飛んでいる間・先頭が違う・頼みが無いときは飛ばさない() {
+        let id = UUID()
+        let request = AutoFlightRequest(token: UUID(), recordID: id, direction: .left)
+        #expect(!AutoSortPolicy.shouldStartFlight(request, isAutoSorting: true, isCommitting: true, frontID: id))
+        #expect(!AutoSortPolicy.shouldStartFlight(request, isAutoSorting: true, isCommitting: false, frontID: UUID()))
+        #expect(!AutoSortPolicy.shouldStartFlight(nil, isAutoSorting: true, isCommitting: false, frontID: id))
+    }
+
     @Test func 提案のジャンルから向きを引く() {
         #expect(SwipeDirection(suggestedGenre: .food) == .up)
         #expect(SwipeDirection(suggestedGenre: .drink) == .left)
