@@ -88,19 +88,38 @@ async function upstreamError(response: Response): Promise<Error> {
   return new Error(`jev http ${response.status}${detail}`);
 }
 
-// 答えの形が想定と違うときは throw する。呼ぶ側で 502 にする（200 の提案なしにしない。suggestion-api.md「エラー」）。
-export async function askJev(apiKey: string, state: string): Promise<JevResult> {
-  const questions = buildQuestions();
-  const request: JevRequest = { model: MODEL, state, questions };
-  const response = await fetch(ENDPOINT, {
+// 503 のときだけ、締め切りまでに RETRY_MIN_MS 以上残っていれば 1 回だけ送り直す。
+// 503 は Vercel 側の一時的な失敗で 0.3 秒で返り、手元の実測で 3 割・本番で 7 回中 1 回あった。
+// 503 以外の 4xx/5xx・時間切れ・ネットワークエラーは再試行しない（送り直しても同じ結果か、時間を食うだけ）。
+const RETRY_MIN_MS = 300;
+
+async function postToJev(apiKey: string, body: string, timeoutMs: number): Promise<Response> {
+  return fetch(ENDPOINT, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(request),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    body,
+    signal: AbortSignal.timeout(timeoutMs),
   });
+}
+
+// 答えの形が想定と違うときは throw する。呼ぶ側で 502 にする（200 の提案なしにしない。suggestion-api.md「エラー」）。
+// 全体の締め切りは TIMEOUT_MS に固定し、1 回目も 2 回目も残り時間で AbortSignal.timeout を作る。
+export async function askJev(apiKey: string, state: string): Promise<JevResult> {
+  const questions = buildQuestions();
+  const request: JevRequest = { model: MODEL, state, questions };
+  const payload = JSON.stringify(request);
+  const deadline = Date.now() + TIMEOUT_MS;
+
+  let response = await postToJev(apiKey, payload, TIMEOUT_MS);
+  if (response.status === 503) {
+    const remaining = deadline - Date.now();
+    if (remaining >= RETRY_MIN_MS) {
+      response = await postToJev(apiKey, payload, remaining);
+    }
+  }
   if (!response.ok) {
     throw await upstreamError(response);
   }
