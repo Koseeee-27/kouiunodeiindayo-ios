@@ -20,7 +20,8 @@ Kouiunodeiindayo/
 │   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使う（一覧の「うまい」は枠からはみ出させるので、枠のあとに重ねる）
 │   │   └── HomePreviewData.swift  ← ホームのプレビュー用のサンプルデータ
 │   ├── Import/
-│   │   └── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ。画面は持たない
+│   │   ├── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ。画面は持たない
+│   │   └── PhotoImportingOverlayView.swift ← 取り込み中の幕（`RootView` が重ねる）
 │   ├── List/
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
@@ -71,7 +72,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 
 - どの画面があるか、何を置くかは `docs/screen-design.md` が正。ここには書かない
 - ホーム・一覧・カメラの行き来は下タブ（左からカメラ／ホーム／一覧。`docs/screen-design.md` の「ナビゲーション」）。下タブは `RootView` が持つ。バーは自作（`RootTabBar`）。ホーム⇄一覧は `TabView` の `.page` で横にめくる。カメラは `RootView` が `fullScreenCover` で出す。撮ったあとの仕分けも同じカバーの中で `CameraFlowView` が切り替える。仕分けは `dismiss()` で閉じ、閉じるとホームに戻る。設定はホーム右上のアイコンから、ホームが `sheet` で `SettingsView` を出す
-- ホーム・一覧の仕分け待ちの入口は、それぞれの画面が `fullScreenCover` で `SortView` を出す。アルバムからの取り込みは、ホーム右上の入口から `PhotosPicker` で選び、取り込み後にホームが `fullScreenCover` で `SortView(importedIDs:importSummary:)` を出す。記録の詳細は、ホーム・一覧のそれぞれが `sheet` で開く（閉じても、元の画面のスクロール位置が残る）
+- ホーム・一覧の仕分け待ちの入口は、それぞれの画面が `fullScreenCover` で `SortView` を出す。アルバムからの取り込みは、ホーム右上の入口から `PhotosPicker` で選び、取り込み後にホームが `fullScreenCover` で `SortView(importedIDs:importSummary:)` を出す。取り込み中は、ホームが進み具合を `RootView` に知らせ、`RootView` がページャーと下タブの上に幕（`PhotoImportingOverlayView`）を重ねて、どちらも触れなくする（終わったときの仕分けのカバーが、カメラ・一覧の仕分けのカバーと重ならないように）。記録の詳細は、ホーム・一覧のそれぞれが `sheet` で開く（閉じても、元の画面のスクロール位置が残る）
 - ビューの型名は `〜View` にする（`List/` フォルダのビューは `RecordListView` など。SwiftUI の `List` と同じ名前にしない）
 - ファイルを足すときは、このフォルダの中に置くだけでよい（同期フォルダなので、Xcode が自動で認識する）
 

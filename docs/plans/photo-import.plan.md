@@ -26,7 +26,11 @@
 - `PhotoImportResult` は `Equatable` にせず `Identifiable`（`let id = UUID()`）だけにした。取り込むたびに別の値になるので、`Equatable` にすると id まで比べてしまい、比べる場所も無いため
 - `FoodPhotoFilter` は `nonisolated` にせず、既定（メインのアクター）のままにした。`Tag.visionLabels` をそのまま使え、判定は軽いので、取り込み（メイン）の中でラベルを受け取ったあとに判定する（リスクの節の案）
 - 0 枚のときのアラートの本文は、読めなかった写真があるときだけ「／ 読めなかった k 枚」を足す（決めたこと 4 と揃えた。無いときは「除外 m 枚」だけ）
-- 取り込み中の幕はホームの上だけに重なる。下タブは触れる（別のタブに移っても取り込みは続く。計画の「取り込み中に別のタブへ移る」のとおり）
+- 取り込み中は、下タブとページの横スワイプも止める（決めたこと 2「取り込み中は触れない」。レビュー 1 周目で直した）。幕（`PhotoImportingOverlayView`）はホームではなく `RootView` がページャーと下タブの上に重ね、ホームは `onImportProgressChange` で進み具合を知らせる。ページャーの `scrollDisabled` では横スワイプが止まらなかった（シミュレータで確認）ので、幕で受け止める。下タブは読み上げからも押せないよう `.disabled` にする。計画の「取り込み中に別のタブへ移る」は起きない
+- 取り込み中は `PhotosPicker` を `.disabled` にし、`startImport` でも二重に始めない（`PhotoImporter.shouldStart`）
+- 全部読めなかった（除外 0・読めなかった 1 枚以上）ときだけ、アラートの題を「写真を読み込めませんでした」にする（文言は仮。こうせいに確認中）。題・本文・件数の 1 行・読み上げの文は `PhotoImportResult` の拡張にまとめてテストする。読み上げは「／」の代わりに読点
+- 時差は `OffsetTimeOriginal` → `OffsetTime` の順で探す
+- 保存の前に `await Task.yield()` を入れ、幕の描き直しに譲る
 
 ## 調べたこと（Apple の公式ドキュメントで確認。Xcode 27 の DocumentationSearch）
 
