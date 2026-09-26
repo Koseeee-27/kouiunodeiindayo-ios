@@ -29,6 +29,8 @@ enum Theme {
 
     /// 太い線（見出しの下の区切りなど）。太さは仮
     static let lineWidthThick: CGFloat = 2
+    /// 細い線（記録の詳細のジャンルのボタンの枠）
+    static let lineWidthThin: CGFloat = 1
     /// 仕分け待ちへの入口の吹き出しの線
     static let lineWidthBubble: CGFloat = 1.5
     /// 仕分けのスタンプの枠。形と一緒に仮
