@@ -55,7 +55,9 @@ struct RecordStore {
     /// 次のときは何も書かない：記録を取れない・消えていた／もう仕分け済み／もう問い合わせ済み（先に届いたほうを使う。
     /// 仕分けの画面でタグを外している最中に、提案が差し替わって外した状態が戻らないように）。
     /// 提案なし（`nil`・空）でも `suggestedAt` は書く。`tags` には触らない。
-    func saveSuggestion(genre: Genre?, tags: [Tag], for id: UUID, at date: Date = .now) {
+    /// `genreConfidence` は、書いたジャンルが `nil` でないときだけ書く（提案できないジャンルを捨てたときに、確率だけ残らないように）。
+    func saveSuggestion(genre: Genre?, genreConfidence: Double? = nil, tags: [Tag], for id: UUID, at date: Date = .now)
+    {
         var descriptor = FetchDescriptor<Record>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         let record: Record
@@ -73,6 +75,7 @@ struct RecordStore {
 
         // 提案するジャンルは食べ物・飲み物・デザートだけ。それ以外は提案なしとして書く
         record.suggestedGenre = genre.flatMap { Genre.suggestable.contains($0) ? $0.rawValue : nil }
+        record.suggestedGenreConfidence = record.suggestedGenre == nil ? nil : genreConfidence
         record.suggestedTags = Self.normalized(tags)
         record.suggestedAt = date
     }

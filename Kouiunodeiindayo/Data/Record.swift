@@ -16,6 +16,9 @@ final class Record {
     var tags: [String] = []
     /// 提案したジャンル（`food`／`drink`／`dessert`）。提案が無かったとき・まだ問い合わせていないときは `nil`。
     var suggestedGenre: String? = nil
+    /// 提案したジャンルの確率（0〜1。Jev の probabilities）。おまかせで任せるかの判定に使う。
+    /// 提案したジャンルが無い・まだ問い合わせていない・確率を返す前の Worker で問い合わせた記録は `nil`。
+    var suggestedGenreConfidence: Double? = nil
     /// 提案したタグのキー。
     var suggestedTags: [String] = []
     /// 提案を問い合わせ終えた日時。提案が無かったときも入る。`nil` はまだ問い合わせていない（通信できなかったときも `nil` のまま）。
