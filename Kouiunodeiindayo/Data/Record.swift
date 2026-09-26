@@ -11,11 +11,35 @@ final class Record {
     var photoFileName: String
     var genre: String
     var isFavorite: Bool
+    // 以下はあとから足した項目。保存済みのデータをそのまま読めるよう、既定値は init ではなく宣言に書く。
+    /// 付いているタグのキー（`Tag` の rawValue）。
+    var tags: [String] = []
+    /// 提案したジャンル（`food`／`drink`／`dessert`）。提案が無かったとき・まだ問い合わせていないときは `nil`。
+    var suggestedGenre: String? = nil
+    /// 提案したタグのキー。
+    var suggestedTags: [String] = []
+    /// 提案を問い合わせ終えた日時。提案が無かったときも入る。`nil` はまだ問い合わせていない（通信できなかったときも `nil` のまま）。
+    var suggestedAt: Date? = nil
 
     /// `genre` を enum として読み書きするための窓口。保存されるのは文字列のまま。
     var genreValue: Genre {
         get { Genre(storedValue: genre) }
         set { genre = newValue.rawValue }
+    }
+
+    /// 付いているタグ。知らないキーは捨てる（表示しない・落とさない）。書き込みは `RecordStore.setTags` から。
+    var tagValues: [Tag] {
+        tags.compactMap(Tag.init(rawValue:))
+    }
+
+    /// 提案したジャンル。知らない値と、提案できないジャンル（`unsorted`・`none`）は `nil`。
+    var suggestedGenreValue: Genre? {
+        suggestedGenre.flatMap(Genre.init(rawValue:)).flatMap { Genre.suggestable.contains($0) ? $0 : nil }
+    }
+
+    /// 提案したタグ。知らないキーは捨てる。
+    var suggestedTagValues: [Tag] {
+        suggestedTags.compactMap(Tag.init(rawValue:))
     }
 
     init(

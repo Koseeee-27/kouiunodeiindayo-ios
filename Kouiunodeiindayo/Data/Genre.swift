@@ -8,6 +8,9 @@ enum Genre: String, CaseIterable {
     // そのため保存する文字列は "none" のまま、case 名だけ変えている。
     case noGenre = "none"
 
+    /// 提案として保存・表示してよいジャンル。docs/data-model.md「suggestedGenre」の決まり。
+    static let suggestable: Set<Genre> = [.food, .drink, .dessert]
+
     /// 知らない文字列は仕分け待ちに倒す。optional にすると画面ごとに nil の扱いがぶれるため。
     init(storedValue: String) {
         self = Genre(rawValue: storedValue) ?? .unsorted

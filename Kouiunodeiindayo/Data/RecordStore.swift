@@ -41,6 +41,38 @@ struct RecordStore {
         record.genreValue = genre
     }
 
+    /// 「タグを変える」。仕分けで次に進むときと、詳細での付け外しが呼ぶ。
+    /// 重複を除き、タグの一覧の順に並べ直して書く（付け外しした順で並びがぶれないように）。`suggestedTags` には触らない。
+    func setTags(_ tags: [Tag], for record: Record) {
+        record.tags = Self.normalized(tags)
+    }
+
+    /// 「提案を保存する」。裏の問い合わせの結果を、メインスレッドで `id` から記録を取り直して書く。
+    /// 次のときは何も書かない：記録を取れない・消えていた／もう仕分け済み／もう問い合わせ済み（先に届いたほうを使う。
+    /// 仕分けの画面でタグを外している最中に、提案が差し替わって外した状態が戻らないように）。
+    /// 提案なし（`nil`・空）でも `suggestedAt` は書く。`tags` には触らない。
+    func saveSuggestion(genre: Genre?, tags: [Tag], for id: UUID, at date: Date = .now) {
+        var descriptor = FetchDescriptor<Record>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        let record: Record
+        do {
+            guard let found = try modelContext.fetch(descriptor).first else {
+                Self.logger.info("提案が届いたが、記録が消えていた")
+                return
+            }
+            record = found
+        } catch {
+            Self.logger.error("提案を保存する記録を取れなかった: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+        guard record.genreValue == .unsorted, record.suggestedAt == nil else { return }
+
+        // 提案するジャンルは食べ物・飲み物・デザートだけ。それ以外は提案なしとして書く
+        record.suggestedGenre = genre.flatMap { Genre.suggestable.contains($0) ? $0.rawValue : nil }
+        record.suggestedTags = Self.normalized(tags)
+        record.suggestedAt = date
+    }
+
     /// 「うまい」の付け外し。
     func toggleFavorite(_ record: Record) {
         record.isFavorite.toggle()
@@ -74,6 +106,12 @@ struct RecordStore {
         for record in records {
             try delete(record)
         }
+    }
+
+    /// 重複を除き、タグの一覧（`Tag.allCases`）の順に並べたキー。
+    private static func normalized(_ tags: [Tag]) -> [String] {
+        let set = Set(tags)
+        return Tag.allCases.filter(set.contains).map(\.rawValue)
     }
 
     /// ファイルの削除に失敗しても記録の削除は戻さない。孤児ファイルが残るだけなので、ログに残す。
