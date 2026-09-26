@@ -78,13 +78,13 @@ Worker を挟む理由と構成は `docs/adr/0006-suggestion-vision-jev.md`。�
 | 項目 | 型 | 内容 |
 |---|---|---|
 | `genre` | 文字列か `null` | `food`／`drink`／`dessert` のどれか。提案しないときは `null`。`unsorted`・`none` は返さない |
-| `genreConfidence` | 数値か `null` | `genre` を返すときの確率（0〜1、小数第2位）。`genre` が `null` なら `null`。アプリはおまかせで任せるかの判定に使う（`docs/data-model.md` の `suggestedGenreConfidence`） |
-| `tags` | 文字列の配列 | タグのキー。重複なし。空でもよい。`genre` が `null` でも、`tags` があることはある |
+| `genreConfidence` | 数値か `null` | `genre` を返すときの確率（0〜1、小数第2位）。`genre` が `null` なら `null`。Vision の食べ物系のラベル（`food` `drink` `beverage` `dessert` `baked_goods`）の最大が 0.30 未満のときも `null`（ジャンルは返す。根拠の弱い写真をおまかせで飛ばさないため）。アプリはおまかせで任せるかの判定に使う（`docs/data-model.md` の `suggestedGenreConfidence`） |
+| `tags` | 文字列の配列 | タグのキー。重複なし。空でもよい。`genre` が `null` でも、`tags` があることはある。ジャンルと食い違うタグは返さない（飲み物・デザートのときは、その種類の料理のタグだけで、大分類・系統は返さない） |
 
 - 提案なしも **200** で返す。アプリはこれを受けて `suggestedAt` を書く（問い合わせ済みにする）
 - Worker は、`docs/data-model.md` にあるキーだけを返す。アプリは、知らないキーが来たら捨てる（落とさない）
 - 古いアプリは知らない項目（`genreConfidence`）を読み飛ばす。新しいアプリが古い Worker を呼ぶと、確率が無い＝おまかせの対象にならないだけ。Worker のデプロイとアプリの入れ替えは、どちらが先でもよい
-- 料理のタグは、対応する Vision のラベルが `labels` にあるときだけ返す（`docs/data-model.md` の「タグの値」）
+- 料理のタグは、対応する Vision のラベルのうち一番強い 1 つだけ、0.15 以上（パスタだけ 0.30 以上）のときに返す（`docs/data-model.md` の「タグの値」）
 
 ## `POST /search`（機能28）
 

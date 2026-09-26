@@ -2,8 +2,11 @@
 
 import { askJev, buildState, type Genre } from "./jev";
 import {
+  AUTO_EVIDENCE_MIN,
   DISH_LABEL_MIN,
   DISH_TAGS,
+  type DishTag,
+  GENERAL_FOOD_LABELS,
   GENRE_MIN,
   LABEL_MIN,
   STRONG_MIN,
@@ -18,6 +21,7 @@ export interface Label {
 export interface Suggestion {
   genre: Genre | null;
   // genre を返すときの Jev の probabilities[genre]。小数第 2 位に丸める。genre が null なら null。
+  // Vision の食べ物系のラベルが弱い（AUTO_EVIDENCE_MIN 未満）ときも null（genre は返す。#114）。
   // アプリはおまかせで任せるかの判定に使う（境目はアプリ側。suggestion-api.md「確信度の扱い」）
   genreConfidence: number | null;
   tags: string[];
@@ -72,27 +76,50 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
     answers.genre.choice === "other" || answers.genre.confidence < GENRE_MIN
       ? null
       : answers.genre.choice;
-  const genreConfidence = genre === null ? null : Math.round(answers.genre.confidence * 100) / 100;
-
-  const dishLabels = new Set(
-    labels.filter((label) => label.confidence >= DISH_LABEL_MIN).map((label) => label.name),
+  // Jev はラベルが弱くても言い切ることがあるので、Vision の食べ物系のラベルが弱い写真はおまかせに回さない（#114）。
+  const evidence = Math.max(
+    0,
+    ...labels.filter((label) => GENERAL_FOOD_LABELS.includes(label.name)).map((label) => label.confidence),
   );
-  const dishes = DISH_TAGS.filter((dish) => dish.labels.some((name) => dishLabels.has(name)));
+  const genreConfidence =
+    genre === null || evidence < AUTO_EVIDENCE_MIN ? null : Math.round(answers.genre.confidence * 100) / 100;
 
+  // 料理のタグは 1 つだけ。ジャンルと種類が違うもの（飲み物にラーメンなど）は付けない。ジャンルが無いときは絞らない（#114）。
+  const dish = strongestDish(labels);
+  const dishes = dish && (genre === null || dish.kind === genre) ? [dish] : [];
+
+  // 大分類・系統は料理のためのタグなので、飲み物・デザートのときは付けない（Jev の答えも）。
   const categories: string[] = [];
   const cuisines: string[] = [];
-  for (const dish of dishes) {
-    if (dish.category) categories.push(dish.category);
-    if (dish.cuisine) cuisines.push(dish.cuisine);
-  }
-  if (answers.category.choice !== "none" && answers.category.confidence >= TAG_MIN) {
-    categories.push(answers.category.choice);
-  }
-  if (answers.cuisine.choice !== "none" && answers.cuisine.confidence >= TAG_MIN) {
-    cuisines.push(answers.cuisine.choice);
+  if (genre === null || genre === "food") {
+    for (const dish of dishes) {
+      if (dish.category) categories.push(dish.category);
+      if (dish.cuisine) cuisines.push(dish.cuisine);
+    }
+    if (answers.category.choice !== "none" && answers.category.confidence >= TAG_MIN) {
+      categories.push(answers.category.choice);
+    }
+    if (answers.cuisine.choice !== "none" && answers.cuisine.confidence >= TAG_MIN) {
+      cuisines.push(answers.cuisine.choice);
+    }
   }
 
   // Set は入れた順を保つので、並びは 料理 → 大分類 → 系統 のまま重複だけ消える。
   const tags = [...new Set([...dishes.map((dish) => dish.key), ...categories, ...cuisines])];
   return { genre, genreConfidence, tags };
+}
+
+// 対応するラベルの確信度が一番強い料理のタグ。DISH_LABEL_MIN（タグに labelMin があればそれ）未満のラベルは見ない。
+// 同じ強さなら DISH_TAGS の順で先のもの。
+function strongestDish(labels: Label[]): DishTag | null {
+  let best: { dish: DishTag; confidence: number } | null = null;
+  for (const dish of DISH_TAGS) {
+    for (const label of labels) {
+      if (!dish.labels.includes(label.name) || label.confidence < (dish.labelMin ?? DISH_LABEL_MIN)) continue;
+      if (best === null || label.confidence > best.confidence) {
+        best = { dish, confidence: label.confidence };
+      }
+    }
+  }
+  return best?.dish ?? null;
 }
