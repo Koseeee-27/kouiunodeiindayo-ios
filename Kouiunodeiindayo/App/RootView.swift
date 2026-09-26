@@ -11,6 +11,11 @@ struct RootView: View {
     /// 下タブの高さと、画面の下のセーフエリア（ホームインジケーター）。ページャーのスクロールの下余白に使う
     @State private var tabBarHeight: CGFloat = 0
     @State private var bottomSafeArea: CGFloat = 0
+    /// ホームでアルバムから取り込んでいる間の進み具合。ページャーと下タブの上に幕を重ね、どちらも触れなくする
+    /// （取り込み中は触れない。終わったときにホームが仕分けのカバーを出すので、カメラ・一覧の仕分けのカバーと重ならないように）
+    @State private var importProgress: PhotoImportProgress?
+
+    private var isImporting: Bool { importProgress != nil }
 
     /// 引数を省くと、設定（`UserDefaults`）の「開いたときの画面」に従う。
     /// `.onAppear` で切り替えると最初の1フレームがホームになってしまうので、`init` で決める。
@@ -24,7 +29,7 @@ struct RootView: View {
         ZStack(alignment: .bottom) {
             // 指についてくる横スワイプにするため、ホームと一覧はページャーに載せる
             TabView(selection: $page) {
-                HomeView { select(.camera) }
+                HomeView(onTakePhoto: { select(.camera) }, onImportProgressChange: { importProgress = $0 })
                     .tag(RootTab.home)
                 RecordListView()
                     .tag(RootTab.list)
@@ -41,6 +46,14 @@ struct RootView: View {
                 select(tab)
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.height) { tabBarHeight = $0 }
+            // 取り込み中は、幕の下で押せなくする（読み上げからも）
+            .disabled(isImporting)
+        }
+        .overlay {
+            if let importProgress {
+                PhotoImportingOverlayView(progress: importProgress)
+                    .ignoresSafeArea()
+            }
         }
         // ページャーは上のセーフエリア（ステータスバーの周り）まで地を広げないので、ここでも地を敷く
         .background(Theme.background)
@@ -61,6 +74,8 @@ struct RootView: View {
     /// カメラのカバーが出ている間はバーが隠れるので、ここに来るのはカバーが閉じているときだけ。
     /// カバーを閉じたあとホームへ戻すのは `onChange(of: isCameraShown)` の1か所に任せる。
     private func select(_ tab: RootTab) {
+        // 取り込み中は動かない（読み上げの操作からも）
+        guard !isImporting else { return }
         withAnimation {
             if tab == .camera {
                 isCameraShown = true

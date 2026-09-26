@@ -13,6 +13,8 @@ struct HomeView: View {
 
     /// 撮るボタン。カメラのカバーの出し方は `RootView` が持つ
     let onTakePhoto: () -> Void
+    /// 取り込みの進み具合が変わったとき（終わったら nil）。`RootView` が、取り込み中の幕をページャーと下タブの上に重ねる
+    let onImportProgressChange: (PhotoImportProgress?) -> Void
 
     /// 仕分け済みの新しい順。「今日」は `#Predicate` に書けないので、`body` で切り分ける
     @Query(
@@ -30,8 +32,8 @@ struct HomeView: View {
     @State private var isSettingsShown = false
     /// アルバムで選ばれた写真。受け取ったらすぐ空に戻す（同じ写真をもう一度選べるように）
     @State private var pickedItems: [PhotosPickerItem] = []
-    /// 取り込み中の進み具合。`nil` でなければ幕を重ねる
-    @State private var importProgress: ImportProgress?
+    /// 取り込み中の進み具合。幕は `RootView` が出す
+    @State private var importProgress: PhotoImportProgress?
     /// 取り込みが終わり、取り込んだ写真だけの仕分けを出しているときの結果
     @State private var importResult: PhotoImportResult?
     /// 食事らしい写真が 0 枚だったときの結果。アラートに使う
@@ -42,18 +44,17 @@ struct HomeView: View {
     @Environment(\.tabBarInset) private var tabBarInset
 
     /// プレビュー「取り込み中」で使う、進み具合の代わり
-    private let previewImportProgress: ImportProgress?
+    private let previewImportProgress: PhotoImportProgress?
 
     /// 引数の `importProgress` は `previewImportProgress` に入れる。プレビューで取り込み中の幕を見るためだけに渡す。
-    init(onTakePhoto: @escaping () -> Void, importProgress: ImportProgress? = nil) {
+    init(
+        onTakePhoto: @escaping () -> Void,
+        onImportProgressChange: @escaping (PhotoImportProgress?) -> Void = { _ in },
+        importProgress: PhotoImportProgress? = nil
+    ) {
         self.onTakePhoto = onTakePhoto
+        self.onImportProgressChange = onImportProgressChange
         previewImportProgress = importProgress
-    }
-
-    /// 取り込みの進み具合（済んだ枚数・全体）
-    struct ImportProgress {
-        var done: Int
-        var total: Int
     }
 
     /// 今日撮った記録のうち一番新しい1枚（新しい順なので、今日の最初の1件）。
@@ -94,8 +95,9 @@ struct HomeView: View {
             SettingsView()
         }
         .overlay {
-            if let progress = importProgress ?? previewImportProgress {
-                importingOverlay(progress)
+            // ふだんの幕は `RootView` が出す。ホームだけのプレビューで見るときだけ、ここで出す
+            if let previewImportProgress {
+                PhotoImportingOverlayView(progress: previewImportProgress)
             }
         }
         .onChange(of: pickedItems) { _, items in
@@ -103,12 +105,15 @@ struct HomeView: View {
             pickedItems = []
             startImport(items)
         }
+        .onChange(of: importProgress) { _, progress in
+            onImportProgressChange(progress)
+        }
         // 取り込んだ写真だけの仕分け。閉じ方は入口からの仕分けと同じ
         .fullScreenCover(item: $importResult) { result in
             SortView(importedIDs: result.importedIDs, importSummary: result)
         }
         .alert(
-            "食事の写真が見つかりませんでした",
+            emptyImportResult?.emptyAlertTitle ?? "",
             isPresented: Binding(
                 get: { emptyImportResult != nil },
                 set: { if !$0 { emptyImportResult = nil } }
@@ -117,7 +122,8 @@ struct HomeView: View {
         ) { _ in
             Button("OK") {}
         } message: { result in
-            Text(verbatim: Self.emptyImportMessage(result))
+            Text(verbatim: result.emptyAlertMessage)
+                .accessibilityLabel(Text(verbatim: result.emptyAlertAccessibilityLabel))
         }
     }
 
@@ -126,16 +132,17 @@ struct HomeView: View {
     }
 
     /// 選ばれた写真を 1 枚ずつ取り込む。終わったら、1 枚以上なら仕分けを開き、0 枚ならアラートを出す。
-    /// 途中で別のタブに移っても続く。途中でアプリが終わっても、そこまでの写真は仕分け待ちに残る
+    /// 取り込み中は下タブもページのスワイプも止まる（`RootView`）。途中でアプリが終わっても、そこまでの写真は仕分け待ちに残る
     private func startImport(_ items: [PhotosPickerItem]) {
-        importProgress = ImportProgress(done: 0, total: items.count)
+        guard PhotoImporter.shouldStart(selectedCount: items.count, isImporting: importProgress != nil) else { return }
+        importProgress = PhotoImportProgress(done: 0, total: items.count)
         let runner = PhotoImportRunner.live(store: store)
         Task {
             // 選んだ直後は、ピッカーがまだ閉じる途中。1 枚だけだと取り込みがすぐ終わり、閉じきる前に仕分けのカバーを出すと
             // カバーの中身が上のセーフエリアにずれて ✕ が押せなくなる（シミュレータで確認）。閉じ終わるのを待ってから始める
             try? await Task.sleep(for: Self.pickerDismissDelay)
             let result = await runner.run(items) { done, total in
-                importProgress = ImportProgress(done: done, total: total)
+                importProgress = PhotoImportProgress(done: done, total: total)
             }
             importProgress = nil
             if result.importedIDs.isEmpty {
@@ -148,28 +155,6 @@ struct HomeView: View {
 
     /// ピッカーが閉じ終わるまで待つ時間
     private static let pickerDismissDelay: Duration = .milliseconds(600)
-
-    /// 0 枚のときのアラートの本文。読めなかった写真があるときだけ、その枚数も足す（仕分けの上の 1 行と同じ）
-    private static func emptyImportMessage(_ result: PhotoImportResult) -> String {
-        var text = "除外 \(result.excludedCount) 枚"
-        if result.failedCount > 0 {
-            text += " ／ 読めなかった \(result.failedCount) 枚"
-        }
-        return text
-    }
-
-    /// 取り込み中の幕。下のホームは触れない（色の付いた幕が触れた指を受け取る）
-    private func importingOverlay(_ progress: ImportProgress) -> some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-            Text(verbatim: "取り込み中 \(progress.done) / \(progress.total)")
-                .font(Theme.font(.headline, bold: true))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background.opacity(0.85))
-        .accessibilityElement(children: .combine)
-    }
 
     /// 「今日の一枚」の見出しと写真の間、写真と「最近の写真」の見出しの間の最小の余白（pt）
     private static let todayPhotoGap: CGFloat = 12
@@ -230,6 +215,8 @@ struct HomeView: View {
                 headerIcon("photo.on.rectangle")
             }
             .buttonStyle(.plain)
+            // 幕の下になるが、読み上げなどから押されないよう、取り込み中は止める
+            .disabled(importProgress != nil)
             .accessibilityLabel("アルバムから取り込む")
             Button {
                 isSettingsShown = true
@@ -362,7 +349,7 @@ struct HomeView: View {
 }
 
 #Preview("取り込み中") {
-    HomeView(onTakePhoto: {}, importProgress: HomeView.ImportProgress(done: 3, total: 12))
+    HomeView(onTakePhoto: {}, importProgress: PhotoImportProgress(done: 3, total: 12))
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
