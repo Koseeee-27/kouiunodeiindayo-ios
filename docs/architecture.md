@@ -58,6 +58,7 @@ Kouiunodeiindayo/
 └── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
+├── Info.plist                 ← 独自のキー（Worker の URL と合言葉）だけの Info.plist。値は Local.xcconfig から入る（docs/setup.md の 7）
 └── Local.xcconfig.example     ← 個人ごとの署名設定・Worker の URL と合言葉の見本（docs/setup.md）
 KouiunodeiindayoTests/         ← テスト（Swift Testing）。同期フォルダなので、ファイルを置くだけでよい
 server/                        ← 中継サーバー（Cloudflare Worker）。Jev を呼んで、ジャンル・タグ・検索の条件を返す
@@ -112,7 +113,9 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 - 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
 - 自信が低いとき（Worker が「提案なし」と返したとき）も問い合わせ済みにする：`suggestedAt` を書き、`suggestedGenre` は `nil`、`suggestedTags` は空
 - 通信できない・時間切れ（目安 1.5 秒）のときだけ、何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる
-- 画面から `SuggestionClient` を直接呼ばない。`SuggestionService` を `@Environment` で受け取る。プレビューではモックを渡す
+- 同じ写真は重ねて問い合わせない（撮った直後は、カメラ側と仕分けの画面の両方から頼まれる）。問い合わせは受け付けた順に1件ずつ行う
+- Worker の URL か合言葉が未設定（`Config/Local.xcconfig` に書いていない）なら、問い合わせない。撮る・仕分けるはそのまま
+- 画面から `SuggestionClient` を直接呼ばない。`SuggestionService` を `@Environment` で受け取る。既定は何もしないモックで、本物はアプリの入口（`KouiunodeiindayoApp`）で渡す。プレビューで提案を見たいときはモック（`SuggestionMock`）を渡す
 
 ## 並行して作るための約束
 

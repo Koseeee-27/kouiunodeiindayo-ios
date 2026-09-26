@@ -6,3 +6,8 @@ DEVELOPMENT_TEAM = XXXXXXXXXX
 
 // Bundle ID の接頭辞。人ごとに変える（同じ値だと、無料の Apple ID では署名が衝突する）。一度決めたら変えない
 BUNDLE_ID_PREFIX = com.example.yourname
+
+// Worker（中継サーバー）の URL と合言葉。書かなければ、提案が出ないだけで、ほかはいつもどおり動く。手順は docs/setup.md の「7. Worker」
+// xcconfig では // 以降がコメントになるので、URL の // は $() で区切って書く（$() は空の値）
+SUGGESTION_BASE_URL = https:/$()/your-worker.example.workers.dev
+SUGGESTION_TOKEN = replace-with-your-token

@@ -73,6 +73,12 @@ struct RecordStore {
         record.suggestedAt = date
     }
 
+    /// 写真ファイルの場所。この `RecordStore` が使う `PhotoStorage` で組み立てる。
+    /// 提案の問い合わせ（`SuggestionService`）が Vision に渡すのに使う（保存した場所と、読む場所がずれないように）。
+    func photoURL(fileName: String) -> URL {
+        photoStorage.photoURL(fileName: fileName)
+    }
+
     /// 「うまい」の付け外し。
     func toggleFavorite(_ record: Record) {
         record.isFavorite.toggle()

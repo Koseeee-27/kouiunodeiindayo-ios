@@ -24,6 +24,7 @@ struct CameraFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.photoStorage) private var photoStorage
+    @Environment(\.suggestionService) private var suggestionService
 
     @State private var step: Step
     @State private var isSaveFailed = false
@@ -95,8 +96,10 @@ struct CameraFlowView: View {
     private func save(_ image: UIImage) {
         do {
             // 撮影日時は常に今。アルバムから選んだ写真も、写真の撮影日時ではなく選んだ時刻にする（`docs/data-model.md`）
-            let record = try RecordStore(modelContext: modelContext, photoStorage: photoStorage)
-                .add(image: image, takenAt: .now)
+            let store = RecordStore(modelContext: modelContext, photoStorage: photoStorage)
+            let record = try store.add(image: image, takenAt: .now)
+            // 提案は裏で問い合わせる。仕分けの画面は待たずに出す（`docs/architecture.md`「提案（機能26）の流れ」）
+            suggestionService.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: store)
             step = .sort(recordID: record.id)
         } catch {
             Self.logger.error("撮った写真を保存できなかった: \(error.localizedDescription, privacy: .public)")
