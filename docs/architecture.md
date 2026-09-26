@@ -23,7 +23,7 @@ Kouiunodeiindayo/
 │   │   ├── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ。画面は持たない
 │   │   └── PhotoImportingOverlayView.swift ← 取り込み中の幕（`RootView` が重ねる）
 │   ├── List/
-│   │   └── RecordListView.swift   ← 一覧。言葉で探す欄と、読み取った条件での絞り込み（機能28）。選ぶモード（まとめて消す。機能11）
+│   │   └── RecordListView.swift   ← 一覧。言葉で探す欄と、読み取った条件での絞り込み（機能28。読み取れない言葉だけ `WordSearchService` で Worker に聞く）。選ぶモード（まとめて消す。機能11）
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
@@ -60,6 +60,7 @@ Kouiunodeiindayo/
 │   ├── SuggestionClient.swift ← Worker への通信。URL と合言葉は Config/Local.xcconfig から読む
 │   ├── SuggestionService.swift ← まとめ役。プロトコルにして、プレビュー用のモックも用意する
 │   ├── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
+│   ├── WordSearchService.swift ← 言葉で探す（機能28）で、端末の中で読み取れなかった言葉を Worker（`/search`）に聞く口と、そのモック
 │   ├── SearchCondition.swift  ← 言葉で探す（機能28）の条件（タグ・うまい・時期）
 │   ├── LocalSearchParser.swift ← 言葉から条件を端末の中で読み取る（タグの名前・「うまい」・時期の言葉）
 │   └── RecordSearchFilter.swift ← 条件で記録を絞り込む（料理のタグは大分類・系統にも当てはめる）
@@ -135,7 +136,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 - 同じ写真は重ねて問い合わせない（撮った直後は、カメラ側と仕分けの画面の両方から頼まれる）。問い合わせは受け付けた順に1件ずつ行う。問い合わせ直しを待っている写真は後回しにし、その間もほかの写真を問い合わせる
 - ふだんは問い合わせの間を空けない。失敗したら問い合わせの間を広げ（1 秒から倍々、上限 8 秒）、成功が 3 回続くたびに半分にして、0.5 秒を切ったら空けないのに戻す。前の問い合わせから 30 秒以上あいたら、すぐ空けないのに戻す。端末が通信できない（機内モード・圏外など）ときの失敗では広げない（Worker の回数の制限に合わせるため。決まりは `LiveSuggestionService.RetryPolicy`）
 - Worker の URL か合言葉が未設定（`Config/Local.xcconfig` に書いていない）なら、問い合わせない。撮る・仕分けるはそのまま
-- 画面から `SuggestionClient` を直接呼ばない。`SuggestionService` を `@Environment` で受け取る。既定は何もしないモックで、本物はアプリの入口（`KouiunodeiindayoApp`）で渡す。プレビューで提案を見たいときはモック（`SuggestionMock`）を渡す
+- 画面から `SuggestionClient` を直接呼ばない。提案は `SuggestionService`、言葉で探すは `WordSearchService` を `@Environment` で受け取る（言葉で探すは待ち行列も問い合わせ直しも持たないので、別の口にしている）。既定は何もしないモックで、本物はアプリの入口（`KouiunodeiindayoApp`）で渡す。プレビューで提案を見たいときはモック（`SuggestionMock`）を渡す
 
 ## 並行して作るための約束
 

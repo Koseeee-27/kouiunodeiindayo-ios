@@ -53,6 +53,9 @@
 - ブランチは `feat/85-word-search-m2`（origin/main から。M1 は未マージ）。M1 とぶつからないよう、アプリの `SearchPeriod` には触らない（「今年」は M1 で足す）。Worker と `suggestion-api.md` は `this_year` も返す形にし、`suggestion-api.md` の `this_year` の行は M1 と同じ文にする（マージでぶつからないように）。M1 が入るまでは、アプリは `this_year` を読めずに時期の指定なしとして扱う
 - Worker の確かめは `npm run check` と、偽の Jev で `/search` を呼ぶスクリプト（`scripts/check-search.mjs`、`npm run check:search`）。本番の Worker と Jev は呼ばない。`try-search.sh` は、デプロイ後にこうせいが本番に向けて使う
 - 11:30 でコードを止める。1.5 時間を超えそうなら、アプリ側を後に回して Worker 側（`server/` と `suggestion-api.md`）を先に仕上げる
+- （実装で変えたこと）アプリの問い合わせの口は、`SuggestionService` に足さず、別の `WordSearchService`（`Suggestion/WordSearchService.swift`。本物・モック・`@Environment` の既定値）にした。`SuggestionService.swift`・`SuggestionMock.swift` は #120（未マージ）も触っていてぶつかるため。言葉で探すは待ち行列も問い合わせ直しも持たないので、分けても困らない。テストも別のファイル（`WordSearchTests.swift`）
+- （実装で変えたこと）Worker の `jev.ts` は、`askJev` を残して、質問と締め切りを渡せる `askJevQuestions` を足した（`/suggest` の呼び方は変えない）。`/search` のときは、Jev が 200 以外を返したときの上流の文をログに入れない（上流の文に検索の言葉が入ることがあるため。状態コードだけ）
+- （実装で変えたこと）Worker に聞いている間は、欄の下に「読み取っています…」を出し、前の結果をそのまま出しておく。新しく探す・欄を空にする・やめると、聞いている途中の結果は捨てる
 
 ## 前提・確認事項
 

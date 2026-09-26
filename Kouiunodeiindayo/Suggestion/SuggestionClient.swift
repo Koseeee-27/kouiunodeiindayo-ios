@@ -169,3 +169,65 @@ struct SuggestionClient {
         let tags: [String]
     }
 }
+
+// MARK: 言葉で探す（`POST /search`。機能28）
+
+/// `POST /search` に送る JSON。形は `docs/suggestion-api.md` が正。
+nonisolated struct SearchRequest: Encodable, Equatable {
+    let query: String
+}
+
+extension SuggestionClient {
+    /// `/search` の時間切れ（`docs/suggestion-api.md`）。
+    static let searchTimeout: TimeInterval = 3
+
+    /// 3 秒で打ち切る通信。`/suggest` の `session` と同じく ephemeral で、全体の時間（Resource）にも同じ値を入れる。
+    static let searchSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = searchTimeout
+        configuration.timeoutIntervalForResource = searchTimeout
+        configuration.waitsForConnectivity = false
+        return URLSession(configuration: configuration)
+    }()
+
+    /// 検索の言葉から条件を読み取ってもらう。200 以外・時間切れ・通信できない・JSON が読めない、はどれも throw する。
+    /// 言葉はログに出さない（ADR 0006）。
+    func search(_ query: String, session: URLSession = SuggestionClient.searchSession) async throws -> SearchCondition {
+        let urlRequest = try Self.makeSearchURLRequest(query, configuration: configuration)
+        let (data, response) = try await session.data(for: urlRequest)
+        guard let http = response as? HTTPURLResponse else {
+            throw SuggestionClientError.invalidResponse
+        }
+        guard http.statusCode == 200 else {
+            throw SuggestionClientError.httpStatus(http.statusCode)
+        }
+        return try Self.decodeSearchCondition(from: data)
+    }
+
+    /// 送る `URLRequest` を組み立てる。
+    static func makeSearchURLRequest(_ query: String, configuration: Configuration) throws -> URLRequest {
+        var urlRequest = URLRequest(url: configuration.baseURL.appending(path: "search"))
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("Bearer \(configuration.token)", forHTTPHeaderField: "Authorization")
+        urlRequest.httpBody = try JSONEncoder().encode(SearchRequest(query: query))
+        return urlRequest
+    }
+
+    /// 返ってきた JSON を読む。知らないタグ・知らない時期は指定なし（`nil`）にする（落とさない）。
+    static func decodeSearchCondition(from data: Data) throws -> SearchCondition {
+        let response = try JSONDecoder().decode(SearchResponse.self, from: data)
+        return SearchCondition(
+            tag: response.tag.flatMap(Tag.init(rawValue:)),
+            favoriteOnly: response.favoriteOnly,
+            period: response.period.flatMap(SearchPeriod.init(rawValue:))
+        )
+    }
+
+    /// 返る JSON そのままの形。
+    private nonisolated struct SearchResponse: Decodable {
+        let tag: String?
+        let favoriteOnly: Bool
+        let period: String?
+    }
+}

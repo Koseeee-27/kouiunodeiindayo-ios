@@ -1,10 +1,12 @@
+import OSLog
 import SwiftData
 import SwiftUI
 
 /// 仕分け済みの記録を新しい順に、サムネイルのグリッドで並べる。上に仕分け待ちの入口（枚数つき）を置く。
 /// 要素と状態は `docs/screen-design.md` の「一覧」、取り出し方は `docs/data-model.md` の「よく使う取り出し方」が正。
 /// 上の欄から言葉で探せる（機能28）。キーボードの「検索」を押すと、言葉からタグ・うまい・時期を読み取って（`LocalSearchParser`）、
-/// 合う記録だけに絞る（`RecordSearchFilter`）。絞り込みは端末の中だけで行い、記録は送らない。
+/// 合う記録だけに絞る（`RecordSearchFilter`）。端末の中で読み取れなかった言葉だけ、Worker に聞く（`WordSearchService`。M2）。
+/// 絞り込みは端末の中だけで行い、記録は送らない（送るのは読み取れなかった言葉だけ）。
 /// 上の行の右端の「選択」で選ぶモードに入り、写真をタップして選んで、まとめて消せる（機能11。#118）。
 /// 選ぶモードの間は下タブの代わりに消すの操作を出すので、選ぶモードかどうかを `onSelectingChange` で `RootView` に伝える。
 struct RecordListView: View {
@@ -28,8 +30,11 @@ struct RecordListView: View {
     @State private var searchText = ""
     /// 絞り込みの条件。`nil` は絞り込んでいない
     @State private var condition: SearchCondition?
-    /// 読み取れなかったときの知らせ。一覧はそのまま
+    /// 読み取れなかった・通信できなかったときの知らせ。一覧はそのまま
     @State private var message: String?
+    /// 端末で読み取れなかった言葉を Worker に聞いている間（M2）。新しく探す・やめるときは取り消す
+    @State private var workerSearch: Task<Void, Never>?
+    @Environment(\.wordSearchService) private var wordSearchService
     @FocusState private var isSearchFocused: Bool
     /// 選ぶモード（まとめて消す）
     @State private var isSelecting = false
@@ -113,7 +118,14 @@ struct RecordListView: View {
                     // 選ぶモードの間は、欄と仕分け待ちの入口を押せなくする（見た目は残す。押すと選ぶ操作と混ざるため）
                     searchField
                         .disabled(isSelecting)
-                    if let message {
+                    if workerSearch != nil {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text("読み取っています…")
+                        }
+                        .font(Theme.font(.subheadline))
+                        .foregroundStyle(Theme.textSecondary)
+                    } else if let message {
                         Text(message)
                             .font(Theme.font(.subheadline))
                             .foregroundStyle(Theme.textSecondary)
@@ -182,6 +194,7 @@ struct RecordListView: View {
         // 欄を手で空にしたら、絞り込みもやめる（✕ が消えて戻す手段が見えなくならないように）。キーボードは閉じない
         .onChange(of: searchText) { _, text in
             if text.isEmpty {
+                cancelWorkerSearch()
                 condition = nil
                 message = nil
             }
@@ -360,7 +373,8 @@ struct RecordListView: View {
         .padding(.vertical, 48)
     }
 
-    /// 言葉から条件を読み取って絞る。1 つも読み取れなければ、知らせを出して一覧はそのまま
+    /// 言葉から条件を読み取って絞る。端末の中で読み取れたら通信せずに絞る。読み取れなかったときだけ Worker に聞く（M2）。
+    /// Worker も読み取れない・通信できないときは、知らせを出して一覧はそのまま
     private func search() {
         let text = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
@@ -368,14 +382,49 @@ struct RecordListView: View {
             return
         }
         now = .now
+        cancelWorkerSearch()
         let parsed = LocalSearchParser.parse(text)
-        if parsed.isEmpty {
-            condition = nil
-            message = "条件を読み取れませんでした。タグの名前や『うまい』『今月』で探せます"
-        } else {
-            condition = parsed
-            message = nil
+        guard parsed.isEmpty else {
+            show(parsed, message: nil)
+            return
         }
+        // 聞いている間は、前の結果（絞り込み中なら、その一覧）をそのまま出しておく
+        message = nil
+        let service = wordSearchService
+        workerSearch = Task {
+            let result: SearchCondition?
+            do {
+                result = try await service.search(text)
+            } catch {
+                // 言葉はログに出さない（ADR 0006）。種類だけ
+                Self.logger.notice("言葉で探す：Worker に聞けなかった（\(String(describing: type(of: error)))）")
+                result = nil
+            }
+            // 取り消された（新しく探した・やめた）なら、あとから届いた結果で上書きしない
+            guard !Task.isCancelled else { return }
+            workerSearch = nil
+            if let result, !result.isEmpty {
+                show(result, message: nil)
+            } else if result != nil {
+                show(nil, message: Self.unreadableMessage)
+            } else {
+                show(nil, message: "通信できませんでした。タグの名前や『うまい』『今月』なら通信なしで探せます")
+            }
+        }
+    }
+
+    private static let unreadableMessage = "条件を読み取れませんでした。タグの名前や『うまい』『今月』で探せます"
+    private static let logger = Logger(category: "RecordListView")
+
+    private func cancelWorkerSearch() {
+        workerSearch?.cancel()
+        workerSearch = nil
+    }
+
+    /// 探した結果を出す。`condition` が `nil` なら一覧はそのまま（絞り込みもやめる）
+    private func show(_ newCondition: SearchCondition?, message newMessage: String?) {
+        condition = newCondition
+        message = newMessage
         // 結果は画面が変わるだけで読み上げの位置は欄に残るので、件数か知らせを読み上げる
         let announcement: String
         if let message {
@@ -390,6 +439,7 @@ struct RecordListView: View {
 
     /// 絞り込みをやめて、元の一覧に戻す
     private func clear() {
+        cancelWorkerSearch()
         searchText = ""
         condition = nil
         message = nil
@@ -538,6 +588,29 @@ struct RecordListView: View {
     RecordListView(searchText: "こんにちは")
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.wordSearchService, WordSearchMock.nothing)
+}
+
+// 端末で読み取れない言葉を Worker に聞く（M2）。モックが、うまいラーメンと読んだことにする
+#Preview("Worker に聞いて絞る") {
+    RecordListView(searchText: "こってりしたもの")
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.wordSearchService, WordSearchMock.ramen)
+}
+
+#Preview("Worker に聞いている") {
+    RecordListView(searchText: "こってりしたもの")
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.wordSearchService, WordSearchMock(result: nil, delay: .seconds(60)))
+}
+
+#Preview("通信できない") {
+    RecordListView(searchText: "こってりしたもの")
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.wordSearchService, WordSearchMock.disabled)
 }
 
 #Preview("SE 相当・文字サイズ XXX Large") {
