@@ -52,7 +52,8 @@ struct RecordDetailView: View {
     }
 }
 
-/// 記録1件ぶんの詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す（右上の「…」から）、閉じるができる。
+/// 記録1件ぶんの詳細。写真（本体）・日付・ジャンル・タグを出し、「うまい」の付け外し、タグの付け外し（一番下の行と、
+/// 「＋ タグ」から開くタグの一覧）、記録を消す（右上の「…」から）、閉じるができる。
 /// 要素と操作は `docs/screen-design.md` の「記録の詳細」が正。
 struct RecordDetailPageView: View {
     private static let logger = Logger(category: "RecordDetailView")
@@ -74,6 +75,8 @@ struct RecordDetailPageView: View {
     @State private var isDeleteFailureShown = false
     /// 消したあと、閉じ終わるまでの間に、消えた記録を読まないための印
     @State private var isDeleted = false
+    /// タグの一覧（シート）を開いているか
+    @State private var isTagPickerShown = false
 
     private var store: RecordStore {
         RecordStore(modelContext: modelContext, photoStorage: photoStorage)
@@ -88,6 +91,36 @@ struct RecordDetailPageView: View {
     }
 
     private var content: some View {
+        // ふだんはスクロールせずに 1 画面に収める（写真が残りの高さに合わせて縮む）。
+        // タグが多い・文字サイズが大きいなどで、写真を `photoMinHeight` より小さくしないと入らないときだけ、縦にスクロールする版にする。
+        // 縦のスクロールは、左右のめくり（ページャー）とは取り合わない
+        ViewThatFits(in: .vertical) {
+            layout(fillsHeight: true)
+            ScrollView {
+                layout(fillsHeight: false)
+            }
+        }
+        .background(Theme.background)
+        // 記録が変わったときだけファイルを読む（写真本体）
+        .task(id: shouldLoadPhoto ? record.id : nil) {
+            image = shouldLoadPhoto ? photoStorage.photo(fileName: record.photoFileName) : nil
+        }
+        // iOS 26 の `confirmationDialog` は「やめる」を出さない（外をタップして閉じる）ので、「消す」と「やめる」が並ぶ `alert` にする
+        .alert("この記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
+            Button("消す", role: .destructive) {
+                delete()
+            }
+            Button("やめる", role: .cancel) {}
+        }
+        .alert("消せませんでした", isPresented: $isDeleteFailureShown) {
+            Button("OK", role: .cancel) {}
+        }
+        .sheet(isPresented: $isTagPickerShown) {
+            TagPickerView(record: record)
+        }
+    }
+
+    private func layout(fillsHeight: Bool) -> some View {
         VStack(spacing: 16) {
             HStack {
                 closeButton
@@ -97,6 +130,15 @@ struct RecordDetailPageView: View {
             // 写真と日付は、近づけて1組にする
             VStack(spacing: Theme.detailPhotoDateSpacing) {
                 photo
+                    // 1 画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
+                    // スクロールする版では、写真を同じ高さで止め、ジャンルとタグがなるべく 1 画面に見えるようにする
+                    .frame(
+                        minHeight: fillsHeight ? Self.photoMinHeight : nil,
+                        idealHeight: fillsHeight ? Self.photoMinHeight : nil,
+                        maxHeight: fillsHeight ? nil : Self.photoMinHeight
+                    )
+                    // 写真は余白より先に、高さを受け取る
+                    .layoutPriority(1)
                 Text(verbatim: dateText)
                     .font(Theme.font(.headline, bold: true))
                     // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
@@ -117,24 +159,18 @@ struct RecordDetailPageView: View {
             favoriteButton
             Spacer(minLength: 0)
             genreButtons
+            // 付いているタグ。「何か（ジャンル）→ どんな（タグ）」の順に読めるよう、ジャンルの下に置く
+            RecordDetailTagsView(
+                tags: record.tagValues,
+                onRemove: { tag in store.setTags(TagEditing.removing(tag, from: record.tagValues), for: record) },
+                onAdd: { isTagPickerShown = true }
+            )
         }
         .padding()
-        .background(Theme.background)
-        // 記録が変わったときだけファイルを読む（写真本体）
-        .task(id: shouldLoadPhoto ? record.id : nil) {
-            image = shouldLoadPhoto ? photoStorage.photo(fileName: record.photoFileName) : nil
-        }
-        // iOS 26 の `confirmationDialog` は「やめる」を出さない（外をタップして閉じる）ので、「消す」と「やめる」が並ぶ `alert` にする
-        .alert("この記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
-            Button("消す", role: .destructive) {
-                delete()
-            }
-            Button("やめる", role: .cancel) {}
-        }
-        .alert("消せませんでした", isPresented: $isDeleteFailureShown) {
-            Button("OK", role: .cancel) {}
-        }
     }
+
+    /// 1 画面に収める版で、写真をこれより小さくしない（pt）。これを取れないときはスクロールする版にする
+    private static let photoMinHeight: CGFloat = 240
 
     /// 「2026年9月10日」の形。数字を直接埋め込むと「2,026」と桁区切りが入るので、`verbatim` で渡す
     private var dateText: String {
@@ -268,4 +304,41 @@ struct RecordDetailPageView: View {
     RecordDetailView(records: records, initial: records.first!)
         .modelContainer(container)
         .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+/// 記録 1 件だけの詳細のプレビュー。`tags` を付けた「食べ物」の記録を開く
+@MainActor
+private func taggedDetailPreview(tags: [Tag]) -> some View {
+    let container = HomePreviewData.makeTaggedContainer(tags: tags)
+    // プレビュー用なので、無ければ落として気づく
+    let record = try! container.mainContext.fetch(FetchDescriptor<Record>()).first!
+    return RecordDetailView(records: [record], initial: record)
+        .modelContainer(container)
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("タグなし") {
+    taggedDetailPreview(tags: [])
+}
+
+#Preview("タグ 3 個") {
+    taggedDetailPreview(tags: [.ramen, .noodles, .chinese])
+}
+
+/// 一番小さい機種（iPhone SE 第3世代。375×667）で、タグが 2 行になっても写真が小さくなりすぎないかを見る
+#Preview("SE 相当・タグ 6 個") {
+    taggedDetailPreview(tags: [.ramen, .gyoza, .noodles, .fried, .chinese, .japanese])
+        .frame(width: 375, height: 667)
+}
+
+#Preview("SE 相当・文字サイズ XXX Large") {
+    taggedDetailPreview(tags: [.ramen, .gyoza, .noodles, .fried, .chinese, .japanese])
+        .frame(width: 375, height: 667)
+        .dynamicTypeSize(.xxxLarge)
+}
+
+#Preview("SE 相当・文字サイズ最大") {
+    taggedDetailPreview(tags: [.ramen, .gyoza, .noodles, .fried, .chinese, .japanese])
+        .frame(width: 375, height: 667)
+        .dynamicTypeSize(.accessibility5)
 }

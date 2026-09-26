@@ -49,7 +49,15 @@ nonisolated struct SuggestionRequest: Encodable, Equatable {
 struct SuggestionResult: Equatable {
     /// 提案するジャンル（食べ物・飲み物・デザートのどれか）。提案しないときは `nil`。
     let genre: Genre?
+    /// ジャンルの確率（0〜1）。ジャンルが無い・古い Worker で項目が無い・範囲の外なら `nil`。おまかせの判定に使う
+    let genreConfidence: Double?
     let tags: [Tag]
+
+    init(genre: Genre?, genreConfidence: Double? = nil, tags: [Tag]) {
+        self.genre = genre
+        self.genreConfidence = genreConfidence
+        self.tags = tags
+    }
 
     /// 提案なし（Worker が自信が低いと返したとき）。
     static let empty = SuggestionResult(genre: nil, tags: [])
@@ -145,15 +153,19 @@ struct SuggestionClient {
     }
 
     /// 返ってきた JSON を読む。知らないジャンル（提案できない `unsorted`・`none` を含む）は `nil`、知らないタグは捨てる。
+    /// ジャンルの確率は、ジャンルが読めたときだけ、かつ 0〜1 のときだけ残す（それ以外は `nil`。落とさない）。
     static func decodeResult(from data: Data) throws -> SuggestionResult {
         let response = try JSONDecoder().decode(Response.self, from: data)
         let genre = response.genre.flatMap(Genre.init(rawValue:)).flatMap { Genre.suggestable.contains($0) ? $0 : nil }
-        return SuggestionResult(genre: genre, tags: response.tags.compactMap(Tag.init(rawValue:)))
+        let confidence = genre == nil ? nil : response.genreConfidence.flatMap { (0...1).contains($0) ? $0 : nil }
+        return SuggestionResult(
+            genre: genre, genreConfidence: confidence, tags: response.tags.compactMap(Tag.init(rawValue:)))
     }
 
-    /// 返る JSON そのままの形。
+    /// 返る JSON そのままの形。`genreConfidence` は古い Worker では無い。
     private nonisolated struct Response: Decodable {
         let genre: String?
+        let genreConfidence: Double?
         let tags: [String]
     }
 }

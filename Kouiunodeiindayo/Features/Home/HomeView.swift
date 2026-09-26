@@ -1,9 +1,11 @@
+import PhotosUI
 import SwiftData
 import SwiftUI
 
 /// ホーム。今日の一枚を大きく出し、その下に最近の写真、上に仕分け待ちの入口（枚数つき）を置く。
 /// 要素と状態は `docs/screen-design.md` の「ホーム」、取り出し方は `docs/data-model.md` の「よく使う取り出し方」が正。
 /// 今日の一枚は今日撮った記録のうち一番新しい1枚、最近の写真は今日の一枚を除く新しい順の4枚。仕分け待ちはどちらにも出さない。
+/// 右上の写真のアイコンから、アルバムの写真をまとめて取り込み（機能18。`PhotoImporter`）、取り込んだ写真だけの仕分けを開く。
 struct HomeView: View {
     // `#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、先に値に取り出す
     private static let unsorted = Genre.unsorted.rawValue
@@ -11,6 +13,8 @@ struct HomeView: View {
 
     /// 撮るボタン。カメラのカバーの出し方は `RootView` が持つ
     let onTakePhoto: () -> Void
+    /// 取り込みの進み具合が変わったとき（終わったら nil）。`RootView` が、取り込み中の幕をページャーと下タブの上に重ねる
+    let onImportProgressChange: (PhotoImportProgress?) -> Void
 
     /// 仕分け済みの新しい順。「今日」は `#Predicate` に書けないので、`body` で切り分ける
     @Query(
@@ -26,8 +30,32 @@ struct HomeView: View {
     @State private var selectedRecord: Record?
     @State private var isSortShown = false
     @State private var isSettingsShown = false
+    /// アルバムで選ばれた写真。受け取ったらすぐ空に戻す（同じ写真をもう一度選べるように）
+    @State private var pickedItems: [PhotosPickerItem] = []
+    /// 取り込み中の進み具合。幕は `RootView` が出す
+    @State private var importProgress: PhotoImportProgress?
+    /// 取り込みが終わり、取り込んだ写真だけの仕分けを出しているときの結果
+    @State private var importResult: PhotoImportResult?
+    /// 食事らしい写真が 0 枚だったときの結果。アラートに使う
+    @State private var emptyImportResult: PhotoImportResult?
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.photoStorage) private var photoStorage
     /// 下タブの上端までの高さ。スクロールしない版で、最近の写真が下タブの裏に隠れないように下を空ける
     @Environment(\.tabBarInset) private var tabBarInset
+
+    /// プレビュー「取り込み中」で使う、進み具合の代わり
+    private let previewImportProgress: PhotoImportProgress?
+
+    /// 引数の `importProgress` は `previewImportProgress` に入れる。プレビューで取り込み中の幕を見るためだけに渡す。
+    init(
+        onTakePhoto: @escaping () -> Void,
+        onImportProgressChange: @escaping (PhotoImportProgress?) -> Void = { _ in },
+        importProgress: PhotoImportProgress? = nil
+    ) {
+        self.onTakePhoto = onTakePhoto
+        self.onImportProgressChange = onImportProgressChange
+        previewImportProgress = importProgress
+    }
 
     /// 今日撮った記録のうち一番新しい1枚（新しい順なので、今日の最初の1件）。
     /// 先頭だけを見ると、日付を未来に直した記録（#13）があるとき今日の記録が隠れるので、今日の記録を探す。
@@ -66,7 +94,67 @@ struct HomeView: View {
         .sheet(isPresented: $isSettingsShown) {
             SettingsView()
         }
+        .overlay {
+            // ふだんの幕は `RootView` が出す。ホームだけのプレビューで見るときだけ、ここで出す
+            if let previewImportProgress {
+                PhotoImportingOverlayView(progress: previewImportProgress)
+            }
+        }
+        .onChange(of: pickedItems) { _, items in
+            guard !items.isEmpty else { return }
+            pickedItems = []
+            startImport(items)
+        }
+        .onChange(of: importProgress) { _, progress in
+            onImportProgressChange(progress)
+        }
+        // 取り込んだ写真だけの仕分け。閉じ方は入口からの仕分けと同じ
+        .fullScreenCover(item: $importResult) { result in
+            SortView(importedIDs: result.importedIDs, importSummary: result)
+        }
+        .alert(
+            emptyImportResult?.emptyAlertTitle ?? "",
+            isPresented: Binding(
+                get: { emptyImportResult != nil },
+                set: { if !$0 { emptyImportResult = nil } }
+            ),
+            presenting: emptyImportResult
+        ) { _ in
+            Button("OK") {}
+        } message: { result in
+            Text(verbatim: result.emptyAlertMessage)
+                .accessibilityLabel(Text(verbatim: result.emptyAlertAccessibilityLabel))
+        }
     }
+
+    private var store: RecordStore {
+        RecordStore(modelContext: modelContext, photoStorage: photoStorage)
+    }
+
+    /// 選ばれた写真を 1 枚ずつ取り込む。終わったら、1 枚以上なら仕分けを開き、0 枚ならアラートを出す。
+    /// 取り込み中は下タブもページのスワイプも止まる（`RootView`）。途中でアプリが終わっても、そこまでの写真は仕分け待ちに残る
+    private func startImport(_ items: [PhotosPickerItem]) {
+        guard PhotoImporter.shouldStart(selectedCount: items.count, isImporting: importProgress != nil) else { return }
+        importProgress = PhotoImportProgress(done: 0, total: items.count)
+        let runner = PhotoImportRunner.live(store: store)
+        Task {
+            // 選んだ直後は、ピッカーがまだ閉じる途中。1 枚だけだと取り込みがすぐ終わり、閉じきる前に仕分けのカバーを出すと
+            // カバーの中身が上のセーフエリアにずれて ✕ が押せなくなる（シミュレータで確認）。閉じ終わるのを待ってから始める
+            try? await Task.sleep(for: Self.pickerDismissDelay)
+            let result = await runner.run(items) { done, total in
+                importProgress = PhotoImportProgress(done: done, total: total)
+            }
+            importProgress = nil
+            if result.importedIDs.isEmpty {
+                emptyImportResult = result
+            } else {
+                importResult = result
+            }
+        }
+    }
+
+    /// ピッカーが閉じ終わるまで待つ時間
+    private static let pickerDismissDelay: Duration = .milliseconds(600)
 
     /// 「今日の一枚」の見出しと写真の間、写真と「最近の写真」の見出しの間の最小の余白（pt）
     private static let todayPhotoGap: CGFloat = 12
@@ -114,22 +202,39 @@ struct HomeView: View {
 
     /// 左上のタイトルロゴと右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
     private var settingsButtonRow: some View {
-        HStack {
+        HStack(spacing: 0) {
             TitleLogoView()
             Spacer()
+            // アルバムから取り込む（機能18）。写真ライブラリの許可は要らない（選んだ写真だけが渡る）
+            PhotosPicker(
+                selection: $pickedItems,
+                maxSelectionCount: PhotoImporter.maxSelectionCount,
+                matching: .images,
+                preferredItemEncoding: .current
+            ) {
+                headerIcon("photo.on.rectangle")
+            }
+            .buttonStyle(.plain)
+            // 幕の下になるが、読み上げなどから押されないよう、取り込み中は止める
+            .disabled(importProgress != nil)
+            .accessibilityLabel("アルバムから取り込む")
             Button {
                 isSettingsShown = true
             } label: {
-                Image(systemName: "gearshape")
-                    // ロゴより小さく、目立たない色にする（押せる範囲は 44pt のまま）
-                    .font(Theme.font(.title3))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
+                headerIcon("gearshape")
             }
             .buttonStyle(.plain)
             .accessibilityLabel("設定")
         }
+    }
+
+    /// 右上のアイコン。ロゴより小さく、目立たない色にする（押せる範囲は 44pt のまま）
+    private func headerIcon(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(Theme.font(.title3))
+            .foregroundStyle(Theme.textSecondary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(.rect)
     }
 
     private var sortEntry: some View {
@@ -239,6 +344,12 @@ struct HomeView: View {
 
 #Preview("今日の一枚あり・仕分け待ちあり") {
     HomeView(onTakePhoto: {})
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("取り込み中") {
+    HomeView(onTakePhoto: {}, importProgress: PhotoImportProgress(done: 3, total: 12))
         .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }

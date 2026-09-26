@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// おまかせで、先頭の写真を飛ばしてほしいとき。`token` が変わるたびに 1 回だけ飛ばす
+struct AutoFlightRequest: Equatable {
+    let token: UUID
+    let recordID: UUID
+    let direction: SwipeDirection
+}
+
 /// 仕分けのカードの重なりと、4方向のラベル。ドラッグ・ラベルを押したときにカードを飛ばし、飛び終わってからジャンルを付ける。
 /// 仕分け待ちの読み込み（`@Query`）と、上の行（✕・残り枚数）は `SortView` が持つ。
 /// 下のラベルのすぐ下には、`SortView` から渡された `belowCard`（提案されたタグの行）を置く。
@@ -11,6 +18,10 @@ struct SortCardStackView<BelowCard: View>: View {
     /// プレビュー「ドラッグ途中」で使う、指で動かしている量の代わり。
     /// `@GestureState` は外から値を入れられないので、指で動かしていないときだけこちらを使う
     let previewDragOffset: CGSize
+    /// おまかせで先頭の写真を飛ばしてほしいとき（`SortView` が 1 枚ずつ入れる）。先頭が `recordID` のときだけ飛ばす
+    var autoFlightRequest: AutoFlightRequest? = nil
+    /// おまかせの間。ドラッグ・ラベル・「う、うまい」を受け付けない（`isCommitting` と同じ扱い）
+    var isAutoSorting = false
     /// 仕分けが決まったとき（飛び終わったとき）。ジャンルを付ける
     let onSort: (Record, Genre) -> Void
     let onToggleFavorite: (Record) -> Void
@@ -34,6 +45,13 @@ struct SortCardStackView<BelowCard: View>: View {
     /// どちらもカードの縁の外にはみ出すので、その分を枠の上下に空ける
     @State private var topOuterHeight: CGFloat = 0
     @State private var bottomOuterHeight: CGFloat = 0
+    /// 飛ばす先を決めるための、仕分けの場所の大きさ（おまかせで外から飛ばすときに使う）
+    @State private var areaSize: CGSize = .zero
+
+    /// 飛んでいる間・おまかせの間は、手で触れる操作を受け付けない
+    private var isInteractionLocked: Bool {
+        isCommitting || isAutoSorting
+    }
 
     /// カードの表示位置。傾きとラベルの強調もここから決める
     private var cardOffset: CGSize {
@@ -57,8 +75,20 @@ struct SortCardStackView<BelowCard: View>: View {
                 .padding(.bottom, bottomOuterHeight + Self.outerLabelGap)
                 .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .onChange(of: records.first?.id) {
-            if isCommitting {
+        .onGeometryChange(for: CGSize.self, of: \.size) { areaSize = $0 }
+        // おまかせ：飛ぶ前に 0.25 秒止めて、スタンプとラベルの強調を見せる
+        .onChange(of: autoFlightRequest) { _, request in
+            guard
+                AutoSortPolicy.shouldStartFlight(
+                    request, isAutoSorting: isAutoSorting, isCommitting: isCommitting, frontID: records.first?.id),
+                let request
+            else { return }
+            commit(request.direction, pause: Self.autoFlightPause, screenSize: areaSize)
+        }
+        // 飛ばしていた記録が並びから消えたら（保存されて `@Query` から外れたら）、飛び終わりとして戻す。
+        // 先頭が変わっただけ（おまかせの並べ替えが戻ったなど）では戻さない。飛んでいる途中のカードが山に戻らないように
+        .onChange(of: records.map(\.id)) { _, ids in
+            if isCommitting, let flyingRecordID, !ids.contains(flyingRecordID) {
                 resetAfterCommit()
             }
         }
@@ -119,6 +149,8 @@ struct SortCardStackView<BelowCard: View>: View {
     private static var labelInset: CGFloat { 12 }
     /// スタンプをカードの上端からどれだけ下に置くか（pt）。右上の「う、うまい」と重ならない高さ
     private static var stampTopInset: CGFloat { 130 }
+    /// おまかせで、飛ぶ前にスタンプを見せて止める時間
+    private static var autoFlightPause: Duration { .milliseconds(250) }
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
     /// 写真を読み直さず、読み込み中の灰色の地も出ない。
@@ -140,8 +172,12 @@ struct SortCardStackView<BelowCard: View>: View {
                 let isMoving = isCommitting ? record.id == flyingRecordID : isFront
                 SortCardView(
                     record: record,
-                    isFavoriteEnabled: isFront && !isCommitting,
-                    onToggleFavorite: { onToggleFavorite(record) }
+                    isFavoriteEnabled: isFront && !isInteractionLocked,
+                    onToggleFavorite: {
+                        // 飛んでいる間・おまかせの間は、読み上げから押されても切り替えない
+                        guard !isInteractionLocked else { return }
+                        onToggleFavorite(record)
+                    }
                 )
                 // スタンプはカードと一緒に動く。真ん中だと、左右に動かしたときに左右のラベル（縦の真ん中）の下に潜るので、
                 // 上のラベルの下あたりに置く
@@ -158,7 +194,7 @@ struct SortCardStackView<BelowCard: View>: View {
                 // 回転 → 移動の順（ADR 0005）。逆にすると回転した座標系で動く
                 .rotationEffect(isMoving ? SwipeDirection.rotation(for: cardOffset) : .zero)
                 .offset(isMoving ? cardOffset : .zero)
-                .gesture(dragGesture(screenSize: screenSize), isEnabled: isFront && !isCommitting)
+                .gesture(dragGesture(screenSize: screenSize), isEnabled: isFront && !isInteractionLocked)
                 .allowsHitTesting(isFront)
                 .accessibilityHidden(!isFront)
             }
@@ -200,21 +236,25 @@ struct SortCardStackView<BelowCard: View>: View {
             // 飛んでいる間も、先頭は飛ばしている写真のまま（`onSort` のあとで変わる）
             isSuggested: records.first?.suggestedGenreValue == direction.genre
         ) {
+            // おまかせの間は、読み上げから押されても仕分けない
+            guard !isAutoSorting else { return }
             commit(direction, screenSize: screenSize)
         }
         // `.disabled` だと飛んでいる間にラベルが薄くなり、向かっている向きの強調も消えるので、押せなくするだけにする。
         // 読み上げから押された場合も、`commit` の先頭で止まる
-        .allowsHitTesting(!isCommitting)
+        .allowsHitTesting(!isInteractionLocked)
     }
 
     /// 手前のカードを `direction` の向きに飛ばし、飛び終わってからジャンルを付ける。
     /// 先に付けると `@Query` からその記録がすぐ消え、飛んでいる途中のカードが消えてしまうため。
     /// `start` はスワイプで離した瞬間の位置。そこから飛ばすことで、見た目が途切れない（ラベルを押したときは 0）。
-    /// `flight` はスワイプで払った勢いの飛び先と時間。ラベルを押したときは nil で、仕分けの向きにまっすぐ飛ばす
+    /// `flight` はスワイプで払った勢いの飛び先と時間。ラベルを押したときは nil で、仕分けの向きにまっすぐ飛ばす。
+    /// `pause` は、スタンプとラベルの強調を出してから飛び始めるまでの時間（おまかせだけ。手のスワイプ・ラベルは 0）
     private func commit(
         _ direction: SwipeDirection,
         from start: CGSize = .zero,
         flight: (offset: CGSize, duration: TimeInterval)? = nil,
+        pause: Duration = .zero,
         screenSize: CGSize
     ) {
         guard !isCommitting, let record = records.first else { return }
@@ -231,14 +271,31 @@ struct SortCardStackView<BelowCard: View>: View {
         withAnimation(.spring(duration: 0.35, bounce: 0.3)) {
             isNextRising = true
         }
+        guard pause > .zero else {
+            fly(record, direction, flight: flight, screenSize: screenSize)
+            return
+        }
+        Task {
+            try? await Task.sleep(for: pause)
+            fly(record, direction, flight: flight, screenSize: screenSize)
+        }
+    }
+
+    /// 画面の外へ飛ばし、飛び終わったらジャンルを付ける（`commit` の後半）。
+    private func fly(
+        _ record: Record, _ direction: SwipeDirection, flight: (offset: CGSize, duration: TimeInterval)?,
+        screenSize: CGSize
+    ) {
+        // 止めの間に状態が戻されていたら（画面が閉じたなど）、飛ばさない・保存しない
+        guard flyingRecordID == record.id else { return }
         let animation: Animation = flight.map { .linear(duration: $0.duration) } ?? .easeIn(duration: 0.25)
         withAnimation(animation) {
             flyOffset = flight?.offset ?? direction.offscreenOffset(in: screenSize)
         } completion: {
-            // 位置は、`@Query` から記録が消えて先頭が変わったときに戻す（`resetAfterCommit`）。
+            // 位置は、`@Query` から飛ばしていた記録が消えたとき（`onChange(of: records.map(\.id))`）に戻す（`resetAfterCommit`）。
             // ここで一緒に戻すと、`@Query` の更新が遅れたとき、仕分けた写真が真ん中に一瞬戻って見える
             onSort(record, direction.genre)
-            // 保険：先頭が変わらず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
+            // 保険：記録が並びから消えず `onChange` が来ないと `isCommitting` が残り、✕ も効かず抜けられなくなる
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
                 if flyingRecordID == record.id {

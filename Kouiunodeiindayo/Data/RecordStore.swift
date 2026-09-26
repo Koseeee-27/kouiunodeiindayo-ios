@@ -43,15 +43,21 @@ struct RecordStore {
 
     /// 「タグを変える」。仕分けで次に進むときと、詳細での付け外しが呼ぶ。
     /// 重複を除き、タグの一覧の順に並べ直して書く（付け外しした順で並びがぶれないように）。`suggestedTags` には触らない。
+    /// 今の `tags` にある知らないキー（新しい版のアプリが付けたタグなど）は、消さずにうしろに残す
+    /// （`docs/data-model.md` の「知らないキーは表示しない（落とさない）」。画面は `tagValues` で知らないキーを除いて渡してくるため）。
     func setTags(_ tags: [Tag], for record: Record) {
-        record.tags = Self.normalized(tags)
+        var seen = Set<String>()
+        let unknownKeys = record.tags.filter { Tag(rawValue: $0) == nil && seen.insert($0).inserted }
+        record.tags = Self.normalized(tags) + unknownKeys
     }
 
     /// 「提案を保存する」。裏の問い合わせの結果を、メインスレッドで `id` から記録を取り直して書く。
     /// 次のときは何も書かない：記録を取れない・消えていた／もう仕分け済み／もう問い合わせ済み（先に届いたほうを使う。
     /// 仕分けの画面でタグを外している最中に、提案が差し替わって外した状態が戻らないように）。
     /// 提案なし（`nil`・空）でも `suggestedAt` は書く。`tags` には触らない。
-    func saveSuggestion(genre: Genre?, tags: [Tag], for id: UUID, at date: Date = .now) {
+    /// `genreConfidence` は、書いたジャンルが `nil` でないときだけ書く（提案できないジャンルを捨てたときに、確率だけ残らないように）。
+    func saveSuggestion(genre: Genre?, genreConfidence: Double? = nil, tags: [Tag], for id: UUID, at date: Date = .now)
+    {
         var descriptor = FetchDescriptor<Record>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         let record: Record
@@ -69,6 +75,7 @@ struct RecordStore {
 
         // 提案するジャンルは食べ物・飲み物・デザートだけ。それ以外は提案なしとして書く
         record.suggestedGenre = genre.flatMap { Genre.suggestable.contains($0) ? $0.rawValue : nil }
+        record.suggestedGenreConfidence = record.suggestedGenre == nil ? nil : genreConfidence
         record.suggestedTags = Self.normalized(tags)
         record.suggestedAt = date
     }

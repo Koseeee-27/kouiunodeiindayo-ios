@@ -16,7 +16,7 @@ struct SortSuggestedTagsView: View {
     var body: some View {
         ZStack {
             // 高さを決めるための見えないチップ。提案が無いときも 1 行分を空ける
-            SortTagChipView(tag: .ramen, isAttached: true) {}
+            TagChipView(tag: .ramen, isAttached: true) {}
                 .hidden()
                 .accessibilityHidden(true)
             if !tags.isEmpty {
@@ -42,58 +42,11 @@ struct SortSuggestedTagsView: View {
     private var row: some View {
         HStack(spacing: Theme.chipSpacing) {
             ForEach(tags, id: \.self) { tag in
-                SortTagChipView(tag: tag, isAttached: !removed.contains(tag)) {
+                TagChipView(tag: tag, isAttached: !removed.contains(tag)) {
                     onToggle(tag)
                 }
             }
         }
-    }
-}
-
-/// タグのチップ 1 つ。付いている：白地に墨の線と −／外した：点線の枠と ＋（ワイヤー集「タグの見せ方」の 2b）。
-private struct SortTagChipView: View {
-    let tag: Tag
-    let isAttached: Bool
-    let action: () -> Void
-
-    /// −・＋ の丸の直径。文字サイズに合わせて大きくする
-    @ScaledMetric(relativeTo: .subheadline) private var symbolSize = Theme.chipSymbolSize
-
-    var body: some View {
-        Button {
-            action()
-        } label: {
-            HStack(spacing: Theme.chipInnerSpacing) {
-                Text(tag.title)
-                    .font(Theme.font(.subheadline, bold: true))
-                    .lineLimit(1)
-                Image(systemName: isAttached ? "minus" : "plus")
-                    .font(Theme.font(.caption2, bold: true))
-                    .frame(width: symbolSize, height: symbolSize)
-                    .background(Circle().fill(Theme.chipSymbolBackground))
-            }
-            .foregroundStyle(isAttached ? Theme.textPrimary : Theme.textSecondary)
-            .padding(Theme.chipPadding)
-            .background {
-                let shape = Capsule().inset(by: Theme.lineWidthBubble / 2)
-                if isAttached {
-                    shape.fill(Theme.surface)
-                    shape.stroke(Theme.line, lineWidth: Theme.lineWidthBubble)
-                } else {
-                    shape.stroke(
-                        Theme.textSecondary,
-                        style: StrokeStyle(lineWidth: Theme.lineWidthBubble, dash: Theme.suggestionDash))
-                }
-            }
-            // 見た目は小さめのまま、押せる範囲は上下に広げる
-            .frame(minHeight: Theme.minTapHeight)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: isAttached)
-        .accessibilityLabel("タグ \(tag.title)")
-        .accessibilityAddTraits(isAttached ? .isSelected : [])
-        .accessibilityHint(isAttached ? "押すと外します" : "押すと付けます")
     }
 }
 

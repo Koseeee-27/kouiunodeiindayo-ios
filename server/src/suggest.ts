@@ -17,6 +17,9 @@ export interface Label {
 
 export interface Suggestion {
   genre: Genre | null;
+  // genre を返すときの Jev の probabilities[genre]。小数第 2 位に丸める。genre が null なら null。
+  // アプリはおまかせで任せるかの判定に使う（境目はアプリ側。suggestion-api.md「確信度の扱い」）
+  genreConfidence: number | null;
   tags: string[];
 }
 
@@ -58,7 +61,7 @@ export function parseLabels(body: unknown): Label[] {
 export async function suggest(apiKey: string, allLabels: Label[]): Promise<Suggestion> {
   const labels = allLabels.filter((label) => label.confidence >= LABEL_MIN);
   if (labels.length === 0) {
-    return { genre: null, tags: [] };
+    return { genre: null, genreConfidence: null, tags: [] };
   }
 
   const strong = labels.filter((label) => label.confidence >= STRONG_MIN).map((label) => label.name);
@@ -69,6 +72,7 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
     answers.genre.choice === "other" || answers.genre.confidence < GENRE_MIN
       ? null
       : answers.genre.choice;
+  const genreConfidence = genre === null ? null : Math.round(answers.genre.confidence * 100) / 100;
 
   const dishLabels = new Set(
     labels.filter((label) => label.confidence >= DISH_LABEL_MIN).map((label) => label.name),
@@ -90,5 +94,5 @@ export async function suggest(apiKey: string, allLabels: Label[]): Promise<Sugge
 
   // Set は入れた順を保つので、並びは 料理 → 大分類 → 系統 のまま重複だけ消える。
   const tags = [...new Set([...dishes.map((dish) => dish.key), ...categories, ...cuisines])];
-  return { genre, tags };
+  return { genre, genreConfidence, tags };
 }

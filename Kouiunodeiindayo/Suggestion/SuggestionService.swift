@@ -100,11 +100,13 @@ final class LiveSuggestionService: SuggestionService {
 
         do {
             let result = try await suggest(request)
-            // URL・合言葉・ラベルは出さない。ジャンルとタグのキーだけ
+            // URL・合言葉・ラベルは出さない。ジャンルとその確率、タグのキーだけ
+            let confidence = result.genreConfidence.map { String(format: "%.2f", $0) } ?? "-"
             Self.logger.info(
-                "提案が届いた: \(result.genre?.rawValue ?? "なし", privacy: .public) \(result.tags.map(\.rawValue).joined(separator: ","), privacy: .public)"
+                "提案が届いた: \(result.genre?.rawValue ?? "なし", privacy: .public) \(confidence, privacy: .public) \(result.tags.map(\.rawValue).joined(separator: ","), privacy: .public)"
             )
-            job.store.saveSuggestion(genre: result.genre, tags: result.tags, for: job.id)
+            job.store.saveSuggestion(
+                genre: result.genre, genreConfidence: result.genreConfidence, tags: result.tags, for: job.id)
         } catch {
             Self.logger.notice("提案を問い合わせられなかった: \(Self.describe(error), privacy: .public)")
         }

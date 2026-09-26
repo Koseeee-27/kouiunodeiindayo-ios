@@ -87,6 +87,32 @@ struct RecordStoreTagsTests {
         #expect(record.suggestedAt == first)
     }
 
+    // MARK: ジャンルの確率
+
+    @Test func ジャンルの確率も保存する() throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        context.store.saveSuggestion(genre: .food, genreConfidence: 0.93, tags: [.ramen], for: record.id)
+        #expect(record.suggestedGenreConfidence == 0.93)
+    }
+
+    @Test func 提案できないジャンルなら確率も書かない() throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        context.store.saveSuggestion(genre: .noGenre, genreConfidence: 0.9, tags: [], for: record.id)
+        #expect(record.suggestedGenre == nil)
+        #expect(record.suggestedGenreConfidence == nil)
+    }
+
+    @Test func 問い合わせ済みなら確率も書き換えない() throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        context.store.saveSuggestion(genre: .food, genreConfidence: 0.95, tags: [], for: record.id)
+        context.store.saveSuggestion(genre: .drink, genreConfidence: 0.5, tags: [], for: record.id)
+        #expect(record.suggestedGenre == "food")
+        #expect(record.suggestedGenreConfidence == 0.95)
+    }
+
     @Test(arguments: [Genre.unsorted, .noGenre])
     func 提案できないジャンルは提案なしとして書く(genre: Genre) throws {
         let context = TestStore()
