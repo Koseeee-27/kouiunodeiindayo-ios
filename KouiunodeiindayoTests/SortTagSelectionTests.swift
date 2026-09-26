@@ -55,3 +55,40 @@ struct SortTagSelectionTests {
         #expect(record.tags == ["tempura", "fried"])
     }
 }
+
+// 外す・付けるの切り替えが、写真ごとに分かれているか（次の写真に持ち越さない）
+@MainActor
+struct SortTagSelectionToggleTests {
+    @Test func 写真Aで外しても写真Bは全部付いたまま() {
+        let photoA = UUID()
+        let photoB = UUID()
+        let removed = SortTagSelection.toggled(.ramen, for: photoA, in: [:])
+        #expect(removed[photoA] == [.ramen])
+        #expect(removed[photoB] == nil)
+        let attachedB = SortTagSelection.attached(suggested: [.ramen, .noodles], removed: removed[photoB] ?? [])
+        #expect(attachedB == [.ramen, .noodles])
+    }
+
+    @Test func 外したタグを戻すとまた入る() {
+        let photo = UUID()
+        let removed = SortTagSelection.toggled(.ramen, for: photo, in: [:])
+        let restored = SortTagSelection.toggled(.ramen, for: photo, in: removed)
+        #expect(restored[photo]?.isEmpty == true)
+        let attached = SortTagSelection.attached(suggested: [.ramen, .noodles], removed: restored[photo] ?? [])
+        #expect(attached == [.ramen, .noodles])
+    }
+
+    @Test func 二件を違うタグで仕分けると記録ごとのタグが別々() throws {
+        let context = TestStore()
+        let recordA = try context.addRecord()
+        let recordB = try context.addRecord()
+        context.store.saveSuggestion(genre: .food, tags: [.ramen, .noodles, .chinese], for: recordA.id)
+        context.store.saveSuggestion(genre: .food, tags: [.ramen, .noodles, .chinese], for: recordB.id)
+        var removed = SortTagSelection.toggled(.chinese, for: recordA.id, in: [:])
+        removed = SortTagSelection.toggled(.ramen, for: recordB.id, in: removed)
+        SortTagSelection.commit(recordA, genre: .food, removed: removed[recordA.id] ?? [], store: context.store)
+        SortTagSelection.commit(recordB, genre: .food, removed: removed[recordB.id] ?? [], store: context.store)
+        #expect(recordA.tags == ["ramen", "noodles"])
+        #expect(recordB.tags == ["noodles", "chinese"])
+    }
+}
