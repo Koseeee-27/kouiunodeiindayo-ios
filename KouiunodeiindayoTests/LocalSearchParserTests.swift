@@ -43,6 +43,12 @@ struct LocalSearchParserTests {
         #expect(LocalSearchParser.parse("今月のご飯もの").period == .thisMonth)
     }
 
+    @Test func 今月を付けないより前と以前は今月より前にならない() {
+        #expect(LocalSearchParser.parse("昨日以前").isEmpty)
+        #expect(LocalSearchParser.parse("今日より前").period != .earlier)
+        #expect(LocalSearchParser.parse("今週より前").period != .earlier)
+    }
+
     @Test func 今月より前と以前は今月にならない() {
         #expect(LocalSearchParser.parse("今月より前のうまいもの").period == .earlier)
         #expect(LocalSearchParser.parse("今月以前").period == .earlier)
