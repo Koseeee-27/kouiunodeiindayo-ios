@@ -16,6 +16,7 @@ struct SortView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.photoStorage) private var photoStorage
+    @Environment(\.suggestionService) private var suggestionService
     /// 出す写真。`init` で条件を決める（`recordID` があれば、その1件が仕分け待ちのあいだだけ入る）
     @Query private var records: [Record]
     /// 撮った直後の仕分けで、出す1枚の id。`nil` なら溜まっている仕分け待ちを出す
@@ -75,6 +76,11 @@ struct SortView: View {
         .background(Theme.background)
         .onAppear {
             wasEmptyAtOpen = records.isEmpty
+            // まだ問い合わせていない写真の提案を、裏で問い合わせる（通信できなかった分の問い合わせ直しも兼ねる）。
+            // 並び順（新しい順）で頼むので、先に出る写真から埋まる。撮った直後の1枚は、カメラ側と重なっても Service が弾く
+            for record in records where record.suggestedAt == nil {
+                suggestionService.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: store)
+            }
         }
         .onChange(of: records.isEmpty) { _, isEmpty in
             // 最後の1枚を仕分けたらホームへ
