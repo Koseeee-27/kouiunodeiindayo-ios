@@ -29,13 +29,24 @@ enum Theme {
 
     /// 太い線（見出しの下の区切りなど）。太さは仮
     static let lineWidthThick: CGFloat = 2
+    /// 細い線（記録の詳細のジャンルのボタンの枠）
+    static let lineWidthThin: CGFloat = 1
+    /// 押せる部品の高さの下限（Apple の Human Interface Guidelines の目安）
+    static let minTapHeight: CGFloat = 44
+    /// 小さめの角丸（記録の詳細のジャンルのボタン）
+    static let cornerRadiusSmall: CGFloat = 8
+    /// 記録の詳細で、写真と日付の間隔。近づけて、ひとまとまりに見せる
+    static let detailPhotoDateSpacing: CGFloat = 8
+    /// 記録の詳細の「うまい」の絵の幅
+    static let detailFavoriteBadgeWidth: CGFloat = 150
+
     /// 仕分け待ちへの入口の吹き出しの線
     static let lineWidthBubble: CGFloat = 1.5
     /// 仕分けのスタンプの枠。形と一緒に仮
     static let lineWidthStamp: CGFloat = 4
-    /// 写真のコマ枠（主役：ホームの今日の一枚・仕分けのカード・記録の詳細）
+    /// 写真のコマ枠（主役：ホームの今日の一枚・仕分けのカード）
     static let photoFrameWidthMain: CGFloat = 2
-    /// 写真のコマ枠（小さい写真：ホームの最近の写真・一覧）
+    /// 写真のコマ枠（小さい写真：ホームの最近の写真・一覧・記録の詳細）
     static let photoFrameWidthSmall: CGFloat = 1.5
 
     /// 写真の縦横比（幅 3・高さ 4。iPhone の標準のカメラで縦に構えて撮ったときと同じ）。

@@ -94,24 +94,29 @@ struct RecordDetailPageView: View {
                 Spacer()
                 moreMenu
             }
-            photo
-            Text(verbatim: dateText)
-                .font(Theme.font(.headline, bold: true))
-                // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(dateText)
-                .accessibilityValue("\(position)件目、全\(total)件")
-                .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
-                .accessibilityAdjustableAction { direction in
-                    switch direction {
-                    case .increment: onMove(1)
-                    case .decrement: onMove(-1)
-                    @unknown default: break
+            // 写真と日付は、近づけて1組にする
+            VStack(spacing: Theme.detailPhotoDateSpacing) {
+                photo
+                Text(verbatim: dateText)
+                    .font(Theme.font(.headline, bold: true))
+                    // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(dateText)
+                    .accessibilityValue("\(position)件目、全\(total)件")
+                    .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment: onMove(1)
+                        case .decrement: onMove(-1)
+                        @unknown default: break
+                        }
                     }
-                }
-            favoriteButton
-            genreButtons
+            }
+            // 「うまい」は、日付とジャンルのボタンの間の真ん中に置く（上下の余白を同じ大きさで取る）
             Spacer(minLength: 0)
+            favoriteButton
+            Spacer(minLength: 0)
+            genreButtons
         }
         .padding()
         .background(Theme.background)
@@ -140,6 +145,7 @@ struct RecordDetailPageView: View {
     /// 付け直せるジャンル。「なし」は選択肢に置かず、選択中のジャンルをもう一度押して外す
     private static let selectableGenres: [Genre] = [.food, .drink, .dessert]
 
+    /// 写真。枠は、ホームの今日の一枚・仕分けのカード（`.main`）より少し細い `.small` にする
     @ViewBuilder
     private var photo: some View {
         if let image {
@@ -147,26 +153,26 @@ struct RecordDetailPageView: View {
                 .resizable()
                 .scaledToFit()
                 .accessibilityHidden(true)
-                .photoFrame(.main)
+                .photoFrame(.small)
         } else {
             Theme.surface
                 .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
-                .photoFrame(.main)
+                .photoFrame(.small)
         }
     }
 
-    /// 「うまい」。写真には重ねず、ジャンルの上に置く。押すたびに付け外しする
+    /// 「うまい」。一覧・ホームと同じ絵を、日付とジャンルのボタンの間の真ん中に置く（写真には重ねない）。押すたびに付け外しする
     private var favoriteButton: some View {
         Button {
             store.toggleFavorite(record)
         } label: {
-            Text("うまい")
-                .font(Theme.font(.headline, bold: true))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.regularMaterial, in: .rect)
+            // 一覧・ホームと同じ「うまい」の絵（かえでさん作）。傾けずに水平に置く。絵なので文字サイズでは大きさを変えない
+            Image(.umaiBadge)
+                .resizable()
+                .scaledToFit()
+                .frame(width: Theme.detailFavoriteBadgeWidth)
+                .frame(minHeight: Theme.minTapHeight)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
         // 付いていないときは薄く、付いたら濃くする
@@ -185,14 +191,20 @@ struct RecordDetailPageView: View {
                     store.setGenre(isSelected ? .noGenre : genre, for: record)
                 } label: {
                     Label(genre.title, systemImage: genre.systemImage)
-                        .font(Theme.font(.subheadline))
+                        .font(Theme.font(.headline))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .frame(maxWidth: .infinity, minHeight: Theme.minTapHeight)
                         .foregroundStyle(isSelected ? Theme.onMain : Theme.textPrimary)
                         .background(
                             isSelected ? AnyShapeStyle(Theme.main) : AnyShapeStyle(.regularMaterial),
-                            in: .rect(cornerRadius: 8))
+                            in: .rect(cornerRadius: Theme.cornerRadiusSmall)
+                        )
+                        // 墨の細い枠。選ばれているとき（墨の地）は、地と同じ色で見えない
+                        .overlay {
+                            RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall)
+                                .strokeBorder(Theme.line, lineWidth: Theme.lineWidthThin)
+                        }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(genre.title)
