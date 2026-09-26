@@ -22,8 +22,10 @@ struct FlowLayout: Layout {
             for index in row.indices {
                 let size = subviews[index].sizeThatFits(.unspecified)
                 // 同じ行の子は、縦の真ん中をそろえる
+                // 1 つで幅を超える子は、幅で止める（チップの文字は「…」で省かれる）
                 subviews[index].place(
-                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
+                    proposal: ProposedViewSize(width: min(size.width, bounds.width), height: size.height))
                 x += size.width + spacing
             }
             y += row.height + lineSpacing
