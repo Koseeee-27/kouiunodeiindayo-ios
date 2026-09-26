@@ -47,6 +47,8 @@ struct SortCardStackView<BelowCard: View>: View {
     @State private var bottomOuterHeight: CGFloat = 0
     /// 飛ばす先を決めるための、仕分けの場所の大きさ（おまかせで外から飛ばすときに使う）
     @State private var areaSize: CGSize = .zero
+    /// 記録ごとの写真の縦横比（幅 ÷ 高さ）。カードが写真を読み込んだときに知らせてくる。縁のラベルを手前のカードの形に付けるのに使う
+    @State private var photoAspects: [UUID: CGFloat] = [:]
 
     /// 飛んでいる間・おまかせの間は、手で触れる操作を受け付けない
     private var isInteractionLocked: Bool {
@@ -59,6 +61,11 @@ struct SortCardStackView<BelowCard: View>: View {
             return flyOffset
         }
         return dragTranslation == .zero ? previewDragOffset : dragTranslation
+    }
+
+    /// 手前のカードの縦横比。写真を読み込む前は 3:4
+    private var frontAspectRatio: CGFloat {
+        records.first.flatMap { photoAspects[$0.id] } ?? Theme.photoAspectRatio
     }
 
     /// 指で動かしていて、離せば仕分けになる向き。超えた瞬間（戻して超え直したときも）に軽く振動させる
@@ -102,9 +109,23 @@ struct SortCardStackView<BelowCard: View>: View {
     /// ラベルはカードと一緒に動かさず、手前のカードの縁（上・下・左・右の真ん中）に固定する。
     /// `overlay` はカードの `ZStack` より手前に描かれるので、飛んでいくカードにもラベルが隠れない
     private func sortArea(screenSize: CGSize) -> some View {
+        cardStack(screenSize: screenSize)
+            .overlay {
+                // カードは 3:4 の場所の真ん中に写真の形で置かれる（`SortCardView`）ので、ラベルも同じ形・同じ位置の枠に付ける。
+                // 透明なので、ドラッグはその下のカードに届く
+                Color.clear
+                    .aspectRatio(frontAspectRatio, contentMode: .fit)
+                    .overlay { edgeLabels(screenSize: screenSize) }
+            }
+            // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
+            .padding(.bottom, SwipeDirection.backCardPeek)
+    }
+
+    /// 縁のラベル（上下左右）と、下のラベルの下の `belowCard`。手前のカードの形の枠に重ねる
+    private func edgeLabels(screenSize: CGSize) -> some View {
         // 飛んでいる間は、飛ばしている向き（仕分けたジャンル）を強調する。飛ぶ位置から決めると、斜めに飛んだときに別の向きになる
         let highlighted = isCommitting ? flyingDirection : SwipeDirection.direction(for: cardOffset)
-        return cardStack(screenSize: screenSize)
+        return Color.clear
             .overlay(alignment: .top) {
                 // 上のラベルは、カードの上の縁の外に出す（右上の「う、うまい」のハンコと重ならないように）
                 genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
@@ -138,8 +159,6 @@ struct SortCardStackView<BelowCard: View>: View {
                 .padding(.top, Self.outerLabelGap)
                 .alignmentGuide(.bottom) { $0[.top] }
             }
-            // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
-            .padding(.bottom, SwipeDirection.backCardPeek)
     }
 
     // 型が `BelowCard` を持つ汎用の型なので、定数は `static let` で持てない（計算で返す）
@@ -177,7 +196,11 @@ struct SortCardStackView<BelowCard: View>: View {
                         // 飛んでいる間・おまかせの間は、読み上げから押されても切り替えない
                         guard !isInteractionLocked else { return }
                         onToggleFavorite(record)
-                    }
+                    },
+                    onPhotoAspect: { photoAspects[record.id] = $0 },
+                    // 後ろのカードは、手前のカードの形の中に収める（手前が横長で後ろが縦長のとき、上下からはみ出してラベルにかぶらないように）。
+                    // 仕分けが決まったら、せり上がりのバネと一緒に自分の形の大きさまで広がるので、手前に来たときに跳ねない
+                    boxAspectRatio: isFront || isNextRising ? nil : frontAspectRatio
                 )
                 // スタンプはカードと一緒に動く。真ん中だと、左右に動かしたときに左右のラベル（縦の真ん中）の下に潜るので、
                 // 上のラベルの下あたりに置く
@@ -199,7 +222,7 @@ struct SortCardStackView<BelowCard: View>: View {
                 .accessibilityHidden(!isFront)
             }
         }
-        // カードは 3:4。ラベルの `overlay` はこの後に付くので、ラベルもカードの縁に付く（先に付けると、場所全体の縁に残ってカードから浮く）。
+        // カードを置く場所は 3:4。カードはその真ん中に写真の形で置かれ、ラベルは `sortArea` で同じ形の枠に付ける。
         // 場所の真ん中に置くのは、`body` の `frame` が受け持つ
         .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
     }
