@@ -73,24 +73,40 @@ struct HomeView: View {
 
     /// `fillsHeight` が true のときは、今日の一枚に残りの高さを渡し、余りは一番下に空ける
     private func content(fillsHeight: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 24) {
-            // 仕分け待ちの帯の有無で位置が変わらないよう、帯より上に置く
-            settingsButtonRow
-            if !unsortedRecords.isEmpty {
-                sortEntry
+        VStack(alignment: .leading, spacing: Self.headerToContentSpacing) {
+            // 仕分け待ちの吹き出しの有無で位置が変わらないよう、吹き出しより上に置く
+            VStack(alignment: .leading, spacing: 4) {
+                settingsButtonRow
+                // タイトルと下の内容の区切り線（一覧と同じ）。画面の端まで伸ばすため、外側の余白のぶん外に広げる
+                Rectangle()
+                    .fill(Theme.line)
+                    .frame(height: Theme.lineWidthThick)
+                    .padding(.horizontal, -Self.contentPadding)
+                    .accessibilityHidden(true)
             }
-            todaySection(fillsHeight: fillsHeight)
-                // ほかの要素より先に、残りの高さを受け取る
-                .layoutPriority(1)
-            if !recentRecords.isEmpty {
-                recentSection
-            }
-            if fillsHeight {
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 24) {
+                if !unsortedRecords.isEmpty {
+                    sortEntry
+                }
+                todaySection(fillsHeight: fillsHeight)
+                    // ほかの要素より先に、残りの高さを受け取る
+                    .layoutPriority(1)
+                if !recentRecords.isEmpty {
+                    recentSection
+                }
+                if fillsHeight {
+                    Spacer(minLength: 0)
+                }
             }
         }
-        .padding()
+        .padding(Self.contentPadding)
     }
+
+    /// 区切り線と、その下の内容の間隔（一覧と同じ）
+    private static let headerToContentSpacing: CGFloat = 23
+
+    /// 画面の左右・上下の余白
+    private static let contentPadding: CGFloat = 16
 
     /// 左上のタイトルロゴと右上の設定のアイコン。ホームは `NavigationStack` を持たず `.toolbar` を使えないので、自前の行にする（見た目は仮）
     private var settingsButtonRow: some View {

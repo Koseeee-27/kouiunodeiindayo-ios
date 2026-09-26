@@ -24,7 +24,7 @@ struct RecordListView: View {
     var body: some View {
         ScrollView {
             // 区切り線を画面の端まで伸ばすため、余白は線ではなく、タイトルと中身の側に付ける
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Self.headerToContentSpacing) {
                 // ロゴと区切り線は、近づけて1組にする
                 VStack(alignment: .leading, spacing: 4) {
                     TitleLogoView()
@@ -68,6 +68,8 @@ struct RecordListView: View {
         }
     }
 
+    /// 区切り線と、その下の内容の間隔（ホームと同じ）
+    private static let headerToContentSpacing: CGFloat = 23
     /// 写真どうしの隙間（上下左右とも同じ）
     private static let photoSpacing: CGFloat = 6
     /// 月と月の隙間。写真どうしの隙間より少し広くする

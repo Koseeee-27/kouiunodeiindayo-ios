@@ -21,7 +21,7 @@ struct SortEntryBubbleView: View {
             }
             .foregroundStyle(Theme.textPrimary)
             .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .padding(.vertical, 15)
             // 尻尾のぶんの高さを、下に空けておく
             .padding(.bottom, Self.tailHeight)
             .background {
