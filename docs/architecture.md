@@ -9,6 +9,7 @@
 Kouiunodeiindayo/
 ├── App/
 │   ├── KouiunodeiindayoApp.swift    ← 起動の入口。SwiftData の準備（ModelContainer）もここ
+│   ├── LaunchSplashView.swift ← 起動画面の絵を1秒見せてから、本物の画面（RootView）に切り替える
 │   ├── RootView.swift         ← 開いたときの画面の切り替え（カメラ／ホーム）と、画面の行き来
 │   ├── RootTab.swift          ← 下タブの行き先の enum（並び順・文言・アイコン）
 │   ├── RootTabBar.swift       ← 自作の下タブのバー（見た目と押したときの通知）

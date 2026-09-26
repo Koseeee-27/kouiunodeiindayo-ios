@@ -5,7 +5,7 @@ import SwiftUI
 struct KouiunodeiindayoApp: App {
     var body: some Scene {
         WindowGroup {
-            LaunchSplashGate {
+            LaunchSplashView {
                 RootView()
             }
             // 文字の種類を指定していない本文・ボタンも、アプリの文字にする
