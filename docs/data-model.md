@@ -45,33 +45,33 @@
 
 - 文字列のキーで保存する。コードでは `Tag` という enum に、日本語名・種類・下の対応を持たせる
 - 知らないキーが入っていたら、表示しない（落とさない）
-- 料理のタグは、Vision のラベル（右の列）のどれかが出たときだけ提案する。大分類と系統は、料理のタグから決まるものに加えて、Jev の判断でも提案する
+- 料理のタグは、Vision のラベル（右の列）が 0.15 以上で出たものから、一番強い 1 つだけを提案する。ジャンルと種類（下の表）が違うものは提案しない（飲み物の写真にラーメンを付けない）。大分類と系統は、料理のタグから決まるものに加えて、Jev の判断でも提案する。ジャンルが飲み物・デザートのときは、大分類と系統を提案しない
 - 記録の詳細で料理のタグを手で付けたときは、大分類・系統を自動では足さない
 
 **料理**
 
-| キー | 名前 | Vision のラベル | 大分類 | 系統 |
-|---|---|---|---|---|
-| `ramen` | ラーメン | `ramen` | `noodles` | `chinese` |
-| `pasta` | パスタ | `pasta` `spaghetti` | `noodles` | `western` |
-| `sushi` | 寿司 | `sushi` | `rice_dish` | `japanese` |
-| `curry` | カレー | `curry` | `rice_dish` | — |
-| `gyoza` | 餃子 | `gyoza` `dumpling` | — | `chinese` |
-| `tempura` | 天ぷら | `tempura` | `fried` | `japanese` |
-| `karaage` | 唐揚げ | `fried_chicken` | `fried` | — |
-| `pizza` | ピザ | `pizza` | — | `western` |
-| `hamburger` | ハンバーガー | `hamburger` | `bread` | `western` |
-| `steak` | ステーキ | `steak` | `meat` | `western` |
-| `sandwich` | サンドイッチ | `sandwich` | `bread` | `western` |
-| `coffee` | コーヒー | `coffee` | — | — |
-| `tea` | お茶 | `tea_drink` | — | — |
-| `alcohol` | お酒 | `beer` `wine` `red_wine` `white_wine` `sparkling_wine` `cocktail` `liquor` | — | — |
-| `juice` | ジュース | `juice` `smoothie` | — | — |
-| `bubble_tea` | タピオカ | `bubble_tea` | — | — |
-| `cake` | ケーキ | `cake` `cake_regular` `birthday_cake` `cheesecake` `cupcake` | — | — |
-| `ice_cream` | アイス | `ice_cream` | — | — |
-| `donut` | ドーナツ | `donut` | — | — |
-| `baked_sweets` | 焼き菓子 | `cookie` `muffin` `pie` | — | — |
+| キー | 名前 | 種類 | Vision のラベル | 大分類 | 系統 |
+|---|---|---|---|---|---|
+| `ramen` | ラーメン | 食べ物 | `ramen` | `noodles` | `chinese` |
+| `pasta` | パスタ | 食べ物 | `pasta` `spaghetti` | `noodles` | `western` |
+| `sushi` | 寿司 | 食べ物 | `sushi` | `rice_dish` | `japanese` |
+| `curry` | カレー | 食べ物 | `curry` | `rice_dish` | — |
+| `gyoza` | 餃子 | 食べ物 | `gyoza` `dumpling` | — | `chinese` |
+| `tempura` | 天ぷら | 食べ物 | `tempura` | `fried` | `japanese` |
+| `karaage` | 唐揚げ | 食べ物 | `fried_chicken` | `fried` | — |
+| `pizza` | ピザ | 食べ物 | `pizza` | — | `western` |
+| `hamburger` | ハンバーガー | 食べ物 | `hamburger` | `bread` | `western` |
+| `steak` | ステーキ | 食べ物 | `steak` | `meat` | `western` |
+| `sandwich` | サンドイッチ | 食べ物 | `sandwich` | `bread` | `western` |
+| `coffee` | コーヒー | 飲み物 | `coffee` | — | — |
+| `tea` | お茶 | 飲み物 | `tea_drink` | — | — |
+| `alcohol` | お酒 | 飲み物 | `beer` `wine` `red_wine` `white_wine` `sparkling_wine` `cocktail` `liquor` | — | — |
+| `juice` | ジュース | 飲み物 | `juice` `smoothie` | — | — |
+| `bubble_tea` | タピオカ | 飲み物 | `bubble_tea` | — | — |
+| `cake` | ケーキ | デザート | `cake` `cake_regular` `birthday_cake` `cheesecake` `cupcake` | — | — |
+| `ice_cream` | アイス | デザート | `ice_cream` | — | — |
+| `donut` | ドーナツ | デザート | `donut` | — | — |
+| `baked_sweets` | 焼き菓子 | デザート | `cookie` `muffin` `pie` | — | — |
 
 **大分類**：`noodles`（麺類）、`rice_dish`（ご飯もの）、`bread`（パン）、`meat`（肉料理）、`seafood`（魚介）、`fried`（揚げ物）、`egg`（卵料理）、`vegetables`（野菜・サラダ）、`soup`（汁物）
 
