@@ -32,17 +32,16 @@ struct RecordListView: View {
     /// 詳細を開くときに渡すもの。開いた記録と、開いた時点の並び（記録の id）を 1 つにまとめて sheet の `item` にする
     /// （別々の `@State` にすると、sheet の中身を作るときに並びがまだ空のまま読まれ、詳細が 1 件だけになった）。
     /// 詳細で「うまい」などを変えて絞り込みから外れても、開いている詳細のページが飛ばないように、開いたときの並びを渡す。
-    /// 記録そのものではなく id で持ち、渡すときに今の `@Query` から引き直す（詳細で消した記録を読まないように）
+    /// 開いた記録も並びも、記録そのものではなく id で持ち、渡すときに今の `@Query` から引き直す（詳細で消した記録を読まないように）
     private struct DetailSelection: Identifiable {
-        let record: Record
+        let recordID: UUID
         let ids: [UUID]
-        var id: UUID { record.id }
+        var id: UUID { recordID }
     }
 
-    /// 詳細に渡す並び。開いた時点の並びを、今の `@Query`（絞る前）から引き直す。消えた記録だけが抜ける
-    private func detailRecords(_ ids: [UUID]) -> [Record] {
-        let byID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return ids.compactMap { byID[$0] }
+    /// 今の `@Query`（絞る前）の記録を id で引く表
+    private var recordsByID: [UUID: Record] {
+        Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
     /// 時期で絞るときの「今」。日付が変わったとき・アプリに戻ったとき・探したときに取り直す
     @State private var now = Date.now
@@ -104,8 +103,15 @@ struct RecordListView: View {
         .background(Theme.background)
         // sheet で開くので、閉じても一覧のスクロール位置は残る
         .sheet(item: $detailSelection) { selection in
-            // 絞り込み中は、絞り込んだ中で左右にめくる（開いた時点の並び）
-            RecordDetailView(records: detailRecords(selection.ids), initial: selection.record)
+            // 開いた記録と並びを、今の `@Query` から引き直す。消えた記録だけが並びから抜ける。
+            // 開いた記録が消えたとき（詳細で消して、閉じ終わるまで）は詳細を作らない
+            let byID = recordsByID
+            if let initial = byID[selection.recordID] {
+                // 絞り込み中は、絞り込んだ中で左右にめくる（開いた時点の並び）
+                RecordDetailView(records: selection.ids.compactMap { byID[$0] }, initial: initial)
+            } else {
+                Theme.background
+            }
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
@@ -274,7 +280,7 @@ struct RecordListView: View {
 
     private func photoButton(_ record: Record) -> some View {
         Button {
-            detailSelection = DetailSelection(record: record, ids: displayed.map(\.id))
+            detailSelection = DetailSelection(recordID: record.id, ids: displayed.map(\.id))
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail)
                 .aspectRatio(1, contentMode: .fit)
