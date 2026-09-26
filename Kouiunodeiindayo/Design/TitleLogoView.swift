@@ -4,13 +4,15 @@ import SwiftUI
 /// 素材は `Assets.xcassets/TitleLogo`（SVG）。読み上げでは、画像ではなくアプリ名の見出しとして読まれる。
 struct TitleLogoView: View {
     /// ロゴの高さ。幅は元の比率で決まる。利用者の文字サイズ設定に合わせて大きくなる
-    @ScaledMetric(relativeTo: .title2) private var height: CGFloat = 36
+    @ScaledMetric(relativeTo: .title2) private var height: CGFloat = 44
 
     var body: some View {
         Image("TitleLogo")
             .resizable()
             .scaledToFit()
             .frame(height: height)
+            // 見出しの左端より、ほんの少し左に寄せる（レイアウトの幅は変えない）
+            .offset(x: -4)
             // 読み上げはアプリ名。Info.plist の表示名と同じ文言にそろえる
             .accessibilityLabel("こういうのでいいんだよ")
             .accessibilityAddTraits(.isHeader)
