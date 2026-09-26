@@ -28,7 +28,7 @@ extension PhotoImportResult {
         countTexts(includesImported: true).joined(separator: "、")
     }
 
-    /// 1 枚も取り込めなかったときのアラートの題。全部読めなかった（除外が 0）ときだけ分ける。文言は仮
+    /// 1 枚も取り込めなかったときのアラートの題。全部読めなかった（除外が 0）ときだけ分ける
     var emptyAlertTitle: String {
         excludedCount == 0 && failedCount > 0 ? "写真を読み込めませんでした" : "食事の写真が見つかりませんでした"
     }
