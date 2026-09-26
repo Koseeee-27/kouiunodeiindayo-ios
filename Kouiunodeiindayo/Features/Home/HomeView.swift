@@ -57,7 +57,7 @@ struct HomeView: View {
         .background(Theme.background)
         // sheet で開くので、閉じてもホームの位置は残る
         .sheet(item: $selectedRecord) { record in
-            RecordDetailView(record: record)
+            RecordDetailView(records: records, initial: record)
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
