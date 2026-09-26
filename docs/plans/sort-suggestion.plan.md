@@ -57,14 +57,14 @@
 ### タグのチップ（新しいファイル `Features/Sort/SortSuggestedTagsView.swift`）
 
 - 引数：`tags: [Tag]`（提案されたタグ。`record.suggestedTagValues`）、`removed: Set<Tag>`（外したタグ）、`isEnabled: Bool`（飛んでいる間は `false`）、`onToggle: (Tag) -> Void`
-- 1 行の横並び（`ScrollView(.horizontal)` の中の `HStack`。入りきるときは真ん中寄せ、入りきらないときだけスクロール。スクロールのインジケーターは出さない）。行の高さは、提案が無いときも 1 行分を空ける（決めたこと 3。空のときは見えないチップを 1 つ置いて高さを決め、読み上げからは隠す）
+- 1 行の横並び（`ViewThatFits(in: .horizontal)` で、入りきるときは `HStack` をそのまま真ん中に、入りきらないときだけ `ScrollView(.horizontal)` の中の `HStack` にする。スクロールのインジケーターは出さない）。行の高さは、提案が無いときも 1 行分を空ける（決めたこと 3。空のときは見えないチップを 1 つ置いて高さを決め、読み上げからは隠す）
 - チップ 1 つ（ワイヤー 2b）：
   - 付いている：白地（`Theme.surface`）・墨の線（`Theme.line`、太さ `Theme.lineWidthBubble`）・カプセル形・墨の字・右に小さな丸の中の「−」（SF Symbols の `minus`）
   - 外した：地なし・`Theme.textSecondary` の点線の枠・同じ色の字・丸の中は「＋」（`plus`）
   - 文字は `Theme.font(.subheadline, bold: true)`。`.dynamicTypeSize(...DynamicTypeSize.xxxLarge)`（決めたこと 4）
   - 見た目の高さはワイヤーどおり小さめ（約 32pt）、押せる範囲は上下に広げて `Theme.minTapHeight`（44pt）以上にする（`contentShape` と `frame(minHeight:)`）
   - 付け外しは `.animation(.easeOut(duration: 0.15))`。振動・効果音は付けない（#22 の範囲）
-- 足す `Theme` の定義：`suggestionMark`（赤。決めたこと 1）、`lineWidthSuggestion`、`suggestionDash`（点線の間隔）、`chipMinusBackground`（− の丸の地。`textSecondary` を薄くしたもの）。画面に色や数値を直書きしない
+- 足す `Theme` の定義：`suggestionMark`（赤。決めたこと 1）、`lineWidthSuggestion`、`suggestionDash`（点線の間隔）、`chipSymbolBackground`（−・＋ の丸の地。`textSecondary` を薄くしたもの）、`chipSymbolSize`・`chipPadding`・`chipInnerSpacing`・`chipSpacing`（チップの大きさと間隔）、`sortBelowLabelSpacing`（下のラベルとタグの行の間）。画面に色や数値を直書きしない
 - 読み上げは決めたこと 5 のとおり
 
 ### 外したタグの持ち方と、書き込みの流れ
@@ -73,23 +73,25 @@
   - 「付いているタグ」ではなく「外したタグ」を持つ。提案が後から届いても、何もしなくても全部付いた状態で出る（届いた時点で初期値を入れ直す処理が要らない）
   - 記録の `id` ごとに持つので、#56 で並び順を切り替えて先頭が入れ替わっても、外した状態が別の写真に移らない
   - `Record` には書かない（書くのは次に進むときだけ）。仕分けを抜けたら捨てる（`@State` なので画面を閉じれば消える）
-- チップを押したら `removedTags[record.id]` に入れる／抜く。写真は次に進まない
+- チップを押したら `SortTagSelection.toggled` で `removedTags[record.id]` に入れる／抜く（ほかの写真の分は変えない）。写真は次に進まない。飛んでいる間（`isCommitting`）は受け付けない（読み上げからのダブルタップも。ジャンルのラベルの `commit` と揃える）
 - 付いているタグを出す関数を 1 つにまとめる（新しいファイル `Features/Sort/SortTagSelection.swift`）
 
   ```swift
   /// 仕分けで付いているタグ。提案されたタグから、外したものを除く（並びは提案の順のまま）
   enum SortTagSelection {
       static func attached(suggested: [Tag], removed: Set<Tag>) -> [Tag]
+      /// チップを押したとき。`id` の写真の分だけ切り替えた辞書を返す（`initial` はプレビュー用の初期値）
+      static func toggled(_ tag: Tag, for id: UUID, in removedTags: [UUID: Set<Tag>], initial: Set<Tag> = []) -> [UUID: Set<Tag>]
       /// 次に進むときの書き込み。タグを先に書いてからジャンルを付ける（ジャンルを付けると `@Query` から消えるため）
       static func commit(_ record: Record, genre: Genre, removed: Set<Tag>, store: RecordStore)
   }
   ```
 
-- `SortView` の `onSort` を `SortTagSelection.commit(record, genre: genre, removed: removedTags[record.id] ?? [], store: store)` に差し替える。`commit` の中は `store.setTags(attached(…), for: record)` → `store.setGenre(genre, for: record)` の順（`docs/architecture.md`「タグを変える」：「仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）」）
+- `SortView` の `onSort` を `SortTagSelection.commit(record, genre: genre, removed: removedTags[record.id] ?? previewRemovedTags, store: store)` に差し替える。`commit` の中は `store.setTags(attached(…), for: record)` → `store.setGenre(genre, for: record)` の順（`docs/architecture.md`「タグを変える」：「仕分けでジャンルを付けて次に進むとき（そのとき付いているタグで書く）」）
   - 提案が届く前・提案なしのときは `setTags([])` になる（仕分け待ちの記録の `tags` は空なので、変わらない）
   - スワイプでもラベルを押しても、`SortCardStackView` の `commit` → `onSort` の同じ道を通る（スワイプとタップで同じ関数。`docs/rules/swift.md`）
   - 書いたあと `removedTags[record.id]` は消す
-- `SortCardStackView` の引数は変えない（`onSort` の中身が変わるだけ）。点線のために `records.first` の提案を読む 1 行だけ足す
+- `SortCardStackView` には、点線のために `records.first` の提案を読む 1 行と、下のラベルの下に置く `belowCard`（タグの行）を足す（決めたこと 6）。`onSort` の形は変えない（中身が変わるだけ）
 
 ### 画面の配置（`SortView`・`SortCardStackView`）
 
@@ -107,6 +109,7 @@
    - 提案が届く前（提案なし）に進むと `tags` は空のまま
    - `commit` のあと `genre` が付き、`suggestedTags` は変わらない
    - 外したタグを戻す（`removed` から抜く）と、また入る
+   - `toggled`：写真 A で外しても写真 B は全部付いたまま／戻すとまた入る／2 件を違うタグで仕分けると記録ごとの `tags` が別々（次の写真に持ち越さない）
 4. `Features/Sort/SortGenreLabelView.swift` — `isSuggested` と点線、読み上げの値。ファイルの最後に、4 つの向き × 提案あり・なし × 強調 3 種を並べたプレビューを足す / プレビューで見る
 5. `Features/Sort/SortSuggestedTagsView.swift`（新規）— チップの行と読み上げ。プレビュー：全部付いている／1 つ外した／5 個（入りきらない）／空（高さだけ）／文字サイズ `.accessibility5`（上限で止まるか）
 6. `Features/Sort/SortCardStackView.swift` — `genreLabel` に `isSuggested` を渡す。`belowCard` を下のラベルの下に置き、上下の余白を空ける（上の「画面の配置」） / 既存のプレビュー「幅 375pt・文字サイズ X Large」で、上のラベルが上の行に、下のラベルがタグの行にかぶらない
