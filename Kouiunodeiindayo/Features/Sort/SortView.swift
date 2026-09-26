@@ -119,13 +119,9 @@ struct SortView: View {
 
     /// チップを押したとき。外す／付けるを切り替える。写真は次に進まない
     private func toggle(_ tag: Tag, for record: Record) {
-        var removed = removed(for: record)
-        if removed.contains(tag) {
-            removed.remove(tag)
-        } else {
-            removed.insert(tag)
-        }
-        removedTags[record.id] = removed
+        // 飛んでいる間は受け付けない（読み上げからのダブルタップも。ジャンルのラベルの `commit` と揃える）
+        guard !isCommitting else { return }
+        removedTags = SortTagSelection.toggled(tag, for: record.id, in: removedTags, initial: previewRemovedTags)
     }
 
     private var header: some View {
