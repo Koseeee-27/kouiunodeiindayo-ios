@@ -22,7 +22,7 @@
   - **Worker の名前は `kouiunodeiindayo-suggest`。** URL は `https://kouiunodeiindayo-suggest.<アカウント名>.workers.dev`（デプロイして出た URL を、#82 の `Config/Local.xcconfig` に書く）
   - **（実装で足したこと）Jev への `state` に「食べ物でないこともある」の 1 行を入れる**（`The photo may or may not show food or drink.`）。下の「リスク」の「なんでも食べ物に寄る」への先回り。強い・弱いが 0 個の行は `(none)` と書く
   - **（実装で足したこと）合言葉の比較は、両方を SHA-256 にしてから `timingSafeEqual` で比べる。** ステップ 9 の「長さを揃える」のやり方。Worker の secret が空のときは、すべて 401 にする
-  - **しきい値（2026-09-26 夕方に Vercel AI Gateway 経由で 7 例を流して決定）：`LABEL_MIN` 0.05 ／ `STRONG_MIN` 0.30 ／ `DISH_LABEL_MIN` 0.10 ／ `GENRE_MIN` 0.50 ／ `TAG_MIN` 0.50。仮の値のまま採用。** 根拠：Jev の `probabilities[choice]` は偏りが強く、正しい答えは 0.87〜1.0、迷うときは `none` 側に寄る（うどんの cuisine が none 0.56）。0.5〜0.85 のどこに置いても 7 例の結果は同じなので、「残り全部より高い」意味の 0.5 にした。うどん（最大 0.22 で全部「弱い」）でも food 0.97・noodles 0.87 を返したので `STRONG_MIN` 0.30 のままでよい。料理名のラベルは 0.55 以上で `DISH_LABEL_MIN` は効いていない（実機の分布は #82 で見る）。7 例の結果：
+  - **しきい値（2026-09-26 夕方に Vercel AI Gateway 経由で 7 例を流して決定）：`LABEL_MIN` 0.05 ／ `STRONG_MIN` 0.30 ／ `DISH_LABEL_MIN` 0.10（のちに 0.30 へ上げた。この項の最後）／ `GENRE_MIN` 0.50 ／ `TAG_MIN` 0.50。仮の値のまま採用。** 根拠：Jev の `probabilities[choice]` は偏りが強く、正しい答えは 0.87〜1.0、迷うときは `none` 側に寄る（うどんの cuisine が none 0.56）。0.5〜0.85 のどこに置いても 7 例の結果は同じなので、「残り全部より高い」意味の 0.5 にした。うどん（最大 0.22 で全部「弱い」）でも food 0.97・noodles 0.87 を返したので `STRONG_MIN` 0.30 のままでよい。料理名のラベルは 0.55 以上で `DISH_LABEL_MIN` は効いていない（実機の分布は #82 で見る）。7 例の結果：
 
     | 例 | genre | tags | Jev の probabilities[choice]（genre／category／cuisine） |
     |---|---|---|---|
@@ -35,6 +35,8 @@
     | ラーメン（`Soup!` 混じり） | food | ramen, noodles, chinese, japanese | food 1.0／noodles 1.0／japanese 1.0 |
 
     ラーメンの系統は、対応表（`chinese`）と Jev（`japanese`）の両方が付く（和集合の決まりどおり）。どちらかに寄せるかは #82 で実機の様子を見て決める
+
+    **（2026-09-27）`DISH_LABEL_MIN` を 0.10 → 0.30 に上げた。** 実機と同じ Vision（Mac）に無料素材 6 枚を掛けると、写っていない料理名が 0.1〜0.2 で出た（うどんに ramen 0.14・spaghetti 0.11、天ぷらに fried_chicken 0.13）。正しい料理名は 0.5 以上が多い（弁当の sushi 0.70）。0.30 にすると、うどんの ramen・pasta（と、そこから付く noodles・chinese・western）と、天ぷらの karaage・fried が消え、弁当の sushi・rice_dish・japanese は残る。ラベルは `server/scripts/real-labels.tsv`、Worker に流すのは `server/scripts/try-real-labels.sh`
   - **時間切れ `TIMEOUT_MS` は 1200 ms のまま（2026-09-26 夕方）。** 手元（`wrangler dev`）で測った所要時間は 0.3〜0.9 秒（curl の `time_total`。18 回）。ただし起動直後の最初の 1 回は 1.2 秒を超えて時間切れになった（下の「リスク」）
   - **Vercel が 503（`Service temporarily unavailable`）を返したときだけ、Worker で 1 回だけ再試行する（2026-09-26 夜。こうせいの決定）。** 全体の締め切りは `TIMEOUT_MS`（1200 ms）に固定し、1 回目も 2 回目も残り時間で `AbortSignal.timeout` を作る。2 回目を送るのは残り 300 ms 以上あるときだけで、間は置かない。2 回目も 503 なら 502。503 以外の 4xx/5xx・時間切れ・ネットワークエラーは再試行しない（503 は 0.3 秒で返る一時的な失敗で、手元の実測 18 回中 6 回・本番 7 回中 1 回。他は送り直しても同じ結果か、時間を食う）。効果の目安：再試行を入れて 7 例を 2 周流したら 14 回中 200 が 6 回・502 が 8 回だったが、502 の多くは 503 ではなく 429（上の「リスク」）で、この再試行の対象外。503 だけの効果は、この計測では分からない
   - **ログに本文を出さない。** `wrangler.jsonc` に `observability` を書かない（Workers Logs を有効にしない）。`console.error` に出すのは、エラーの種類と Workers AI の例外のメッセージだけ。ラベル・Jev の答えは出さない
