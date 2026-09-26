@@ -17,7 +17,7 @@
 - Xcode 27（App Store から入れる）。2人とも同じメジャーバージョンに揃える
 - iPhone（iOS 26 以上）と、つなぐケーブル
 - Apple ID（無料でよい）
-- Node.js 18 以上（XcodeBuildMCP を使う場合。https://nodejs.org/ から入れるか、Homebrew なら `brew install node`）
+- Node.js 18 以上（XcodeBuildMCP を使う場合と、Worker（`server/`）を動かす場合。https://nodejs.org/ から入れるか、Homebrew なら `brew install node`）
 
 ## 2. Xcode の準備
 
@@ -122,6 +122,47 @@ Xcode 本体が持つ連携。ビルドに加えて、**Apple の公式ドキュ
 - 起動した瞬間に落ちるようになった：データの形を変えた可能性がある。アプリを削除して入れ直す（`docs/data-model.md`）
 - カメラが映らない：シミュレータではカメラは動かない。実機で確認する
 - 効果音が鳴らない：iPhone がマナーモードになっていないか確認する
+
+## 7. Worker（中継サーバー）
+
+ジャンルとタグの提案（機能26）のための Cloudflare Worker。コードは `server/`、受け渡しの形は `docs/suggestion-api.md`。
+Cloudflare のアカウントはこうせいのもの。本番へのデプロイも、こうせいが手で行う。
+
+1. 道具を入れる
+
+   ```bash
+   cd server && npm install
+   ```
+
+2. 手元の合言葉を作る。`.dev.vars` は git に入れない
+
+   ```bash
+   cp .dev.vars.example .dev.vars
+   openssl rand -base64 32   # 出た長いランダムな文字列を、.dev.vars の SUGGEST_TOKEN に書く
+   ```
+
+3. 型の定義を作る（`wrangler.jsonc` を変えたときもやり直す）
+
+   ```bash
+   npm run types
+   ```
+
+4. 手元で動かして、確認用のスクリプトで叩く。Workers AI は手元で動かしても本物を呼ぶので、ネットが要り、料金もかかる（`wrangler login` でログインしておく）
+
+   ```bash
+   npm run dev
+   # 別のターミナルで
+   SUGGEST_URL=http://localhost:8787 SUGGEST_TOKEN=<.dev.vars の値> scripts/try-suggest.sh
+   ```
+
+5. 本番に出す（こうせいが行う）
+
+   ```bash
+   npx wrangler secret put SUGGEST_TOKEN   # 本番の合言葉。手元とは別の値にする
+   npm run deploy
+   ```
+
+- Jev の呼び出しが `2021: Insufficient AI Gateway credits` で 502 になる：Jev は third-party のモデルで、Cloudflare の AI Gateway のクレジットから払う。ダッシュボードの AI Gateway の画面の「Credits Available」から足す
 
 ## 付録：プロジェクトを作る人が、最初に1回だけやること
 

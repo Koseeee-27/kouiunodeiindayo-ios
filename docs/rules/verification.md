@@ -50,6 +50,14 @@ xcodebuild test -scheme Kouiunodeiindayo -destination 'platform=iOS Simulator,na
 - 効果音（マナーモードのオン・オフの両方）
 - 写真の保存・削除（アプリを終了して開き直しても残っているか）
 
+## 5. Worker の確認
+
+`server/` を触った変更だけ。手順の詳細は `docs/setup.md` の「7. Worker（中継サーバー）」。
+
+1. 型の確認：`cd server && npm run check`
+2. `npm run dev` で手元で動かす
+3. `SUGGEST_URL=http://localhost:8787 SUGGEST_TOKEN=<.dev.vars の値> scripts/try-suggest.sh` で、200／400／401／404／405 と、提案の中身（`genre` と `tags`）を見る。Workers AI は本物を呼んで料金がかかるので、何度も回さない
+
 ## 報告の形
 
 ```markdown
@@ -58,6 +66,7 @@ xcodebuild test -scheme Kouiunodeiindayo -destination 'platform=iOS Simulator,na
 - テスト: ✅ / ❌（n passed / n failed）／ なし
 - 表示の確認: 何をどう見たか1行
 - 実機での確認: 済（誰が・何を） ／ 未（理由） ／ 不要
+- Worker: ✅ / ❌ ／ 触っていない
 ```
 
 「ビルドが通った」は「動く」ではない。
