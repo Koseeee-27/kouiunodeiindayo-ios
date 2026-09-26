@@ -20,7 +20,11 @@ struct RecordDetailView: View {
         // 指についてくる横スワイプにするため、記録を `.page` スタイルのページャーに横に並べる
         TabView(selection: $selectedID) {
             ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                RecordDetailPageView(record: record, position: index + 1, total: records.count) { delta in
+                RecordDetailPageView(
+                    record: record, position: index + 1, total: records.count,
+                    // 今のページと、その前後1件だけ写真を読む（全件の写真本体を一度に持つと、メモリ不足で落ちる）
+                    shouldLoadPhoto: abs(index - selectedIndex) <= 1
+                ) { delta in
                     move(from: index, by: delta)
                 }
                 .tag(record.id)
@@ -29,6 +33,11 @@ struct RecordDetailView: View {
         .tabViewStyle(.page(indexDisplayMode: .never))
         // ページャーはセーフエリアまで地を広げないので、ここでも地を敷く
         .background(Theme.background)
+    }
+
+    /// 今出ている記録の位置。見つからないときは先頭
+    private var selectedIndex: Int {
+        records.firstIndex { $0.id == selectedID } ?? 0
     }
 
     /// VoiceOver から前後の記録へ移る。端では動かない
@@ -50,6 +59,8 @@ struct RecordDetailPageView: View {
     /// 開いた元の並びの中での位置（1始まり）と件数。VoiceOver の読み上げに使う
     let position: Int
     let total: Int
+    /// 写真本体を読むか。今のページの近くだけ true にして、遠いページは写真を持たない
+    let shouldLoadPhoto: Bool
     /// VoiceOver から前後の記録へ移る（-1 が前、1 が次）
     let onMove: (Int) -> Void
 
@@ -85,7 +96,10 @@ struct RecordDetailPageView: View {
             Text(verbatim: dateText)
                 .font(Theme.font(.headline, bold: true))
                 // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(dateText)
                 .accessibilityValue("\(position)件目、全\(total)件")
+                .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
                 .accessibilityAdjustableAction { direction in
                     switch direction {
                     case .increment: onMove(1)
@@ -100,8 +114,8 @@ struct RecordDetailPageView: View {
         .padding()
         .background(Theme.background)
         // 記録が変わったときだけファイルを読む（写真本体）
-        .task(id: record.id) {
-            image = photoStorage.photo(fileName: record.photoFileName)
+        .task(id: shouldLoadPhoto ? record.id : nil) {
+            image = shouldLoadPhoto ? photoStorage.photo(fileName: record.photoFileName) : nil
         }
         // iOS 26 の `confirmationDialog` は「やめる」を出さない（外をタップして閉じる）ので、「消す」と「やめる」が並ぶ `alert` にする
         .alert("この記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
