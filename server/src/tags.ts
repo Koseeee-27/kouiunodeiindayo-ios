@@ -85,8 +85,9 @@ export const LABEL_MIN = 0.05;
 // 0.30：うどんの例（最大 0.22、全部「弱い」）でも Jev は food 0.97・noodles 0.87 を返したので、弱い扱いでも推せる。料理名のラベル（0.55〜0.8）は「強い」に入る。
 export const STRONG_MIN = 0.3;
 // 料理のタグを付けるのに要る、対応するラベルの確信度。弱すぎる料理名で決めつけないように。
-// 0.10：7 例の料理名のラベルは 0.55 以上で、この値では結果が変わらない。実機のラベルの分布は #82 で見て直す。
-export const DISH_LABEL_MIN = 0.1;
+// 0.30：実機の Vision は、写っていない料理名を 0.1〜0.2 で出す（うどんに ramen 0.14・spaghetti 0.11、天ぷらに fried_chicken 0.13）。
+// 正しい料理名は 0.5 以上が多い（弁当の sushi 0.70）。Mac の Vision で無料素材 6 枚を見て 0.10 から上げた。ラベルは scripts/real-labels.tsv。
+export const DISH_LABEL_MIN = 0.3;
 // Jev のジャンルの probabilities[choice] がこれ未満なら提案しない。
 // 0.50：7 例の答えは 0.97〜1.0（食べ物でない例は other 1.0）と偏っていて、0.5〜0.9 のどこでも結果は同じ。4 択で「残り全部より高い」意味の 0.5 にした。
 export const GENRE_MIN = 0.5;
