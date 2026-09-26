@@ -2,7 +2,8 @@ import SwiftUI
 
 /// 仕分けのカードの重なりと、4方向のラベル。ドラッグ・ラベルを押したときにカードを飛ばし、飛び終わってからジャンルを付ける。
 /// 仕分け待ちの読み込み（`@Query`）と、上の行（✕・残り枚数）は `SortView` が持つ。
-struct SortCardStackView: View {
+/// 下のラベルのすぐ下には、`SortView` から渡された `belowCard`（提案されたタグの行）を置く。
+struct SortCardStackView<BelowCard: View>: View {
     /// 仕分け待ち（`SortView` の `@Query` の結果）。先頭2件だけ使う
     let records: [Record]
     /// カードが飛んでいる間。ジェスチャー・ラベル・✕・「う、うまい」を受け付けない。✕ を持つ `SortView` と共有する
@@ -13,6 +14,8 @@ struct SortCardStackView: View {
     /// 仕分けが決まったとき（飛び終わったとき）。ジャンルを付ける
     let onSort: (Record, Genre) -> Void
     let onToggleFavorite: (Record) -> Void
+    /// 下のラベルのすぐ下に置くもの（提案されたタグの行）。カードと一緒には動かさない
+    @ViewBuilder let belowCard: BelowCard
 
     /// 指で動かしている間の移動量。離したときも、iOS がジェスチャーを取り消したとき（通知センターを引き出すなど）も、
     /// `onEnded` を待たずにバネで 0 に戻る
@@ -27,6 +30,10 @@ struct SortCardStackView: View {
     @State private var commitCount = 0
     /// 仕分けが決まって、後ろのカードを手前の大きさ・位置までせり上げている間
     @State private var isNextRising = false
+    /// 上のラベルの高さ・下のラベルと `belowCard` を合わせた高さ（測った値）。
+    /// どちらもカードの縁の外にはみ出すので、その分を枠の上下に空ける
+    @State private var topOuterHeight: CGFloat = 0
+    @State private var bottomOuterHeight: CGFloat = 0
 
     /// カードの表示位置。傾きとラベルの強調もここから決める
     private var cardOffset: CGSize {
@@ -43,7 +50,11 @@ struct SortCardStackView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            // 上下のラベル（と、下のタグの行）の分を空けて、カードのほうを小さくする。
+            // 狭い画面で、上のラベルが上の行に、下のタグの行が画面の外にかぶらないように
             sortArea(screenSize: geometry.size)
+                .padding(.top, topOuterHeight + Self.outerLabelGap)
+                .padding(.bottom, bottomOuterHeight + Self.outerLabelGap)
                 .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .onChange(of: records.first?.id) {
@@ -67,6 +78,11 @@ struct SortCardStackView: View {
             .overlay(alignment: .top) {
                 // 上のラベルは、カードの上の縁の外に出す（右上の「う、うまい」のハンコと重ならないように）
                 genreLabel(.up, highlighted: highlighted, screenSize: screenSize)
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: {
+                        topOuterHeight = $0
+                    }
                     .padding(.bottom, Self.outerLabelGap)
                     .alignmentGuide(.top) { $0[.bottom] }
             }
@@ -79,21 +95,30 @@ struct SortCardStackView: View {
                     .padding(.trailing, Self.labelInset)
             }
             .overlay(alignment: .bottom) {
-                // 下のラベルも、カードの下の縁の外に出す
-                genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
-                    .padding(.top, Self.outerLabelGap)
-                    .alignmentGuide(.bottom) { $0[.top] }
+                // 下のラベルも、カードの下の縁の外に出す。そのすぐ下に `belowCard`（提案されたタグの行）
+                VStack(spacing: Theme.sortBelowLabelSpacing) {
+                    genreLabel(.down, highlighted: highlighted, screenSize: screenSize)
+                    belowCard
+                }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    bottomOuterHeight = $0
+                }
+                .padding(.top, Self.outerLabelGap)
+                .alignmentGuide(.bottom) { $0[.top] }
             }
             // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
             .padding(.bottom, SwipeDirection.backCardPeek)
     }
 
+    // 型が `BelowCard` を持つ汎用の型なので、定数は `static let` で持てない（計算で返す）
     /// 上と下のラベルを、カードの縁からどれだけ外に離すか（pt）
-    private static let outerLabelGap: CGFloat = 8
+    private static var outerLabelGap: CGFloat { 8 }
     /// ラベルをカードの縁からどれだけ内側に置くか（pt）。縁をまたぐと、左右 16pt の余白しかないので画面の外にはみ出す
-    private static let labelInset: CGFloat = 12
+    private static var labelInset: CGFloat { 12 }
     /// スタンプをカードの上端からどれだけ下に置くか（pt）。右上の「う、うまい」と重ならない高さ
-    private static let stampTopInset: CGFloat = 130
+    private static var stampTopInset: CGFloat { 130 }
 
     /// 手前と後ろの2枚を、記録の id で並べる。後ろのカードが手前に来ても同じビューのままなので、
     /// 写真を読み直さず、読み込み中の灰色の地も出ない。
@@ -171,7 +196,9 @@ struct SortCardStackView: View {
         SortGenreLabelView(
             direction: direction,
             genre: direction.genre,
-            emphasis: highlighted.map { $0 == direction ? .strong : .weak } ?? .normal
+            emphasis: highlighted.map { $0 == direction ? .strong : .weak } ?? .normal,
+            // 飛んでいる間も、先頭は飛ばしている写真のまま（`onSort` のあとで変わる）
+            isSuggested: records.first?.suggestedGenreValue == direction.genre
         ) {
             commit(direction, screenSize: screenSize)
         }

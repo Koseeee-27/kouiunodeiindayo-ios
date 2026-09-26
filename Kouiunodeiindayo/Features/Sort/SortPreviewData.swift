@@ -16,6 +16,19 @@ enum SortPreviewData {
         return container
     }
 
+    /// 提案をまだ問い合わせていない仕分け待ちだけ（3件）。共有の `SampleData` には提案済みの仕分け待ちがあるので、使わずに作る。
+    /// 提案なし・通信できない・後から届くのプレビューで使う
+    static func makeUnsuggestedContainer() -> ModelContainer {
+        let container = SampleData.makeContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        for (index, color) in [UIColor.systemOrange, .systemGreen, .systemPurple].enumerated() {
+            let takenAt = Date.now.addingTimeInterval(-60 * 60 * Double(index))
+            // プレビュー用なので、作れなければ落として気づく
+            _ = try! store.add(image: SampleData.makeImage(color: color), takenAt: takenAt)
+        }
+        return container
+    }
+
     /// 仕分け待ちのうち一番新しい1件の id（撮った直後の仕分けのプレビューで、今撮った1枚に見立てる）。
     static func newestUnsortedID(in container: ModelContainer) -> UUID {
         let unsorted = Genre.unsorted.rawValue

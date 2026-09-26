@@ -25,9 +25,11 @@ Kouiunodeiindayo/
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
 │   ├── Sort/                  ← 仕分け
 │   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す
-│   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理
+│   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理。下のラベルの下に、提案されたタグの行を置く
 │   │   ├── SortCardView.swift     ← 写真1枚のカードと「う、うまい」
-│   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調
+│   │   ├── SortGenreLabelView.swift ← 縁に置く吹き出しのラベル（上下はカードの外）。押すと仕分け・ドラッグ中の強調・提案されたジャンルの点線
+│   │   ├── SortSuggestedTagsView.swift ← 提案されたタグの − つきのチップの行。押すと外す・付ける
+│   │   ├── SortTagSelection.swift ← 付いているタグ（提案 − 外したもの）と、次に進むときの書き込み（タグ → ジャンル）
 │   │   ├── SortStampView.swift    ← ドラッグ中のスタンプ（見た目は仮）
 │   │   ├── SortPreviewData.swift  ← 仕分けのプレビュー用のサンプルデータ
 │   │   └── SwipeDirection.swift   ← 向き → ジャンル、しきい値・傾き・飛び方の定数

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 色・線の太さ・文字の定義。画面ごとに値を直書きせず、ここを参照する。
 /// 配色の正はチームの Notion「デザイン要件書」の確定版（マンガのコマ）。ダーク用の色は未定なので、アプリは明るい表示に固定している（`Config/Base.xcconfig`）。
-/// 赤はハンコ・スタンプだけに使う。
+/// 赤はハンコ・スタンプだけに使う。例外は、仕分けの提案のしるし（提案されたジャンルのラベルを囲む点線。`suggestionMark`）。
 enum Theme {
     /// 墨。文字（主）と線の元の色
     /// Asset の AccentColor（`main`）にも同じ値を入れている。Asset はコードから値を読めないので、墨を変えるときは両方を直す
@@ -26,6 +26,27 @@ enum Theme {
     static let textSecondary = Color(hex: 0x6E6862)
     /// 線・区切り
     static let line = ink
+
+    /// 提案のしるし（仕分けで、提案されたジャンルのラベルを囲む点線）。赤の例外（冒頭の決まり）
+    static let suggestionMark = accent
+    /// 提案のしるしの点線の太さ
+    static let lineWidthSuggestion: CGFloat = 2
+    /// 提案のしるしの点線の間隔（線の長さ・空きの長さ）
+    static let suggestionDash: [CGFloat] = [5, 4]
+    /// 提案のしるしを、ラベルの縁からどれだけ外に離すか
+    static let suggestionMarkOffset: CGFloat = 4
+    /// 仕分けのタグのチップの「−」「＋」の丸の地
+    static let chipSymbolBackground = textSecondary.opacity(0.2)
+    /// 仕分けのタグのチップの「−」「＋」の丸の直径（文字サイズが標準のとき。`@ScaledMetric` で文字サイズに合わせる）
+    static let chipSymbolSize: CGFloat = 18
+    /// 仕分けのタグのチップの内側の余白（右は「−」「＋」の丸があるので狭く）
+    static let chipPadding = EdgeInsets(top: 7, leading: 13, bottom: 7, trailing: 9)
+    /// 仕分けのタグのチップの、名前と「−」「＋」の丸の間
+    static let chipInnerSpacing: CGFloat = 4
+    /// 仕分けのタグのチップ同士の間
+    static let chipSpacing: CGFloat = 8
+    /// 仕分けの下のラベルと、その下のタグの行の間
+    static let sortBelowLabelSpacing: CGFloat = 4
 
     /// 太い線（見出しの下の区切りなど）。太さは仮
     static let lineWidthThick: CGFloat = 2
