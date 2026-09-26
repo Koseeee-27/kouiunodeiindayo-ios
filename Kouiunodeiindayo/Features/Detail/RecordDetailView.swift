@@ -3,13 +3,68 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 記録の詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す（右上の「…」から）、閉じるができる。
-/// 要素と操作は `docs/screen-design.md` の「記録の詳細」が正。
-/// ホーム・一覧から sheet で開く。sheet なので、閉じても元の画面のスクロール位置はそのまま残る。
+/// 記録の詳細。開いた元の並び（ホーム・一覧の新しい順）のまま、左右にスワイプして前後の記録に移れる。端ではそれ以上動かない。
+/// 1件ぶんの画面は `RecordDetailPageView`。ホーム・一覧から sheet で開く。sheet なので、閉じても元の画面のスクロール位置はそのまま残る。
 struct RecordDetailView: View {
+    let records: [Record]
+    /// 今出ている記録の `id`。`init` で開いた記録に決める（宣言時に初期値を持つ `@State` に `init` で代入しないため）
+    @State private var selectedID: UUID
+
+    /// `records` は開いた元の並び。`initial` がその中に無いときは、`initial` だけを出す
+    init(records: [Record], initial: Record) {
+        self.records = records.contains { $0.id == initial.id } ? records : [initial]
+        _selectedID = State(initialValue: initial.id)
+    }
+
+    var body: some View {
+        // ページごとに探し直さないよう、今の位置は1回だけ求める
+        let currentIndex = selectedIndex
+        // 指についてくる横スワイプにするため、記録を `.page` スタイルのページャーに横に並べる
+        TabView(selection: $selectedID) {
+            ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
+                RecordDetailPageView(
+                    record: record, position: index + 1, total: records.count,
+                    // 今のページと、その前後1件だけ写真を読む（全件の写真本体を一度に持つと、メモリ不足で落ちる）
+                    shouldLoadPhoto: abs(index - currentIndex) <= 1
+                ) { delta in
+                    move(from: index, by: delta)
+                }
+                .tag(record.id)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        // ページャーはセーフエリアまで地を広げないので、ここでも地を敷く
+        .background(Theme.background)
+    }
+
+    /// 今出ている記録の位置。見つからないときは先頭
+    private var selectedIndex: Int {
+        records.firstIndex { $0.id == selectedID } ?? 0
+    }
+
+    /// VoiceOver から前後の記録へ移る。端では動かない
+    private func move(from index: Int, by delta: Int) {
+        let next = index + delta
+        guard records.indices.contains(next) else { return }
+        withAnimation {
+            selectedID = records[next].id
+        }
+    }
+}
+
+/// 記録1件ぶんの詳細。写真（本体）・日付・ジャンルを出し、「うまい」の付け外し、記録を消す（右上の「…」から）、閉じるができる。
+/// 要素と操作は `docs/screen-design.md` の「記録の詳細」が正。
+struct RecordDetailPageView: View {
     private static let logger = Logger(category: "RecordDetailView")
 
     let record: Record
+    /// 開いた元の並びの中での位置（1始まり）と件数。VoiceOver の読み上げに使う
+    let position: Int
+    let total: Int
+    /// 写真本体を読むか。今のページの近くだけ true にして、遠いページは写真を持たない
+    let shouldLoadPhoto: Bool
+    /// VoiceOver から前後の記録へ移る（-1 が前、1 が次）
+    let onMove: (Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -42,6 +97,18 @@ struct RecordDetailView: View {
             photo
             Text(verbatim: dateText)
                 .font(Theme.font(.headline, bold: true))
+                // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(dateText)
+                .accessibilityValue("\(position)件目、全\(total)件")
+                .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: onMove(1)
+                    case .decrement: onMove(-1)
+                    @unknown default: break
+                    }
+                }
             favoriteButton
             genreButtons
             Spacer(minLength: 0)
@@ -49,8 +116,8 @@ struct RecordDetailView: View {
         .padding()
         .background(Theme.background)
         // 記録が変わったときだけファイルを読む（写真本体）
-        .task(id: record.id) {
-            image = photoStorage.photo(fileName: record.photoFileName)
+        .task(id: shouldLoadPhoto ? record.id : nil) {
+            image = shouldLoadPhoto ? photoStorage.photo(fileName: record.photoFileName) : nil
         }
         // iOS 26 の `confirmationDialog` は「やめる」を出さない（外をタップして閉じる）ので、「消す」と「やめる」が並ぶ `alert` にする
         .alert("この記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
@@ -179,12 +246,14 @@ struct RecordDetailView: View {
 }
 
 #Preview {
-    let container = SampleData.makePreviewContainer()
-    // ジャンルが付いている記録で、ジャンルの表示も見る。プレビュー用なので、無ければ落として気づく
-    let food = Genre.food.rawValue
-    let record = try! container.mainContext.fetch(FetchDescriptor<Record>(predicate: #Predicate { $0.genre == food }))
-        .first!
-    RecordDetailView(record: record)
+    let container = HomePreviewData.makeManyContainer()
+    // 仕分け済みを新しい順に。一覧・ホームと同じ並びで、左右にスワイプして前後に移れる。プレビュー用なので、無ければ落として気づく
+    let unsorted = Genre.unsorted.rawValue
+    let records = try! container.mainContext.fetch(
+        FetchDescriptor<Record>(
+            predicate: #Predicate { $0.genre != unsorted },
+            sortBy: [SortDescriptor(\.takenAt, order: .reverse)]))
+    RecordDetailView(records: records, initial: records.first!)
         .modelContainer(container)
         .environment(\.photoStorage, SampleData.photoStorage)
 }
