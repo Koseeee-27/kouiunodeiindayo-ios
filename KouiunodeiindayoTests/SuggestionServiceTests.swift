@@ -262,6 +262,45 @@ struct SuggestionServiceTests {
         #expect(probe.callCount == 3)
     }
 
+    @Test func 通信できないときは間を広げず問い合わせ直しだけする() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let probe = SuggesterProbe(failuresBeforeSuccess: 2, error: URLError(.notConnectedToInternet))
+        let service = LiveSuggestionService(
+            labels: Self.fixedLabels, suggest: probe.suggest, policy: Self.fastPolicy(backoffStart: .seconds(1)))
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        try await waitUntil(tries: 500) { record.suggestedAt != nil }
+        #expect(probe.callCount == 3)
+        #expect(service.interval == .zero)
+    }
+
+    @Test func 間を広げるのはWorkerの失敗と時間切れで通信できないときは広げない() {
+        #expect(LiveSuggestionService.widensInterval(after: SuggestionClientError.httpStatus(502)))
+        #expect(LiveSuggestionService.widensInterval(after: SuggestionClientError.httpStatus(429)))
+        #expect(LiveSuggestionService.widensInterval(after: URLError(.timedOut)))
+        #expect(!LiveSuggestionService.widensInterval(after: URLError(.notConnectedToInternet)))
+        #expect(!LiveSuggestionService.widensInterval(after: URLError(.networkConnectionLost)))
+    }
+
+    @Test func 前の問い合わせから時間があいたら間を0に戻す() async throws {
+        let context = TestStore()
+        let first = try context.addRecord()
+        let later = try context.addRecord()
+        let probe = SuggesterProbe(failuresBeforeSuccess: 1)
+        var policy = Self.fastPolicy(backoffStart: .milliseconds(300), backoffMax: .milliseconds(300))
+        policy.idleReset = .milliseconds(100)
+        let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest, policy: policy)
+        service.requestSuggestion(for: first.id, photoFileName: first.photoFileName, store: context.store)
+        try await waitUntil(tries: 500) { first.suggestedAt != nil }
+        // 失敗 1 回で広がり、成功 1 回ではまだ戻らない
+        #expect(service.interval == .milliseconds(300))
+
+        try await Task.sleep(for: .milliseconds(400))
+        service.requestSuggestion(for: later.id, photoFileName: later.photoFileName, store: context.store)
+        try await waitUntil(tries: 500) { later.suggestedAt != nil }
+        #expect(service.interval == .zero)
+    }
+
     private static let fixedLabels: LiveSuggestionService.LabelProvider = { _ in
         [ImageLabel(name: "ramen", confidence: 0.9)]
     }
@@ -286,9 +325,16 @@ private final class SuggesterProbe {
     /// 呼ばれた時刻（問い合わせの間を確かめる）
     private(set) var callTimes: [ContinuousClock.Instant] = []
 
-    init(delay: Duration = .zero, failuresBeforeSuccess: Int = 0) {
+    /// 失敗するときに投げるもの。既定は Worker の 502（回数の制限に当たったときと同じ。間を広げる）
+    private let error: Error
+
+    init(
+        delay: Duration = .zero, failuresBeforeSuccess: Int = 0,
+        error: Error = SuggestionClientError.httpStatus(502)
+    ) {
         self.delay = delay
         failuresLeft = failuresBeforeSuccess
+        self.error = error
     }
 
     var suggest: LiveSuggestionService.Suggester {
@@ -303,7 +349,7 @@ private final class SuggesterProbe {
             }
             if failuresLeft > 0 {
                 failuresLeft -= 1
-                throw URLError(.notConnectedToInternet)
+                throw error
             }
             return SuggestionResult(genre: .food, genreConfidence: 0.88, tags: [.ramen])
         }

@@ -14,6 +14,7 @@ protocol SuggestionService {
 /// 同じ写真は重ねて問い合わせず、受け付けた順に1件ずつ行う（Vision を何枚も同時に動かさない・Worker に同時に投げない）。
 /// Worker への問い合わせが失敗したら、少し待って問い合わせ直す（`RetryPolicy`）。ふだんは間を空けずに続けて問い合わせ、
 /// 失敗が来たときだけ問い合わせの間を広げ、成功が続いたら戻す（Worker の回数の制限に合わせるため。`docs/plans/suggestion-retry.plan.md`）。
+/// 端末が通信できないときの失敗では間を広げない（回数の制限とは関係ないため）。前の問い合わせから長くあいたら、間を 0 に戻す。
 /// 問い合わせ中の控えをアプリ全体で1つにするため、アプリの入口で1つだけ作って渡す。
 final class LiveSuggestionService: SuggestionService {
     /// 写真ファイルからラベルを取る。本物は `ImageLabeler`（Vision）。テストで差し替える
@@ -33,6 +34,8 @@ final class LiveSuggestionService: SuggestionService {
         var successesToRelax = 3
         /// 半分にしてこれを切ったら 0（ふだんの速さ）に戻す
         var relaxFloor: Duration = .milliseconds(500)
+        /// 前の問い合わせからこれ以上あいていたら、間を 0 に戻す。回数の制限の窓より長くあけば、速さを戻しても当たらないため
+        var idleReset: Duration = .seconds(30)
     }
 
     private struct Job {
@@ -119,6 +122,11 @@ final class LiveSuggestionService: SuggestionService {
                 continue
             }
             var job = jobs.remove(at: index)
+            if interval > .zero, let lastCallAt, .now - lastCallAt >= policy.idleReset {
+                interval = .zero
+                successStreak = 0
+                Self.logger.info("前の問い合わせから時間があいたので、問い合わせの間を 0 秒に戻した")
+            }
             // 失敗のあとは、前の問い合わせから `interval` あける
             if interval > .zero, let lastCallAt, lastCallAt + interval > .now {
                 try? await Task.sleep(until: lastCallAt + interval, clock: .continuous)
@@ -180,8 +188,23 @@ final class LiveSuggestionService: SuggestionService {
             let attempt = job.attempt + 1
             Self.logger.notice(
                 "提案を問い合わせられなかった（\(attempt) 回目）: \(Self.describe(error), privacy: .public)")
-            widenAfterFailure()
+            // 端末が通信できないときは、問い合わせ直しだけにする（間を広げると、通信が戻ったあとも遅いままになるため）
+            if Self.widensInterval(after: error) {
+                widenAfterFailure()
+            }
             return .workerFailed
+        }
+    }
+
+    /// この失敗で問い合わせの間を広げるか。端末が通信できない（機内モード・圏外など）ときは広げない。
+    /// Worker の返事（502・429 など）・時間切れ・Worker に届かないときは、回数の制限のせいかもしれないので広げる
+    static func widensInterval(after error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return true }
+        switch urlError.code {
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff, .callIsActive:
+            return false
+        default:
+            return true
         }
     }
 
