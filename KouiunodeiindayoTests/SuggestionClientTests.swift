@@ -143,6 +143,11 @@ struct SuggestionClientTests {
                 == .init(baseURL: URL(string: "https://worker.example.com")!, token: "abc"))
     }
 
+    @Test func 手元のWorkerだけはhttpを許す() {
+        let info: [String: Any] = ["SuggestionBaseURL": "http://localhost:8787", "SuggestionToken": "abc"]
+        #expect(SuggestionClient.configuration(from: info)?.baseURL == URL(string: "http://localhost:8787"))
+    }
+
     @Test(arguments: [
         ["SuggestionBaseURL": "", "SuggestionToken": "abc"],
         ["SuggestionBaseURL": "https://worker.example.com", "SuggestionToken": ""],
@@ -150,6 +155,7 @@ struct SuggestionClientTests {
         ["SuggestionBaseURL": "https://worker.example.com", "SuggestionToken": "$(SUGGESTION_TOKEN)"],
         ["SuggestionBaseURL": "https:", "SuggestionToken": "abc"],
         ["SuggestionBaseURL": "ftp://worker.example.com", "SuggestionToken": "abc"],
+        ["SuggestionBaseURL": "http://worker.example.com", "SuggestionToken": "abc"],
         ["SuggestionToken": "abc"],
     ])
     func 未設定や読めない設定はnil(info: [String: String]) {
