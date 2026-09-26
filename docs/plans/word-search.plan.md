@@ -32,7 +32,7 @@
 4. **文言**：欄の薄い文字「ラーメン、うまい、今月 など」／合う記録が無い「合う記録がありません」＋「絞り込みをやめる」／読み取れなかった「条件を読み取れませんでした。タグの名前や『うまい』『今月』で探せます」（一覧はそのまま）
 5. **通信できないとき（M2）**：先に端末の中で読み取り、読み取れた条件があれば通信せずに絞る。読み取れなかったときだけ Worker に聞き、通信できなければ「通信できませんでした。タグの名前や『うまい』『今月』なら通信なしで探せます」を出して一覧はそのまま
 6. **結果の並べ方**：今の一覧と同じ（新しい順・月ごとの見出し・3 列）。絞り込み中は仕分け待ちの入口を隠す
-7. **「前に食べた」の読み方**：「前に」「前の」「昔」は `earlier`（今月 1 日より前）。「今日」→ `today`、「今週」→ `this_week`、「今月」→ `this_month`。「昨日」「先週」「先月」は読み取らない。「今月より前」「今月以前」も `earlier`（「今月」より先に見る。レビューで足した）。「より前」「以前」だけ（「昨日以前」など）は読み取らない
+7. **「前に食べた」の読み方**：「前に」「前の」「昔」は `earlier`（今月 1 日より前）。「今日」→ `today`、「今週」→ `this_week`、「今月」→ `this_month`。「昨日」「先週」「先月」は読み取らない。「今月より前」「今月以前」も `earlier`（「今月」より先に見る。レビューで足した）。「今年」→ `this_year`（今年の 1 月 1 日以降。M1 で足した）。「より前」「以前」だけ（「昨日以前」など）は読み取らない
 
 ## 実装で計画から変えたこと（2026-09-27。M0）
 
@@ -72,8 +72,8 @@ struct SearchCondition: Equatable, Sendable {
 }
 
 enum SearchPeriod: String, CaseIterable, Sendable {
-    case today, thisWeek = "this_week", thisMonth = "this_month", earlier
-    var title: String   // 「今日」「今週」「今月」「今月より前」（チップの文字。M1）
+    case today, thisWeek = "this_week", thisMonth = "this_month", thisYear = "this_year", earlier
+    var title: String   // 「今日」「今週」「今月」「今年」「今月より前」（チップの文字。M1）
 }
 ```
 
@@ -109,7 +109,7 @@ enum RecordSearchFilter {
 ```
 
 - `matches(record, tag:)`：`record.tagValues` に `tag` がある、または `record.tagValues` のどれかの `category == tag` か `cuisine == tag`
-- 時期：`today` は `calendar.isDate(date, inSameDayAs: now)`、`this_week` は `calendar.dateInterval(of: .weekOfYear, for: now)` の始まり以降、`this_month` は `dateInterval(of: .month, for: now)` の始まり以降、`earlier` は今月の始まりより前。未来の日付（機能13 で直したもの）は `this_week`・`this_month` に含める（`today` 以外は「始まり以降」で見るため）
+- 時期：`today` は `calendar.isDate(date, inSameDayAs: now)`、`this_week` は `calendar.dateInterval(of: .weekOfYear, for: now)` の始まり以降、`this_month` は `dateInterval(of: .month, for: now)` の始まり以降、`this_year` は `dateInterval(of: .year, for: now)` の始まり以降、`earlier` は今月の始まりより前。未来の日付（機能13 で直したもの）は `this_week`・`this_month`・`this_year` に含める（`today` 以外は「始まり以降」で見るため）
 
 ### 一覧（`Features/List/RecordListView.swift`。M0・M1）
 
@@ -132,7 +132,7 @@ enum RecordSearchFilter {
   - 質問 3 つ（どれも `choice`）
     - `tag`：34 個のタグのキー＋`none`。説明は「日本語名 / 英語」（例 `ramen: "ラーメン / ramen"`、`noodles: "麺類 / noodle dishes"`）。表は `tags.ts` に `SEARCH_TAGS` として置く（`docs/data-model.md` の表を写したもの。コメントで「表を変えたら data-model.md も」）
     - `favorite`：`yes`（うまかった・お気に入りだけ）／`no`
-    - `period`：`today`・`this_week`・`this_month`・`earlier`（"before this month, e.g. 前に, 昔"）・`none`
+    - `period`：`today`・`this_week`・`this_month`・`this_year`（"since January 1 this year, e.g. 今年"）・`earlier`（"before this month, e.g. 前に, 昔"）・`none`
   - しきい値：`SEARCH_MIN = 0.5`（`/suggest` の `GENRE_MIN` と同じ考え）。確率がこれ未満、または `none` なら指定なし（`null`／`false`）
   - 時間切れ：2500ms（アプリの 3 秒より先に 502）
 - `index.ts`：`/search` を足す（`/suggest` と同じ順で 405・401・400・502）。ログは種類とエラーの文だけ（検索の言葉を出さない）
@@ -162,6 +162,9 @@ enum RecordSearchFilter {
 ### M1（条件のチップ）
 
 8. `RecordListView`：条件のチップと「やめる」（要判断 3 の A）。プレビュー「絞り込み中」のスクショを撮り直す → コミット `feat: 言葉で探すときに、読み取った条件を見せる (#85)`
+   - （2026-09-27 こうせい）チップは `TagChipView`（#84）の見た目を使う。タグ・「うまい」・時期を 1 つずつチップにし、欄の下に左から折り返して並べ（`FlowLayout`）、右端に「やめる」。チップの − を押すと、その条件だけ外して絞り直す（全部外れたら、やめるのと同じ）。`TagChipView` に、タグでない文字を渡せる `init(title:accessibilityLabel:isAttached:action:)` を足す
+   - あわせて、時期の言葉に「今年」を足す（シミュレータで「今年」が読めなかった）。「今年」→ `this_year`（今年の 1 月 1 日以降。今週・今月と同じく、日付を未来に直した記録も入る）。`docs/suggestion-api.md` の `period` の表にも足す。テスト：`LocalSearchParserTests` に「今年のラーメン」→ ramen・this_year、`RecordSearchFilterTests` に年の境目
+   - プレビュー：「絞り込み中（ラーメン・うまい・今月より前）」（先月以前のうまいラーメンを 1 件足したデータ）・「SE 相当・文字サイズ XXX Large」をチップつきで撮る。スクショは `.verification/85/m1-*.png`
 
 ### M2（Worker と問い合わせ）
 

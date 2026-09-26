@@ -23,7 +23,7 @@ enum RecordSearchFilter {
     }
 
     /// 撮った日がその時期に入るか。区切りは暦（週の始まりは端末の設定）。
-    /// 今週・今月は「始まり以降」で見るので、日付を未来に直した記録（機能13）も入る
+    /// 今週・今月・今年は「始まり以降」で見るので、日付を未来に直した記録（機能13）も入る
     static func matches(_ date: Date, period: SearchPeriod, now: Date, calendar: Calendar) -> Bool {
         switch period {
         case .today:
@@ -33,6 +33,9 @@ enum RecordSearchFilter {
             return date >= start
         case .thisMonth:
             guard let start = calendar.dateInterval(of: .month, for: now)?.start else { return false }
+            return date >= start
+        case .thisYear:
+            guard let start = calendar.dateInterval(of: .year, for: now)?.start else { return false }
             return date >= start
         case .earlier:
             guard let start = calendar.dateInterval(of: .month, for: now)?.start else { return false }

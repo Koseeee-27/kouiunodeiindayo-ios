@@ -113,6 +113,11 @@ struct RecordListView: View {
                     // 選ぶモードの間は、欄と仕分け待ちの入口を押せなくする（見た目は残す。押すと選ぶ操作と混ざるため）
                     searchField
                         .disabled(isSelecting)
+                    if let condition {
+                        // 選ぶモードの間は、条件のチップと「やめる」も押せなくする（欄と同じ。絞り込みが変わると選んだ記録と混ざるため）
+                        conditionRow(condition)
+                            .disabled(isSelecting)
+                    }
                     if let message {
                         Text(message)
                             .font(Theme.font(.subheadline))
@@ -346,6 +351,52 @@ struct RecordListView: View {
         }
     }
 
+    /// 読み取った条件のチップと「やめる」。欄のすぐ下に、何で絞っているかを見せる（読み取りの取り違えに気づいて言い直せるように）。
+    /// チップの − で、その条件だけ外して絞り直す
+    private func conditionRow(_ condition: SearchCondition) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            // チップは押せる範囲を上下に広げているので、行の間は空けない（見た目の間はその分で足りる）
+            FlowLayout(lineSpacing: 0) {
+                if let tag = condition.tag {
+                    TagChipView(tag: tag, isAttached: true) {
+                        remove { $0.tag = nil }
+                    }
+                }
+                if condition.favoriteOnly {
+                    TagChipView(title: "うまい", accessibilityLabel: "うまい", isAttached: true) {
+                        remove { $0.favoriteOnly = false }
+                    }
+                }
+                if let period = condition.period {
+                    TagChipView(title: period.title, accessibilityLabel: "時期 \(period.title)", isAttached: true) {
+                        remove { $0.period = nil }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button("やめる") {
+                clear()
+            }
+            .font(Theme.font(.subheadline, bold: true))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minHeight: Theme.minTapHeight)
+            .accessibilityLabel("絞り込みをやめる")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("絞り込みの条件")
+    }
+
+    /// 条件を 1 つ外して絞り直す。全部外れたら、やめるのと同じ
+    private func remove(_ change: (inout SearchCondition) -> Void) {
+        guard var next = condition else { return }
+        change(&next)
+        if next.isEmpty {
+            clear()
+        } else {
+            condition = next
+        }
+    }
+
     /// 合う記録が無いとき
     private var noMatchView: some View {
         VStack(spacing: 12) {
@@ -528,6 +579,12 @@ struct RecordListView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
+#Preview("絞り込み中（ラーメン・うまい・今月より前）") {
+    RecordListView(searchText: "今月より前のうまいラーメン")
+        .modelContainer(RecordListPreviewData.makeEarlierRamenContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
 #Preview("合う記録が無い") {
     RecordListView(searchText: "寿司")
         .modelContainer(SampleData.makePreviewContainer())
@@ -541,10 +598,10 @@ struct RecordListView: View {
 }
 
 #Preview("SE 相当・文字サイズ XXX Large") {
-    RecordListView(searchText: "ラーメン")
+    RecordListView(searchText: "今月より前のうまいラーメン")
         .frame(width: 375, height: 667)
         .dynamicTypeSize(.xxxLarge)
-        .modelContainer(SampleData.makePreviewContainer())
+        .modelContainer(RecordListPreviewData.makeEarlierRamenContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
@@ -584,4 +641,20 @@ struct RecordListView: View {
     RecordListView()
         .modelContainer(SampleData.makeContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+/// 一覧のプレビュー用のデータ
+enum RecordListPreviewData {
+    /// サンプルに、先月以前の「うまい」のラーメンを 1 件足したもの（「今月より前」で当たる記録を見るため）
+    static func makeEarlierRamenContainer() -> ModelContainer {
+        let container = SampleData.makePreviewContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        let takenAt = Calendar.current.date(byAdding: .day, value: -45, to: .now) ?? .now
+        // プレビュー用なので、作れなければ落として気づく
+        let record = try! store.add(image: SampleData.makeImage(color: .systemBrown), takenAt: takenAt)
+        store.setGenre(.food, for: record)
+        store.toggleFavorite(record)
+        store.setTags([.ramen], for: record)
+        return container
+    }
 }

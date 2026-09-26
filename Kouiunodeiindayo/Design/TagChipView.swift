@@ -1,11 +1,25 @@
 import SwiftUI
 
 /// タグのチップ 1 つ。付いている：白地に墨の線と −／外した：点線の枠と ＋（ワイヤー集「タグの見せ方」の 2b）。
-/// 仕分けの提案されたタグ・記録の詳細のタグの行・タグの一覧のシートで共通に使う。
+/// 仕分けの提案されたタグ・記録の詳細のタグの行・タグの一覧のシート・一覧の言葉で探す条件で共通に使う。
 struct TagChipView: View {
-    let tag: Tag
+    let title: String
+    /// 読み上げ
+    let accessibilityName: String
     let isAttached: Bool
     let action: () -> Void
+
+    init(tag: Tag, isAttached: Bool, action: @escaping () -> Void) {
+        self.init(title: tag.title, accessibilityLabel: "タグ \(tag.title)", isAttached: isAttached, action: action)
+    }
+
+    /// タグでないもの（言葉で探す条件の「うまい」「今月」など）を、同じ見た目で出す
+    init(title: String, accessibilityLabel: String, isAttached: Bool, action: @escaping () -> Void) {
+        self.title = title
+        accessibilityName = accessibilityLabel
+        self.isAttached = isAttached
+        self.action = action
+    }
 
     /// −・＋ の丸の直径。文字サイズに合わせて大きくする
     @ScaledMetric(relativeTo: .subheadline) private var symbolSize = Theme.chipSymbolSize
@@ -15,7 +29,7 @@ struct TagChipView: View {
             action()
         } label: {
             HStack(spacing: Theme.chipInnerSpacing) {
-                Text(tag.title)
+                Text(title)
                     .font(Theme.font(.subheadline, bold: true))
                     .lineLimit(1)
                 Image(systemName: isAttached ? "minus" : "plus")
@@ -42,7 +56,7 @@ struct TagChipView: View {
         }
         .buttonStyle(.plain)
         .animation(.easeOut(duration: 0.15), value: isAttached)
-        .accessibilityLabel("タグ \(tag.title)")
+        .accessibilityLabel(accessibilityName)
         .accessibilityAddTraits(isAttached ? .isSelected : [])
         .accessibilityHint(isAttached ? "押すと外します" : "押すと付けます")
     }
