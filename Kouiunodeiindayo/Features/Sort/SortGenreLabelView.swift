@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 仕分けのラベル。カードの縁に置く吹き出し（左右の尻尾はスワイプする向き、上下の尻尾は写真のほうを指す）。押すと、その向きにスワイプしたのと同じになる。
+/// 仕分けのラベル。カードの縁に置く吹き出し（尻尾がスワイプする向きを指す）。押すと、その向きにスワイプしたのと同じになる。
 struct SortGenreLabelView: View {
     enum Emphasis {
         case normal
@@ -10,7 +10,7 @@ struct SortGenreLabelView: View {
         case weak
     }
 
-    /// このラベルでスワイプする向き。上と下のラベルはカードの外にあるので、尻尾は写真のほう（内側）を向く
+    /// 尻尾の向き（このラベルでスワイプする向き）
     let direction: SwipeDirection
     let genre: Genre
     let emphasis: Emphasis
@@ -18,15 +18,6 @@ struct SortGenreLabelView: View {
 
     /// 尻尾の長さ（pt）
     private static let tailLength: CGFloat = 6
-
-    /// 尻尾を出す辺。上・下のラベルは、カードの外から写真を指す
-    private var tailSide: SwipeDirection {
-        switch direction {
-        case .up: .down
-        case .down: .up
-        case .left, .right: direction
-        }
-    }
 
     var body: some View {
         Button {
@@ -41,10 +32,10 @@ struct SortGenreLabelView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 // 尻尾のぶんを、その向きに空けておく
-                .padding(tailSide.edge, Self.tailLength)
+                .padding(direction.edge, Self.tailLength)
                 .background {
                     let shape = LabelBubbleShape(
-                        direction: tailSide, tailLength: Self.tailLength, inset: Theme.lineWidthBubble / 2)
+                        direction: direction, tailLength: Self.tailLength, inset: Theme.lineWidthBubble / 2)
                     // 強調中は、色を付けた地に白い文字にする
                     shape.fill(emphasis == .strong ? Theme.main : Theme.surface)
                     shape.stroke(Theme.line, style: StrokeStyle(lineWidth: Theme.lineWidthBubble, lineJoin: .round))
