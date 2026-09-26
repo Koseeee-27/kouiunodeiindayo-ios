@@ -120,54 +120,69 @@ struct RecordDetailPageView: View {
         }
     }
 
+    /// 上に ✕ と「…」。その下に、写真・日付・「うまい」・ジャンル・タグを決まった間隔でまとめて置く。
+    /// 1 画面に収める版では、余った高さをまとまりの上と下に同じだけ空けて、画面の縦の真ん中に置く（要素の間は広げない）
     private func layout(fillsHeight: Bool) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             HStack {
                 closeButton
                 Spacer()
                 moreMenu
             }
-            // 写真と日付は、近づけて1組にする
-            VStack(spacing: Theme.detailPhotoDateSpacing) {
-                photo
-                    // 1 画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
-                    // スクロールする版では、写真を同じ高さで止め、ジャンルとタグがなるべく 1 画面に見えるようにする
-                    .frame(
-                        minHeight: fillsHeight ? Self.photoMinHeight : nil,
-                        idealHeight: fillsHeight ? Self.photoMinHeight : nil,
-                        maxHeight: fillsHeight ? nil : Self.photoMinHeight
-                    )
-                    // 写真は余白より先に、高さを受け取る
-                    .layoutPriority(1)
-                Text(verbatim: dateText)
-                    .font(Theme.font(.headline, bold: true))
-                    // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(dateText)
-                    .accessibilityValue("\(position)件目、全\(total)件")
-                    .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
-                    .accessibilityAdjustableAction { direction in
-                        switch direction {
-                        case .increment: onMove(1)
-                        case .decrement: onMove(-1)
-                        @unknown default: break
-                        }
-                    }
+            Spacer(minLength: Self.blockGap)
+            VStack(spacing: Self.blockSpacing) {
+                // 写真と日付は、近づけて1組にする
+                VStack(spacing: Theme.detailPhotoDateSpacing) {
+                    photoArea
+                        // 1 画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
+                        // スクロールする版では、写真の場所を同じ高さで止め、ジャンルとタグがなるべく 1 画面に見えるようにする
+                        .frame(
+                            minHeight: fillsHeight ? Self.photoMinHeight : nil,
+                            idealHeight: fillsHeight ? Self.photoMinHeight : nil,
+                            maxHeight: fillsHeight ? nil : Self.photoMinHeight
+                        )
+                        // 写真の場所は、余白より先に高さを受け取る
+                        .layoutPriority(1)
+                    dateLabel
+                }
+                favoriteButton
+                genreButtons
+                // 付いているタグ。「何か（ジャンル）→ どんな（タグ）」の順に読めるよう、ジャンルの下に置く
+                RecordDetailTagsView(
+                    tags: record.tagValues,
+                    onRemove: { tag in store.setTags(TagEditing.removing(tag, from: record.tagValues), for: record) },
+                    onAdd: { isTagPickerShown = true }
+                )
             }
-            // 「うまい」は、日付とジャンルのボタンの間の真ん中に置く（上下の余白を同じ大きさで取る）
-            Spacer(minLength: 0)
-            favoriteButton
-            Spacer(minLength: 0)
-            genreButtons
-            // 付いているタグ。「何か（ジャンル）→ どんな（タグ）」の順に読めるよう、ジャンルの下に置く
-            RecordDetailTagsView(
-                tags: record.tagValues,
-                onRemove: { tag in store.setTags(TagEditing.removing(tag, from: record.tagValues), for: record) },
-                onAdd: { isTagPickerShown = true }
-            )
+            Spacer(minLength: Self.blockGap)
         }
         .padding()
     }
+
+    /// 日付。文字が大きいときは折り返す（切れないように）
+    private var dateLabel: some View {
+        Text(verbatim: dateText)
+            .font(Theme.font(.headline, bold: true))
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            // VoiceOver では「2026年9月10日、3件目、全28件」と読まれ、上下にスワイプすると前後の記録に移れる
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(dateText)
+            .accessibilityValue("\(position)件目、全\(total)件")
+            .accessibilityHint("上下にスワイプすると、前後の記録に移ります")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: onMove(1)
+                case .decrement: onMove(-1)
+                @unknown default: break
+                }
+            }
+    }
+
+    /// まとまりの中の、要素と要素の間隔（pt）
+    private static let blockSpacing: CGFloat = 16
+    /// ✕ の行とまとまりの間・まとまりの下に、最低限空ける高さ（pt）
+    private static let blockGap: CGFloat = 8
 
     /// 1 画面に収める版で、写真をこれより小さくしない（pt）。これを取れないときはスクロールする版にする
     private static let photoMinHeight: CGFloat = 240
@@ -181,20 +196,27 @@ struct RecordDetailPageView: View {
     /// 付け直せるジャンル。「なし」は選択肢に置かず、選択中のジャンルをもう一度押して外す
     private static let selectableGenres: [Genre] = [.food, .drink, .dessert]
 
-    /// 写真。枠は、ホームの今日の一枚・仕分けのカード（`.main`）より少し細い `.small` にする
-    @ViewBuilder
-    private var photo: some View {
-        if let image {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .accessibilityHidden(true)
-                .photoFrame(.small)
-        } else {
-            Theme.surface
-                .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
-                .photoFrame(.small)
-        }
+    /// 写真の場所。3:4 の場所を取り、写真はその真ん中に、切らずに写真の形のまま置く（縦長・横長・正方形のどれでも）。
+    /// 場所の形がどの記録でも同じなので、前後にめくっても日付から下の位置が変わらない。
+    /// 枠は写真に付ける。ホームの今日の一枚・仕分けのカード（`.main`）より少し細い `.small`
+    private var photoArea: some View {
+        Color.clear
+            .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityHidden(true)
+                        .photoFrame(.small)
+                } else {
+                    // 読み込む前・遠いページは、場所いっぱいの地
+                    Theme.surface
+                        .photoFrame(.small)
+                }
+            }
+            // 場所は横幅いっぱいまで。高さで決まるときは、真ん中に置く
+            .frame(maxWidth: .infinity)
     }
 
     /// 「うまい」。一覧・ホームと同じ絵を、日付とジャンルのボタンの間の真ん中に置く（写真には重ねない）。押すたびに付け外しする
@@ -306,10 +328,10 @@ struct RecordDetailPageView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
-/// 記録 1 件だけの詳細のプレビュー。`tags` を付けた「食べ物」の記録を開く
+/// 記録 1 件だけの詳細のプレビュー。`tags` を付けた「食べ物」の記録を開く。`photoSize` で写真の形を変えられる
 @MainActor
-private func taggedDetailPreview(tags: [Tag]) -> some View {
-    let container = HomePreviewData.makeTaggedContainer(tags: tags)
+private func taggedDetailPreview(tags: [Tag], photoSize: CGSize? = nil) -> some View {
+    let container = HomePreviewData.makeTaggedContainer(tags: tags, photoSize: photoSize)
     // プレビュー用なので、無ければ落として気づく
     let record = try! container.mainContext.fetch(FetchDescriptor<Record>()).first!
     return RecordDetailView(records: [record], initial: record)
@@ -340,5 +362,53 @@ private func taggedDetailPreview(tags: [Tag]) -> some View {
 #Preview("SE 相当・文字サイズ最大") {
     taggedDetailPreview(tags: [.ramen, .gyoza, .noodles, .fried, .chinese, .japanese])
         .frame(width: 375, height: 667)
+        .dynamicTypeSize(.accessibility5)
+}
+
+// 写真の形の見比べ（#108）。縦長 3:4・横長 4:3・正方形を、ふつうの幅・SE 相当・文字サイズ最大で並べる。タグは 3 個
+private let portraitSize = CGSize(width: 1200, height: 1600)
+private let landscapeSize = CGSize(width: 1600, height: 1200)
+private let squareSize = CGSize(width: 1400, height: 1400)
+private let aspectTags: [Tag] = [.ramen, .noodles, .chinese]
+
+#Preview("縦長・ふつう") {
+    taggedDetailPreview(tags: aspectTags, photoSize: portraitSize)
+}
+
+#Preview("横長・ふつう") {
+    taggedDetailPreview(tags: aspectTags, photoSize: landscapeSize)
+}
+
+#Preview("正方形・ふつう") {
+    taggedDetailPreview(tags: aspectTags, photoSize: squareSize)
+}
+
+#Preview("縦長・SE 相当") {
+    taggedDetailPreview(tags: aspectTags, photoSize: portraitSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("横長・SE 相当") {
+    taggedDetailPreview(tags: aspectTags, photoSize: landscapeSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("正方形・SE 相当") {
+    taggedDetailPreview(tags: aspectTags, photoSize: squareSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("縦長・文字サイズ最大") {
+    taggedDetailPreview(tags: aspectTags, photoSize: portraitSize)
+        .dynamicTypeSize(.accessibility5)
+}
+
+#Preview("横長・文字サイズ最大") {
+    taggedDetailPreview(tags: aspectTags, photoSize: landscapeSize)
+        .dynamicTypeSize(.accessibility5)
+}
+
+#Preview("正方形・文字サイズ最大") {
+    taggedDetailPreview(tags: aspectTags, photoSize: squareSize)
         .dynamicTypeSize(.accessibility5)
 }
