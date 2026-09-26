@@ -36,6 +36,17 @@ struct TagEditingTests {
         #expect(record.tags == ["gyoza"])
     }
 
+    @Test func 知らないキーは足す・外すのあとも残る() throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        // 新しい版のアプリが付けたタグ。このアプリの `Tag` には無い
+        record.tags = ["future_tag"]
+        context.store.setTags(TagEditing.toggled(.ramen, in: record.tagValues), for: record)
+        #expect(record.tags == ["ramen", "future_tag"])
+        context.store.setTags(TagEditing.removing(.ramen, from: record.tagValues), for: record)
+        #expect(record.tags == ["future_tag"])
+    }
+
     @Test func 料理を足しても大分類と系統は付かない() throws {
         let context = TestStore()
         let record = try context.addRecord()
