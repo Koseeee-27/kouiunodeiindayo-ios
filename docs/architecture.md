@@ -20,7 +20,7 @@ Kouiunodeiindayo/
 │   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使う（一覧の「うまい」は枠からはみ出させるので、枠のあとに重ねる）
 │   │   └── HomePreviewData.swift  ← ホームのプレビュー用のサンプルデータ
 │   ├── Import/
-│   │   ├── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ。画面は持たない
+│   │   ├── PhotoImporter.swift    ← アルバムからの取り込み（機能18）。受け取り・縮小・撮影日時・食事の判定・保存を 1 枚ずつ（受け取りだけ 2 枚先まで先に始める）。画面は持たない
 │   │   └── PhotoImportingOverlayView.swift ← 取り込み中の幕（`RootView` が重ねる）
 │   ├── List/
 │   │   └── RecordListView.swift   ← 一覧。言葉で探す欄と、読み取った条件での絞り込み（機能28）
@@ -129,6 +129,7 @@ server/                        ← 中継サーバー（Cloudflare Worker）。J
 - 裏の処理には、`Record` そのものではなく `id` と `photoFileName` だけを渡す（`@Model` はスレッドをまたいで渡せない）。結果を保存するときに、メインスレッドで `id` から記録を取り直す
 - アプリと Worker の受け渡しの形（送る JSON・返る JSON・合言葉のヘッダー）は `docs/suggestion-api.md`
 - 仕分けの画面は、提案を待たずに写真を出す。提案は `Record` に保存された時点で画面に出る
+- 待っている・問い合わせ中の写真は、仕分けで「提案を待っています…」を出す（`SuggestionService.isPending`。控えの `SuggestionPendingIDs` だけを `@Observable` にして、画面が変化を追う）
 - 自信が低いとき（Worker が「提案なし」と返したとき）も問い合わせ済みにする：`suggestedAt` を書き、`suggestedGenre` は `nil`、`suggestedTags` は空
 - 通信できない・時間切れ（目安 1.5 秒）のときだけ、何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる
 - 同じ写真は重ねて問い合わせない（撮った直後は、カメラ側と仕分けの画面の両方から頼まれる）。問い合わせは受け付けた順に1件ずつ行う
