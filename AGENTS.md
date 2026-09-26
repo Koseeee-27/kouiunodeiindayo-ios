@@ -29,7 +29,7 @@
 | 「記録」のデータの形、写真ファイルの置き場所 | `docs/data-model.md` |
 | フォルダ構成、画面からデータを読み書きするときの決まり | `docs/architecture.md` |
 | 技術的な決定と、その理由 | `docs/adr/` |
-| 中継サーバー（Cloudflare Worker）のコードと、アプリとの受け渡しの形 | `server/`、`docs/suggestion-api.md`（#79 で作る） |
+| 中継サーバー（Cloudflare Worker）のコードと、アプリとの受け渡しの形 | `server/`、`docs/suggestion-api.md` |
 | 環境構築、実機に入れる手順、AI ツールの設定 | `docs/setup.md` |
 | Swift / SwiftUI / SwiftData の書き方の決まり | `docs/rules/swift.md` |
 | 言語を問わないコーディング原則 | `docs/rules/coding-style.md` |
