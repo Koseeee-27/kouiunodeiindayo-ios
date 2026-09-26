@@ -26,8 +26,13 @@ struct HomeView: View {
     @Query(filter: #Predicate<Record> { $0.genre == unsorted })
     private var unsortedRecords: [Record]
 
-    /// 詳細を開いている記録
-    @State private var selectedRecord: Record?
+    /// 詳細を開いている記録の id。記録そのものではなく id で持ち、開くときに今の `@Query` から引き直す（詳細で消した記録を読まないように）
+    @State private var selectedRecord: DetailTarget?
+
+    /// 詳細を開くときに渡すもの（記録の id）。sheet の `item` にするため `Identifiable` にする
+    private struct DetailTarget: Identifiable {
+        let id: UUID
+    }
     @State private var isSortShown = false
     @State private var isSettingsShown = false
     /// アルバムで選ばれた写真。受け取ったらすぐ空に戻す（同じ写真をもう一度選べるように）
@@ -84,8 +89,13 @@ struct HomeView: View {
         }
         .background(Theme.background)
         // sheet で開くので、閉じてもホームの位置は残る
-        .sheet(item: $selectedRecord) { record in
-            RecordDetailView(records: records, initial: record)
+        .sheet(item: $selectedRecord) { target in
+            // 開いた記録が消えたとき（詳細で消して、閉じ終わるまで）は詳細を作らない
+            if let initial = records.first(where: { $0.id == target.id }) {
+                RecordDetailView(records: records, initial: initial)
+            } else {
+                Theme.background
+            }
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
@@ -252,7 +262,7 @@ struct HomeView: View {
                     // 写真の上下の余白。余りは上下に半分ずつ入る
                     Spacer(minLength: Self.todayPhotoGap)
                     Button {
-                        selectedRecord = record
+                        selectedRecord = DetailTarget(id: record.id)
                     } label: {
                         // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
                         RecordPhotoView(record: record, kind: .photo)
@@ -322,7 +332,7 @@ struct HomeView: View {
             ) {
                 ForEach(recentRecords, id: \.id) { record in
                     Button {
-                        selectedRecord = record
+                        selectedRecord = DetailTarget(id: record.id)
                     } label: {
                         RecordPhotoView(record: record, kind: .thumbnail)
                             .aspectRatio(1, contentMode: .fit)
