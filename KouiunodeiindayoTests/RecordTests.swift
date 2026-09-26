@@ -23,11 +23,18 @@ struct RecordTests {
         #expect(record.suggestedTagValues == [.coffee])
     }
 
-    @Test(arguments: ["unknown_genre", "", "food"])
-    func 提案のジャンルに知らない値が入っていても落ちない(stored: String) throws {
+    @Test(
+        arguments: [
+            ("unknown_genre", nil),
+            ("", nil),
+            ("unsorted", nil),
+            ("none", nil),
+            ("food", Genre.food),
+        ] as [(String, Genre?)])
+    func 提案のジャンルは提案できる値だけを読む(stored: String, expected: Genre?) throws {
         let context = TestStore()
         let record = try context.addRecord()
         record.suggestedGenre = stored
-        #expect(record.suggestedGenreValue == Genre(rawValue: stored))
+        #expect(record.suggestedGenreValue == expected)
     }
 }

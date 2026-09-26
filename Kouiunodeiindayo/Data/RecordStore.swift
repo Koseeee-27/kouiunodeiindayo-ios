@@ -67,9 +67,8 @@ struct RecordStore {
         }
         guard record.genreValue == .unsorted, record.suggestedAt == nil else { return }
 
-        // 提案するジャンルは食べ物・飲み物・デザートだけ（docs/data-model.md）。それ以外は提案なしとして書く
-        let suggestable: Set<Genre> = [.food, .drink, .dessert]
-        record.suggestedGenre = genre.flatMap { suggestable.contains($0) ? $0.rawValue : nil }
+        // 提案するジャンルは食べ物・飲み物・デザートだけ。それ以外は提案なしとして書く
+        record.suggestedGenre = genre.flatMap { Genre.suggestable.contains($0) ? $0.rawValue : nil }
         record.suggestedTags = Self.normalized(tags)
         record.suggestedAt = date
     }

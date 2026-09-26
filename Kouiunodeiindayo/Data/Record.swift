@@ -32,9 +32,9 @@ final class Record {
         tags.compactMap(Tag.init(rawValue:))
     }
 
-    /// 提案したジャンル。知らない値は `nil`。
+    /// 提案したジャンル。知らない値と、提案できないジャンル（`unsorted`・`none`）は `nil`。
     var suggestedGenreValue: Genre? {
-        suggestedGenre.flatMap(Genre.init(rawValue:))
+        suggestedGenre.flatMap(Genre.init(rawValue:)).flatMap { Genre.suggestable.contains($0) ? $0 : nil }
     }
 
     /// 提案したタグ。知らないキーは捨てる。

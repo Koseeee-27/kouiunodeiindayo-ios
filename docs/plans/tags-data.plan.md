@@ -149,3 +149,4 @@
 - `Tag.visionLabels`・`category`・`cuisine` の `switch` は、料理以外をまとめて `default:` にした
 - `docs/architecture.md` は、ステップ 8 の1文に加えて、「タグを変える」の行に「重複を除き、タグの一覧の順に並べ直して書く」（決めたこと 3）を足し、フォルダ構成に `KouiunodeiindayoTests/` を足した
 - ステップ 7 は、アルバムから選ぶ操作の代わりに、main の版が作った `default.store` の `ZRECORD` に sqlite3 で古い形の記録を4件入れて行った（アプリの入っていないシミュレータ iPhone 17 で。普段使いのシミュレータのデータを消さないため）。開いたときの画面は `simctl spawn … defaults write <bundle id> launchScreen home` でホームにした。結果は落ちず、4 列が足されて4件とも残った
+- セルフレビューの提案で、提案できるジャンル（食べ物・飲み物・デザート）の判定を `Genre.suggestable` にまとめ、`RecordStore.saveSuggestion` と `Record.suggestedGenreValue` の両方で使うようにした（`unsorted`・`none` が入っていても `suggestedGenreValue` は `nil`。#82 の `SuggestionClient` でも同じ判定を使う）
