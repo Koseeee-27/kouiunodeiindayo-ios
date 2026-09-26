@@ -9,6 +9,8 @@ import SwiftUI
 ///
 /// 閉じるのは `dismiss()`。✕ で抜けたときと、最後の1枚を仕分けたとき。抜けた分は仕分け待ちに残る。
 /// この画面は上の行（✕・残り枚数）と空のときを持つ。カード・ラベル・ドラッグは `SortCardStackView`。
+/// 提案されたタグの行（`SortSuggestedTagsView`）はこの画面が作り、`SortCardStackView` の下のラベルの下に置いてもらう。
+/// 外したタグは記録ごとに画面の中だけで持ち、ジャンルを付けて次に進むときに `SortTagSelection.commit` で記録に書く。
 struct SortView: View {
     // `#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、先に値に取り出す
     private static let unsorted = Genre.unsorted.rawValue
@@ -26,15 +28,22 @@ struct SortView: View {
     @State private var isCommitting = false
     /// 開いた時点で仕分け待ちが0件だったか。最初の描画では nil（まだ控えていない）
     @State private var wasEmptyAtOpen: Bool?
+    /// 記録の `id` ごとの、外したタグ。付いているタグではなく外したほうを持つので、提案が後から届いても全部付いた状態で出る。
+    /// 記録には書かない（書くのは次に進むとき）。仕分けを抜けたら捨てる
+    @State private var removedTags: [UUID: Set<Tag>] = [:]
 
     /// プレビュー「ドラッグ途中」で使う、指で動かしている量の代わり。`SortCardStackView` にそのまま渡す
     private let previewDragOffset: CGSize
+    /// プレビュー「1 つ外した」で使う、外したタグの初期値。まだ付け外ししていない記録に当てる
+    private let previewRemovedTags: Set<Tag>
 
     /// `recordID` は、撮った直後の仕分けで今撮った1枚だけを出すときに渡す。
     /// 引数の `dragOffset` は `previewDragOffset` に入れる。プレビューでドラッグの途中を見るためだけに渡す。
-    init(recordID: UUID? = nil, dragOffset: CGSize = .zero) {
+    /// `removedTags` も同じく、プレビューで外したタグの見た目を見るためだけに渡す。
+    init(recordID: UUID? = nil, dragOffset: CGSize = .zero, removedTags: Set<Tag> = []) {
         singleRecordID = recordID
         previewDragOffset = dragOffset
+        previewRemovedTags = removedTags
         let unsorted = Self.unsorted
         if let recordID {
             _records = Query(
@@ -61,9 +70,23 @@ struct SortView: View {
                     records: records,
                     isCommitting: $isCommitting,
                     previewDragOffset: previewDragOffset,
-                    onSort: { record, genre in store.setGenre(genre, for: record) },
+                    onSort: { record, genre in
+                        SortTagSelection.commit(record, genre: genre, removed: removed(for: record), store: store)
+                        removedTags[record.id] = nil
+                    },
                     onToggleFavorite: { record in store.toggleFavorite(record) }
-                )
+                ) {
+                    // 先頭の写真の提案されたタグ。カードの外（下のラベルの下）に置く（スワイプと取り違えないように）
+                    if let record = records.first {
+                        SortSuggestedTagsView(
+                            tags: record.suggestedTagValues,
+                            removed: removed(for: record),
+                            isEnabled: !isCommitting
+                        ) { tag in
+                            toggle(tag, for: record)
+                        }
+                    }
+                }
             } else if wasEmptyAtOpen ?? true {
                 emptyView
             } else {
@@ -88,6 +111,21 @@ struct SortView: View {
                 dismiss()
             }
         }
+    }
+
+    private func removed(for record: Record) -> Set<Tag> {
+        removedTags[record.id] ?? previewRemovedTags
+    }
+
+    /// チップを押したとき。外す／付けるを切り替える。写真は次に進まない
+    private func toggle(_ tag: Tag, for record: Record) {
+        var removed = removed(for: record)
+        if removed.contains(tag) {
+            removed.remove(tag)
+        } else {
+            removed.insert(tag)
+        }
+        removedTags[record.id] = removed
     }
 
     private var header: some View {
@@ -179,4 +217,57 @@ struct SortView: View {
         .dynamicTypeSize(.xLarge)
         .modelContainer(SortPreviewData.makeManyUnsortedContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("提案あり（ラーメン）") {
+    SortView()
+        .modelContainer(SortPreviewData.makeManyUnsortedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
+}
+
+#Preview("提案あり・1つ外した") {
+    SortView(removedTags: [.chinese])
+        .modelContainer(SortPreviewData.makeManyUnsortedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
+}
+
+#Preview("提案なし") {
+    SortView()
+        .modelContainer(SortPreviewData.makeUnsuggestedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.noSuggestion.immediate)
+}
+
+#Preview("通信できない") {
+    SortView()
+        .modelContainer(SortPreviewData.makeUnsuggestedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.disabled)
+}
+
+/// 静止画では「届く前」になる。キャンバスで動かして、0.3 秒後に届いたときにカードが跳ねないかを見る
+#Preview("後から届く") {
+    SortView()
+        .modelContainer(SortPreviewData.makeUnsuggestedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen)
+}
+
+#Preview("ドラッグ途中・提案あり") {
+    SortView(dragOffset: CGSize(width: 10, height: -85))
+        .modelContainer(SortPreviewData.makeManyUnsortedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
+}
+
+/// 狭い画面・文字サイズ最大で、ラベル・タグの行・上の行・「う、うまい」が重ならないかを見る
+#Preview("幅 375pt・文字サイズ最大・提案あり") {
+    SortView()
+        .frame(width: 375, height: 667)
+        .dynamicTypeSize(.accessibility5)
+        .modelContainer(SortPreviewData.makeManyUnsortedContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
 }

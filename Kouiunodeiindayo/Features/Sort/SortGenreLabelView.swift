@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// 仕分けのラベル。カードの縁に置く吹き出し（尻尾がスワイプする向きを指す）。押すと、その向きにスワイプしたのと同じになる。
+/// 提案されたジャンル（機能26）のラベルは、吹き出しの外側を赤い点線で囲む（スワイプ中の強調とは別の見え方）。
 struct SortGenreLabelView: View {
     enum Emphasis {
         case normal
@@ -14,6 +15,8 @@ struct SortGenreLabelView: View {
     let direction: SwipeDirection
     let genre: Genre
     let emphasis: Emphasis
+    /// 提案されたジャンルか。点線で囲む
+    var isSuggested = false
     let action: () -> Void
 
     /// 尻尾の長さ（pt）
@@ -40,6 +43,20 @@ struct SortGenreLabelView: View {
                     shape.fill(emphasis == .strong ? Theme.main : Theme.surface)
                     shape.stroke(Theme.line, style: StrokeStyle(lineWidth: Theme.lineWidthBubble, lineJoin: .round))
                 }
+                // 提案のしるし。吹き出しの形（尻尾も含む）を外側に広げて点線で描く。ラベルの大きさ（押せる範囲・位置）は変えない
+                .overlay {
+                    if isSuggested {
+                        LabelBubbleShape(
+                            direction: direction, tailLength: Self.tailLength, inset: -Theme.suggestionMarkOffset
+                        )
+                        .stroke(
+                            Theme.suggestionMark,
+                            style: StrokeStyle(
+                                lineWidth: Theme.lineWidthSuggestion, lineJoin: .round, dash: Theme.suggestionDash)
+                        )
+                        .transition(.opacity)
+                    }
+                }
         }
         .buttonStyle(.plain)
         // 文字サイズを大きくすると、左右のラベル同士が重なるので、Large で止める
@@ -48,7 +65,10 @@ struct SortGenreLabelView: View {
         // ほかの向きのラベルも、何のラベルか読める濃さに留める
         .opacity(emphasis == .weak ? 0.6 : 1.0)
         .animation(.easeOut(duration: 0.15), value: emphasis)
+        // 提案が届いたときに、ふわっと出す
+        .animation(.easeOut(duration: 0.15), value: isSuggested)
         .accessibilityLabel("\(genre.title)にする")
+        .accessibilityValue(isSuggested ? "提案" : "")
     }
 }
 
@@ -130,4 +150,29 @@ extension SwipeDirection {
         case .right: .trailing
         }
     }
+}
+
+/// 4 つの向き × 提案あり・なし × 強調 3 種。横に入りきらないので、横にスクロールする
+#Preview("提案あり・なし × 強調") {
+    let directions: [SwipeDirection] = [.up, .left, .right, .down]
+    let emphases: [SortGenreLabelView.Emphasis] = [.normal, .strong, .weak]
+    ScrollView(.horizontal) {
+        VStack(alignment: .leading, spacing: 20) {
+            ForEach(Array(emphases.enumerated()), id: \.offset) { _, emphasis in
+                ForEach([false, true], id: \.self) { isSuggested in
+                    HStack(spacing: 20) {
+                        ForEach(Array(directions.enumerated()), id: \.offset) { _, direction in
+                            SortGenreLabelView(
+                                direction: direction, genre: direction.genre, emphasis: emphasis,
+                                isSuggested: isSuggested
+                            ) {}
+                            .fixedSize()
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+    .background(Theme.background)
 }
