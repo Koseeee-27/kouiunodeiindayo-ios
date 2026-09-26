@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// 起動画面（`LaunchScreen.storyboard`）は、アプリの準備が終わるとすぐ消えて短い。
-/// そこで、同じ絵を SwiftUI の画面としても出して、一定の時間だけ見せてから、本物の画面に切り替える。
+/// そこで、同じ絵を SwiftUI の画面としても出して、1秒だけ見せてから、本物の画面に切り替える。
 /// 起動画面と同じ見た目（紙色の地に、絵を画面いっぱいに）にして、切れ目が見えないようにする。
 struct LaunchSplashGate<Content: View>: View {
     /// 起動画面を出しておく秒数
-    static var duration: Duration { .seconds(2) }
+    static var duration: Duration { .seconds(1) }
 
     @ViewBuilder let content: () -> Content
 
