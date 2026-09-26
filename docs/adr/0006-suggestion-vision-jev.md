@@ -8,6 +8,8 @@
 - 写真から「写っているもの」を取り出すのは、端末の中の Vision（`ClassifyImageRequest`。iPhone 標準の画像分類。1303 種類のラベルと確信度を返す）で行う
 - 取り出したラベル（文字）を、TypeSafe AI の Jev（決まった選択肢から選び、確率付きで答える AI。文章は作らない）に渡し、ジャンル・タグを選ばせる。言葉で探す（機能28）も、検索の言葉を Jev に渡して、絞り込みの条件を選ばせる
 - Jev は Cloudflare Workers AI（モデル名 `typesafe/jev`）で呼ぶ。アプリは Jev を直接呼ばず、自分たちの Cloudflare Worker（中継サーバー）1本を経由する。Worker のコードはこのリポジトリの `server/` に置く
+- Worker は TypeScript で、Workers 標準の書き方（`export default { fetch }`）で書く。ライブラリ（Hono など）は使わない。Workers AI は binding（`env.AI.run`）で呼ぶので、鍵を Worker に置く必要もない。開発とデプロイは `wrangler`（Node.js と npm で動く）。本番は Cloudflare の実行環境で動くので、Node・Deno・Bun の API には頼らない
+- 質問の文面・タグの選択肢・しきい値は Worker 側に置く。アプリから送れるのはラベルと検索の言葉だけにする
 - 外に送るのは、ラベルの名前と検索の言葉だけ。写真と記録は送らない。Worker は受け取った内容を保存しない
 - 通信できない・時間切れ・自信が低いときは、提案を出さないだけにする。仕分けと記録はいつも通りできる
 
@@ -29,6 +31,9 @@
 | Foundation Models の画像入力（iOS 27） | 画像を直接見られて和食に強い見込み。ただし iPhone 15 Pro 以降だけで、回答に数秒かかる |
 | Cloudflare Workers AI の画像対応 LLM（Llama 4 Scout など） | 写真そのものを外に送ることになる。回答に数秒かかる |
 | 日本食の写真で自前のモデルを学習する（UEC FOOD-256 など） | 学習に時間がかかる。写真集は研究目的の利用に限られる |
+| アプリから Workers AI の REST API を直接呼ぶ | Cloudflare の API トークンをアプリに入れることになり、抜き取られると他のモデルも使われる。質問の中身もアプリから自由に変えられてしまう |
+| Worker を Hono で書く | ルーティングや合言葉のチェックが短く書けるが、入口は2本（`/suggest`・`/search`）だけで、標準の書き方で足りる。ライブラリが1つ増える |
+| Worker を別のリポジトリに置く | ルールとテンプレを一から作る手間がかかり、受け渡しの形を2か所で管理することになる。大きくなったら分ける |
 | TypeSafe の API や Vercel AI Gateway を直接使う | 使えるが、鍵の管理とサービスの登録が増える。Vercel は無料枠でもカードの登録が要り、回数の制限がきつい |
 
 ## 影響・注意
