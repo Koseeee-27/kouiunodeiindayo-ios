@@ -53,7 +53,7 @@ Kouiunodeiindayo/
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
 │   ├── PhotoFrame.swift       ← 写真の墨のコマ枠（`.photoFrame(.main / .small)`）
 │   └── SoundPlayer.swift      ← 効果音の再生
-└── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchScreen.storyboard。絵は Assets の LaunchScreen）
+└── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitle.storyboard。絵は Assets の LaunchTitle）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
 └── Local.xcconfig.example     ← 個人ごとの署名設定・Worker の URL と合言葉の見本（docs/setup.md）

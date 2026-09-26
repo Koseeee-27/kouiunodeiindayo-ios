@@ -26,6 +26,6 @@ INFOPLIST_KEY_CFBundleDisplayName = いいんだよ
 // 独自の暗号化をしていないという申告。無いと App Store Connect へのアップロードのたびに質問される
 INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO
 
-// 起動画面（Kouiunodeiindayo/Resources/LaunchScreen.storyboard。絵は Assets.xcassets/LaunchScreen）。
+// 起動画面（Kouiunodeiindayo/Resources/LaunchTitle.storyboard。絵は Assets.xcassets/LaunchTitle）。
 // project.pbxproj 側に残っている INFOPLIST_KEY_UILaunchScreen_Generation（画像なしの自動生成）があっても、この storyboard が優先される
-INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen
+INFOPLIST_KEY_UILaunchStoryboardName = LaunchTitle
