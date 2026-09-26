@@ -51,8 +51,19 @@ struct FoodPhotoFilterTests {
     }
 
     @Test func しきい値の境目() {
-        #expect(!FoodPhotoFilter.isFood(Self.labels([("food", 0.29)])))
-        #expect(FoodPhotoFilter.isFood(Self.labels([("food", 0.30)])))
+        #expect(!FoodPhotoFilter.isFood(Self.labels([("food", 0.09)])))
+        #expect(FoodPhotoFilter.isFood(Self.labels([("food", 0.10)])))
+    }
+
+    /// こうせいの写真で、0.30 のときに取りこぼしていた料理・デザート（食べ物系のラベルが 0.10〜0.30）
+    @Test(arguments: [("food", Float(0.21)), ("dessert", 0.26), ("baked_goods", 0.10)])
+    func 食べ物系のラベルが弱い料理とデザートも食事になる(name: String, confidence: Float) {
+        #expect(FoodPhotoFilter.isFood(Self.labels([(name, confidence), ("tableware", 0.4)])))
+    }
+
+    @Test func 食べ物系のラベルがとても弱い写真は食事でない() {
+        // food が 0.05 しか出ない写真は除く（こうせいの写真では、この辺りのデザート 2 枚が取りこぼしとして残る）
+        #expect(!FoodPhotoFilter.isFood(Self.labels([("food", 0.05), ("carton", 0.6)])))
     }
 
     @Test func ラベルが無ければ食事でない() {
