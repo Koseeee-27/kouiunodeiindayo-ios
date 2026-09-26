@@ -1,7 +1,7 @@
 // Worker の入口。受け渡しの形とエラーの決まりは docs/suggestion-api.md。
 // 受け取った内容（ラベル・Jev の答え・API キー）はログに出さない（ADR 0006・0007）。console.error はエラーの種類と例外のメッセージだけ。
 
-import { BadRequestError, parseLabels, suggest } from "./suggest";
+import { BadRequestError, type Label, parseLabels, suggest } from "./suggest";
 
 interface Env {
   SUGGEST_TOKEN: string;
@@ -57,7 +57,7 @@ export default {
       return errorResponse(400, "bad_request", "body must be JSON");
     }
 
-    let labels;
+    let labels: Label[];
     try {
       labels = parseLabels(body);
     } catch (error) {

@@ -2,7 +2,7 @@
 
 ## 概要
 
-`server/` に Cloudflare Worker（中継サーバー）を作る。`POST /suggest` で Vision のラベルを受け取り、Workers AI の Jev（`env.AI.run('typesafe/jev', …)`）にジャンル・大分類・系統を選ばせ、料理のタグは対応表で決めて、`docs/suggestion-api.md` の形で返す。対応する Issue：#80。対応する機能：機能26（ジャンルとタグの提案）。
+`server/` に Cloudflare Worker（中継サーバー）を作る。`POST /suggest` で Vision のラベルを受け取り、Workers AI の Jev（`env.AI.run('typesafe/jev', …)`）にジャンル・大分類・系統を選ばせ、料理のタグは対応表で決めて、`docs/suggestion-api.md` の形で返す。対応する Issue：#80。対応する機能：機能26（ジャンルとタグの提案）。呼ぶ経路は、下の「変更（2026-09-26 夕方）」の節のとおり Vercel AI Gateway に変えた（ADR 0007）。
 
 受け渡しの形は `docs/suggestion-api.md`、理由と構成は `docs/adr/0006-suggestion-vision-jev.md`、タグと Vision のラベルの対応表は `docs/data-model.md`「タグの値」。この計画では、それらを繰り返さず、Worker の中身（ファイル・Jev への質問の組み立て・しきい値・確認手順）だけを書く。
 

@@ -19,13 +19,13 @@ const GENRE_CHOICES = {
 
 const NONE_CHOICE = "none";
 
-export type JevQuestion = {
+type JevQuestion = {
   type: "choice";
   instructions: string;
   criteria: Record<string, string>;
 };
 
-export type JevRequest = {
+type JevRequest = {
   model: string;
   state: string;
   questions: Record<string, JevQuestion>;
@@ -74,12 +74,13 @@ export function buildQuestions(): Record<string, JevQuestion> {
 }
 
 // HTTP が 200 以外のときの Error。状態コードと Vercel の error.message だけを入れる（送った本文＝ラベルは入れない）。
+// error.message は上流が送った state（ラベル）を含めて返す可能性があるので、先頭 80 文字で切ってログに乗る量を抑える。
 async function upstreamError(response: Response): Promise<Error> {
   let detail = "";
   try {
     const body = (await response.json()) as { error?: { message?: unknown } };
     if (typeof body?.error?.message === "string") {
-      detail = `: ${body.error.message}`;
+      detail = `: ${body.error.message.slice(0, 80)}`;
     }
   } catch {
     // 本文が JSON でなければ状態コードだけにする。

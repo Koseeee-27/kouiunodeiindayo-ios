@@ -55,9 +55,9 @@ xcodebuild test -scheme Kouiunodeiindayo -destination 'platform=iOS Simulator,na
 `server/` を触った変更だけ。手順の詳細は `docs/setup.md` の「7. Worker（中継サーバー）」。
 
 1. 型の確認：`cd server && npm run check`
-2. `npm run dev` で手元で動かす。**起動するのは人**（Vercel AI Gateway の API キーを `npm run dev -- --var AI_GATEWAY_API_KEY:<キー>` で渡す。環境変数では届かない。やり方は `docs/setup.md`）。AI ツールは起動しない。AI ツールは、起動済みの `localhost:8787` に叩くだけで、キーを読まない・ファイルに書かない
+2. `npm run dev` で手元で動かす。**起動するのは人**（やり方とキーの扱いは `docs/setup.md` の 7）。AI ツールは起動せず、起動済みの `localhost:8787` に叩くだけ
 3. `SUGGEST_URL=http://localhost:8787 SUGGEST_TOKEN=<.dev.vars の値> scripts/try-suggest.sh` で、200／400／401／404／405 と、提案の中身（`genre` と `tags`）を見る。Jev は本物を呼んでクレジットを使うので、何度も回さない
-4. 提案が全部 502 で、ログに `AI_GATEWAY_API_KEY not set` が出るときは、キー無しで起動している。人が起動し直す（AI ツールは 1 行で報告して止まる）
+4. 提案が全部 502 で、ログに `AI_GATEWAY_API_KEY not set` が出るときは、キー無しで起動している。人が起動し直す（AI ツールは 1 行で報告して止まる。直し方は `docs/setup.md` の 7）
 
 ## 報告の形
 

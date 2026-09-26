@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Worker の /suggest を例で叩いて、返った HTTP の番号と JSON を並べる確認用スクリプト。
 # 使い方：SUGGEST_URL=http://localhost:8787 SUGGEST_TOKEN=<.dev.vars の値> scripts/try-suggest.sh
-# Workers AI は wrangler dev でも本物を呼ぶ（課金される）ので、回数を増やしすぎない。
+# Jev は wrangler dev でも Vercel の本物を呼ぶ（クレジットを使う）ので、回数を増やしすぎない。
 set -euo pipefail
 
 : "${SUGGEST_URL:?SUGGEST_URL を指定する（例：http://localhost:8787）}"
