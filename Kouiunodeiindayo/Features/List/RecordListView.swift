@@ -5,6 +5,8 @@ import SwiftUI
 /// 要素と状態は `docs/screen-design.md` の「一覧」、取り出し方は `docs/data-model.md` の「よく使う取り出し方」が正。
 /// 上の欄から言葉で探せる（機能28）。キーボードの「検索」を押すと、言葉からタグ・うまい・時期を読み取って（`LocalSearchParser`）、
 /// 合う記録だけに絞る（`RecordSearchFilter`）。絞り込みは端末の中だけで行い、記録は送らない。
+/// 上の行の右端の「選択」で選ぶモードに入り、写真をタップして選んで、まとめて消せる（機能11。#118）。
+/// 選ぶモードの間は下タブの代わりに消すの操作を出すので、選ぶモードかどうかを `onSelectingChange` で `RootView` に伝える。
 struct RecordListView: View {
     // `#Predicate` の中に `Genre.unsorted.rawValue` を直接書けないので、先に値に取り出す
     private static let unsorted = Genre.unsorted.rawValue
@@ -29,6 +31,15 @@ struct RecordListView: View {
     /// 読み取れなかったときの知らせ。一覧はそのまま
     @State private var message: String?
     @FocusState private var isSearchFocused: Bool
+    /// 選ぶモード（まとめて消す）
+    @State private var isSelecting = false
+    @State private var selectedIDs: Set<UUID> = []
+    @State private var isDeleteConfirmationShown = false
+    @State private var isDeleteFailureShown = false
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.photoStorage) private var photoStorage
+    /// 画面の下のセーフエリア（`RootView` が入れる）。消すの操作を下タブと同じ位置に出すのに使う。`nil` はプレビューなど `RootView` の外
+    @Environment(\.rootBottomSafeArea) private var rootBottomSafeArea
     /// 詳細を開くときに渡すもの。開いた記録と、開いた時点の並び（記録の id）を 1 つにまとめて sheet の `item` にする
     /// （別々の `@State` にすると、sheet の中身を作るときに並びがまだ空のまま読まれ、詳細が 1 件だけになった）。
     /// 詳細で「うまい」などを変えて絞り込みから外れても、開いている詳細のページが飛ばないように、開いたときの並びを渡す。
@@ -49,10 +60,27 @@ struct RecordListView: View {
 
     /// プレビューで、欄に言葉を入れて探した状態を見るための言葉。開いたときに一度だけ探す
     private let previewSearchText: String?
+    /// プレビューで、選ぶモードを見るためのもの。`nil` は選ぶモードにしない。数は、先頭から選んでおく件数
+    private let previewSelectedCount: Int?
+    /// プレビューで、消す確認を開いた状態を見る
+    private let previewShowsDeleteConfirmation: Bool
+    private let onSelectingChange: (Bool) -> Void
 
-    /// 引数の `searchText` は、プレビューで探した状態を見るためだけに渡す
-    init(searchText: String? = nil) {
+    /// 引数の `searchText`・`selectedCount`・`showsDeleteConfirmation` は、プレビューで状態を見るためだけに渡す
+    init(
+        searchText: String? = nil,
+        selectedCount: Int? = nil,
+        showsDeleteConfirmation: Bool = false,
+        onSelectingChange: @escaping (Bool) -> Void = { _ in }
+    ) {
         previewSearchText = searchText
+        previewSelectedCount = selectedCount
+        previewShowsDeleteConfirmation = showsDeleteConfirmation
+        self.onSelectingChange = onSelectingChange
+    }
+
+    private var store: RecordStore {
+        RecordStore(modelContext: modelContext, photoStorage: photoStorage)
     }
 
     /// 画面に出す記録。絞り込み中は、条件に合うものだけ（並びは新しい順のまま）
@@ -66,8 +94,12 @@ struct RecordListView: View {
             VStack(alignment: .leading, spacing: Self.headerToContentSpacing) {
                 // ロゴと区切り線は、近づけて1組にする
                 VStack(alignment: .leading, spacing: 4) {
-                    TitleLogoView()
-                        .padding(.horizontal)
+                    HStack(alignment: .center) {
+                        TitleLogoView()
+                        Spacer(minLength: 8)
+                        selectButton
+                    }
+                    .padding(.horizontal)
                     // タイトルと下の内容の区切り線
                     Rectangle()
                         .fill(Theme.line)
@@ -75,9 +107,16 @@ struct RecordListView: View {
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 16) {
+                    if isSelecting {
+                        selectionBar
+                    }
+                    // 選ぶモードの間は、欄と仕分け待ちの入口を押せなくする（見た目は残す。押すと選ぶ操作と混ざるため）
                     searchField
+                        .disabled(isSelecting)
                     if let condition {
+                        // 選ぶモードの間は、条件のチップと「やめる」も押せなくする（欄と同じ。絞り込みが変わると選んだ記録と混ざるため）
                         conditionRow(condition)
+                            .disabled(isSelecting)
                     }
                     if let message {
                         Text(message)
@@ -87,6 +126,7 @@ struct RecordListView: View {
                     // 絞り込み中は、結果と入口が混ざらないよう、仕分け待ちの入口を隠す
                     if !unsortedRecords.isEmpty && condition == nil {
                         sortEntry
+                            .disabled(isSelecting)
                     }
                     // 絞り込み中を先に見る（仕分け済みが 0 件のときも「合う記録がありません」とやめるボタンを出す）
                     if condition != nil && displayed.isEmpty {
@@ -104,6 +144,30 @@ struct RecordListView: View {
             .padding(.vertical)
         }
         .background(Theme.background)
+        .overlay(alignment: .bottom) {
+            if isSelecting {
+                actionBar
+            }
+        }
+        // 確認の文に件数と「写真も消えます」を必ず出す（取り消しは無い）。詳細の 1 件の確認と同じく `alert` にする
+        .alert("\(selectedIDs.count) 件の記録を消しますか？", isPresented: $isDeleteConfirmationShown) {
+            Button("消す", role: .destructive) {
+                deleteSelected()
+            }
+            Button("やめる", role: .cancel) {}
+        } message: {
+            Text("写真も消えます")
+        }
+        .alert("消せませんでした", isPresented: $isDeleteFailureShown) {
+            Button("OK", role: .cancel) {}
+        }
+        .onChange(of: isSelecting) { _, selecting in
+            onSelectingChange(selecting)
+        }
+        // 絞り込みが変わった・記録が消えたときは、画面に無い記録を選んだままにしない
+        .onChange(of: displayed.map(\.id)) { _, ids in
+            selectedIDs.formIntersection(ids)
+        }
         // sheet で開くので、閉じても一覧のスクロール位置は残る
         .sheet(item: $detailSelection) { selection in
             // 開いた記録と並びを、今の `@Query` から引き直す。消えた記録だけが並びから抜ける。
@@ -143,6 +207,111 @@ struct RecordListView: View {
                 searchText = previewSearchText
                 search()
             }
+            if let previewSelectedCount {
+                isSelecting = true
+                selectedIDs = Set(displayed.prefix(previewSelectedCount).map(\.id))
+                isDeleteConfirmationShown = previewShowsDeleteConfirmation
+            }
+        }
+    }
+
+    // MARK: 選ぶモード（まとめて消す）
+
+    /// 上の行の右端。選ぶモードでないときは「選択」、選ぶモードのときは「キャンセル」。並べる記録が無いときは出さない
+    @ViewBuilder
+    private var selectButton: some View {
+        if isSelecting {
+            Button("キャンセル") {
+                endSelecting()
+            }
+            .buttonStyle(.plain)
+            .font(Theme.font(.body))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minHeight: Theme.minTapHeight)
+            .contentShape(.rect)
+        } else if !displayed.isEmpty {
+            Button("選択") {
+                isSearchFocused = false
+                isSelecting = true
+            }
+            .buttonStyle(.plain)
+            .font(Theme.font(.body))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minHeight: Theme.minTapHeight)
+            .contentShape(.rect)
+            .accessibilityHint("記録を選んで、まとめて消せます")
+        }
+    }
+
+    /// 選んだ件数と「すべて選択」。絞り込み中は、絞り込んだ結果だけを選ぶ
+    private var selectionBar: some View {
+        let allSelected = !displayed.isEmpty && displayed.allSatisfy { selectedIDs.contains($0.id) }
+        return HStack {
+            Text("\(selectedIDs.count) 件を選択")
+                .font(Theme.font(.subheadline))
+                .foregroundStyle(Theme.textSecondary)
+            Spacer(minLength: 8)
+            Button(allSelected ? "選択を解除" : "すべて選択") {
+                if allSelected {
+                    selectedIDs.removeAll()
+                } else {
+                    selectedIDs = Set(displayed.map(\.id))
+                }
+            }
+            .buttonStyle(.plain)
+            .font(Theme.font(.subheadline))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minHeight: Theme.minTapHeight)
+            .contentShape(.rect)
+        }
+    }
+
+    /// 下タブの代わりに出す操作のバー（今は「消す」だけ）。下タブと同じ位置・同じガラスの見た目・同じ高さにする
+    private var actionBar: some View {
+        Button {
+            isDeleteConfirmationShown = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "trash")
+                Text("消す")
+                    .font(Theme.font(.caption2))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(selectedIDs.isEmpty ? Theme.textSecondary : Theme.accent)
+        .disabled(selectedIDs.isEmpty)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 16)
+        // `RootView` の中では、ページャーが画面の下まで広がっているので、下タブと同じくセーフエリアの上に置く
+        .padding(.bottom, rootBottomSafeArea ?? 0)
+        .ignoresSafeArea(edges: rootBottomSafeArea == nil ? [] : .bottom)
+        .accessibilityLabel("選んだ記録を消す")
+    }
+
+    private func toggleSelection(_ record: Record) {
+        if selectedIDs.contains(record.id) {
+            selectedIDs.remove(record.id)
+        } else {
+            selectedIDs.insert(record.id)
+        }
+    }
+
+    private func endSelecting() {
+        isSelecting = false
+        selectedIDs.removeAll()
+    }
+
+    /// 選んだ記録を消す。選ぶモードの間は詳細を開けないので、消した記録の詳細が開いていることは無い
+    private func deleteSelected() {
+        let selected = displayed.filter { selectedIDs.contains($0.id) }
+        do {
+            try store.delete(selected)
+            endSelecting()
+        } catch {
+            isDeleteFailureShown = true
         }
     }
 
@@ -328,22 +497,68 @@ struct RecordListView: View {
     }
 
     private func photoButton(_ record: Record) -> some View {
-        Button {
-            detailSelection = DetailSelection(recordID: record.id, ids: displayed.map(\.id))
+        let isSelected = selectedIDs.contains(record.id)
+        let date =
+            "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")"
+        return Button {
+            // 選ぶモードの間は、押すと選ぶ・外す（詳細は開かない）
+            if isSelecting {
+                toggleSelection(record)
+            } else {
+                detailSelection = DetailSelection(recordID: record.id, ids: displayed.map(\.id))
+            }
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail)
                 .aspectRatio(1, contentMode: .fit)
+                // 選んだ写真は少し暗くする
+                .overlay {
+                    if isSelecting && isSelected {
+                        Color.black.opacity(Self.selectedDimOpacity)
+                    }
+                }
                 .photoFrame(.small)
+                // 選ぶ印は右下（「うまい」のハンコは右上なので重ならない）
+                .overlay(alignment: .bottomTrailing) {
+                    if isSelecting {
+                        selectionMark(isSelected: isSelected)
+                            .padding(Self.selectionMarkPadding)
+                    }
+                }
                 // 「うまい」は、枠の切り抜きの外に重ねる（枠から少しはみ出させる）
                 .listFavoriteBadge(isFavorite: record.isFavorite)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(
-            "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(record.isFavorite ? "。うまい付き" : "")。記録の詳細を開く"
-        )
+        .accessibilityLabel(isSelecting ? "\(date)。\(isSelected ? "選択中" : "選択されていません")" : "\(date)。記録の詳細を開く")
+        .accessibilityHint(isSelecting ? (isSelected ? "押すと外します" : "押すと選びます") : "")
+        .accessibilityAddTraits(isSelecting && isSelected ? .isSelected : [])
         // はみ出した「うまい」が、右隣の写真の下に隠れないよう、お気に入りの写真を手前に描く
         .zIndex(record.isFavorite ? 1 : 0)
     }
+
+    /// 選ぶ印。選んでいないときは白い丸の枠、選ぶと墨の丸に白いチェック
+    private func selectionMark(isSelected: Bool) -> some View {
+        ZStack {
+            if isSelected {
+                Circle().fill(Theme.textPrimary)
+                Image(systemName: "checkmark")
+                    .font(.system(size: Self.selectionMarkSize * 0.5, weight: .bold))
+                    .foregroundStyle(Theme.onMain)
+            } else {
+                // 明るい写真の上でも見えるよう、薄い影を付ける
+                Circle().fill(.black.opacity(0.15))
+            }
+            Circle().strokeBorder(.white, lineWidth: 2)
+        }
+        .frame(width: Self.selectionMarkSize, height: Self.selectionMarkSize)
+        .shadow(color: .black.opacity(0.3), radius: 1)
+        .accessibilityHidden(true)
+    }
+
+    /// 選ぶ印の大きさと、写真の角からの隙間
+    private static let selectionMarkSize: CGFloat = 24
+    private static let selectionMarkPadding: CGFloat = 6
+    /// 選んだ写真に重ねる黒の濃さ
+    private static let selectedDimOpacity: Double = 0.3
 }
 
 #Preview("記録あり・仕分け待ちあり") {
@@ -387,6 +602,38 @@ struct RecordListView: View {
         .frame(width: 375, height: 667)
         .dynamicTypeSize(.xxxLarge)
         .modelContainer(RecordListPreviewData.makeEarlierRamenContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("選ぶモード・何も選んでいない") {
+    RecordListView(selectedCount: 0)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("選ぶモード・2 件選んだ") {
+    RecordListView(selectedCount: 2)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("選ぶモード・消す確認") {
+    RecordListView(selectedCount: 2, showsDeleteConfirmation: true)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("選ぶモード・絞り込み中（うまい）・すべて選択") {
+    RecordListView(searchText: "うまい", selectedCount: 99)
+        .modelContainer(SampleData.makePreviewContainer())
+        .environment(\.photoStorage, SampleData.photoStorage)
+}
+
+#Preview("選ぶモード・SE 相当・文字サイズ XXX Large") {
+    RecordListView(selectedCount: 1)
+        .frame(width: 375, height: 667)
+        .dynamicTypeSize(.xxxLarge)
+        .modelContainer(SampleData.makePreviewContainer())
         .environment(\.photoStorage, SampleData.photoStorage)
 }
 
