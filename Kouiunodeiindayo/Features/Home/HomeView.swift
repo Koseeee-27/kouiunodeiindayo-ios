@@ -91,11 +91,12 @@ struct HomeView: View {
                 todaySection(fillsHeight: fillsHeight)
                     // ほかの要素より先に、残りの高さを受け取る
                     .layoutPriority(1)
-                if !recentRecords.isEmpty {
-                    recentSection
-                }
+                // 余りは、今日の一枚と最近の写真の間に空けて、最近の写真を一番下に置く（今日の一枚が無いときも同じ位置）
                 if fillsHeight {
                     Spacer(minLength: 0)
+                }
+                if !recentRecords.isEmpty {
+                    recentSection
                 }
             }
         }
@@ -117,7 +118,9 @@ struct HomeView: View {
                 isSettingsShown = true
             } label: {
                 Image(systemName: "gearshape")
-                    .font(Theme.font(.title2))
+                    // ロゴより小さく、目立たない色にする（押せる範囲は 44pt のまま）
+                    .font(Theme.font(.body))
+                    .foregroundStyle(Theme.textSecondary)
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
             }
@@ -133,41 +136,57 @@ struct HomeView: View {
     }
 
     private func todaySection(fillsHeight: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("今日の一枚")
-                .font(Theme.font(.headline, bold: true))
+        Group {
             if let record = todayRecord {
-                Button {
-                    selectedRecord = record
-                } label: {
-                    // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
-                    RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
-                        .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
-                        .photoFrame(.main)
+                // 見出しは、写真の左端にそろえる。写真が高さで決まって横幅より細いときは、見出しごと左右の真ん中に置く
+                VStack(alignment: .leading, spacing: 8) {
+                    todayHeading
+                    Button {
+                        selectedRecord = record
+                    } label: {
+                        // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
+                        RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
+                            .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
+                            .photoFrame(.main)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
+                    // 1画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
+                    .frame(
+                        minHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
+                        idealHeight: fillsHeight ? Self.todayPhotoMinHeight : nil
+                    )
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
-                // 1画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
-                .frame(
-                    minHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
-                    idealHeight: fillsHeight ? Self.todayPhotoMinHeight : nil
-                )
-                // 高さで決まって横幅より細くなったときは、左右の真ん中に置く
                 .frame(maxWidth: .infinity)
             } else {
-                VStack(spacing: 16) {
-                    Text("今日はまだ撮っていません")
-                    Button("撮る") {
-                        onTakePhoto()
+                VStack(alignment: .leading, spacing: 8) {
+                    todayHeading
+                    // 言葉とボタンは、今日の一枚の写真が入る場所（見出しの下、残りの高さ）の真ん中に置く。
+                    // 1画面に収まるかを測るときは、写真と同じ最小の高さで測る
+                    VStack(spacing: 16) {
+                        Text("今日はまだ撮っていません")
+                        Button("撮る") {
+                            onTakePhoto()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("カメラを開いて撮る")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("カメラを開いて撮る")
+                    .frame(maxWidth: .infinity)
+                    .frame(
+                        minHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
+                        idealHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
+                        maxHeight: fillsHeight ? .infinity : nil
+                    )
+                    // スクロールする版では、残りの高さが決まらないので、上下に余白を取る
+                    .padding(.vertical, fillsHeight ? 0 : 48)
                 }
-                .frame(maxWidth: .infinity)
-                // 写真の代わりの場所だと分かるよう、上下に余白を取る
-                .padding(.vertical, 48)
             }
         }
+    }
+
+    private var todayHeading: some View {
+        Text("今日の一枚")
+            .font(Theme.font(.headline, bold: true))
     }
 
     /// 「うまい」のラベルは読み上げから隠しているので、ボタンの読み上げに足す
@@ -187,14 +206,18 @@ struct HomeView: View {
                     Button {
                         selectedRecord = record
                     } label: {
-                        RecordPhotoView(record: record, kind: .thumbnail, showsFavoriteLabel: true)
+                        RecordPhotoView(record: record, kind: .thumbnail)
                             .aspectRatio(1, contentMode: .fit)
                             .photoFrame(.small)
+                            // 「うまい」は、一覧と同じ、枠から少しはみ出す右肩下がりの形（枠のあとに重ねる）
+                            .listFavoriteBadge(isFavorite: record.isFavorite)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(
                         "\(record.takenAt.formatted(date: .abbreviated, time: .omitted)) の写真\(Self.favoriteSuffix(record))。記録の詳細を開く"
                     )
+                    // はみ出した「うまい」が、右隣の写真の下に隠れないよう、お気に入りの写真を手前に描く
+                    .zIndex(record.isFavorite ? 1 : 0)
                 }
             }
         }
