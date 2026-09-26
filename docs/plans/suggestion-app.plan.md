@@ -32,29 +32,14 @@
 - 流れ：`Config/Local.xcconfig`（値。git に入れない）→ `Config/Base.xcconfig` が `#include?` で読む → `Config/Info.plist` の `$(SUGGESTION_BASE_URL)`・`$(SUGGESTION_TOKEN)` が置き換わる → アプリの Info.plist → `Bundle.main`
 - xcconfig では `//` 以降がコメントになる。URL は `https:/$()/<worker>.workers.dev` のように書く（`$()` は空の値で、`//` を分けるため）
 
-### 要判断（こうせいに決めてもらう。おすすめつき）
+### 決めたこと（2026-09-26 こうせい確認。計画のときの案は全部おすすめのほうに決めた）
 
-1. **Info.plist への取り込みを、どこでやるか**
-   - **A（おすすめ）**：`Config/Info.plist` を新しく作って独自キー2つを書き、`Config/Base.xcconfig` に `INFOPLIST_FILE = Config/Info.plist` を1行足す。どちらも AI が書けるテキストのファイルで、`project.pbxproj` は変わらない。今も `Base.xcconfig` で `INFOPLIST_KEY_〜` を設定している流儀と同じ。人の作業は、自分の `Local.xcconfig` に値を書くことと、Xcode で設定が効いているかを見ることだけ（下の「人が Xcode で行う作業」）
-   - B：人が Xcode のターゲットの Info タブで独自キーを足す。Xcode が `Kouiunodeiindayo/Info.plist` を作り、`INFOPLIST_FILE` と同期フォルダの除外を `project.pbxproj` に書く。ADR 0006 の「人が Xcode で行う」の文字どおりだが、値が pbxproj に書かれる・同期フォルダの除外の操作が要る・ほかの人の手元とずれやすい
-   - A でも「ビルド設定の変更」には当たるので、AGENTS.md の「ビルド設定の変更が必要なときは、人が Xcode で行う」に照らして OK かを決めてほしい
-2. **URL か合言葉が未設定のとき（`Local.xcconfig` に書いていない人・シミュレータ向けの既定）**
-   - **おすすめ**：問い合わせない（Vision も動かさない）。何も保存しない（`suggestedAt` は `nil` のまま）。起動後に1回だけログに出す。撮る・仕分けるは変わらない
-   - 別案：未設定ならビルドを失敗させる。相方がビルドできなくなるので、おすすめしない
-3. **`@Environment` の既定値**
-   - **おすすめ**：`@Entry var suggestionService: any SuggestionService = SuggestionMock.none`（何もしないモック）。本物はアプリの入口（`KouiunodeiindayoApp`）で `.environment(\.suggestionService, LiveSuggestionService())` と明示して渡す。既存のプレビューが勝手に通信しないようにするため（プレビューのビルドにも Info.plist の値は入る）
-   - 別案：`photoStorage` と同じく、既定を本物にする。渡し忘れは起きないが、プレビューが本物の Worker を呼び、クレジットを使う
-4. **同じ写真・たくさんの写真を同時に問い合わせたとき**
-   - 撮った直後は、`CameraFlowView` の「追加」のあとと、すぐ開く `SortView(recordID:)` の両方から同じ写真の問い合わせが来る。仕分け待ちが溜まっていると、開いた瞬間に何十枚も来る
-   - **おすすめ**：`SuggestionService` の本物が「今問い合わせ中の `id`」を控え、同じ `id` は受け付けない。問い合わせは受け付けた順に**1件ずつ**行う（Vision を何十枚も同時に動かさない・Worker に同時に投げない）。仕分けの画面は新しい順に頼むので、画面に先に出る写真から埋まる
-   - 別案：同時に全部投げる。速いが、Vision のメモリと Worker の混雑（429）が心配
-5. **Vision のラベルが（名前の形で絞ったあと）0個のとき**
-   - **おすすめ**：Worker に送らず、「提案なし」として保存する（`saveSuggestion(genre: nil, tags: [])`）。Vision は同じ写真には同じ結果を返すので、問い合わせ直しても変わらないため
-   - 別案：何も保存しない（次に仕分けを開いたときにまた Vision を動かす）
-   - Vision 自体が失敗した（throw）ときは、何も保存しない（通信の失敗と同じ扱い）
-6. **プレビューで「モックの提案が出る」ことをどう見せるか**（#83 がまだなので、仕分けの画面には提案が出ない）
-   - **おすすめ**：`SuggestionMock.swift` に、確認用の小さなビュー（仕分け待ちの記録ごとに `suggestedGenre`・`suggestedTags` を文字で並べるだけ）と、そのプレビューを置く。開くとモックが `saveSuggestion` を呼び、文字が「未問い合わせ」から提案に変わる。#83 の画面ができたら、#83 のプレビューで同じモックを使う
-   - 別案：`SortView` のプレビューにモックを渡すだけにする（保存はされるが、画面には何も出ないので確認できない）
+1. **Info.plist への取り込みは、`Config/Info.plist` と `Config/Base.xcconfig` で行う。** `Config/Info.plist` に独自キー2つを書き、`Base.xcconfig` に `INFOPLIST_FILE = Config/Info.plist` を1行足す。どちらもテキストのファイルで、`project.pbxproj` は変わらない（今も `Base.xcconfig` で `INFOPLIST_KEY_〜` を設定している流儀と同じ）。人の作業は、自分の `Local.xcconfig` に値を書くことと、Xcode で設定が効いているかを見ることだけ（下の「人が Xcode で行う作業」）。ターゲットの Info タブで足す案は、`project.pbxproj` に値と同期フォルダの除外が書かれ、手元ごとにずれやすいので採らない
+2. **URL か合言葉が未設定なら、問い合わせない。** Vision も動かさず、何も保存しない（`suggestedAt` は `nil` のまま）。起動後に1回だけログに出す。撮る・仕分けるは変わらない。ビルドは失敗させない（相方がビルドできなくなるため）
+3. **`@Environment` の既定値は、何もしないモック（`SuggestionMock.none`）。** 本物はアプリの入口（`KouiunodeiindayoApp`）で明示して渡す。既存のプレビューが勝手に本物の Worker を呼び、クレジットを使わないようにするため（プレビューのビルドにも Info.plist の値は入る）
+4. **同じ写真は重ねて問い合わせず、受け付けた順に1件ずつ行う。** 撮った直後は `CameraFlowView` の「追加」のあとと、すぐ開く `SortView(recordID:)` の両方から同じ写真が来る。仕分け待ちが溜まっていると、開いた瞬間に何十枚も来る。本物の Service が「問い合わせ中・待ちの `id`」を控えて同じ `id` を弾き、1件ずつ処理する（Vision を何十枚も同時に動かさない・Worker に同時に投げない）。仕分けの画面は新しい順に頼むので、画面に先に出る写真から埋まる
+5. **Vision のラベルが（名前の形で絞ったあと）0個なら、Worker に送らず「提案なし」として保存する。** Vision は同じ写真には同じ結果を返すので、問い合わせ直しても変わらないため。Vision 自体が失敗した（throw）ときは、何も保存しない（通信の失敗と同じ扱い）
+6. **プレビューでの確認は、`SuggestionMock.swift` に置く確認用の小さなビューで行う。** 仕分け待ちの記録ごとに `suggestedGenre`・`suggestedTags` を文字で並べるだけ。開くとモックが `saveSuggestion` を呼び、「未問い合わせ」から提案に変わる。#83 の画面ができたら、#83 のプレビューで同じモックを使う
 
 ## 型と関数の口
 
@@ -101,7 +86,7 @@ struct SuggestionResult: Equatable, Sendable {
 struct SuggestionClient {
     struct Configuration: Equatable { let baseURL: URL; let token: String }
 
-    /// Info.plist から読む。どちらかが空・`$(…)` のまま・URL として読めないときは `nil`（要判断 2）。
+    /// Info.plist から読む。どちらかが空・`$(…)` のまま・URL として読めないときは `nil`（決めたこと 2）。
     static func configurationFromBundle(_ bundle: Bundle = .main) -> Configuration?
 
     init(configuration: Configuration, session: URLSession = .suggestion)
@@ -138,19 +123,19 @@ protocol SuggestionService {
 }
 
 extension EnvironmentValues {
-    @Entry var suggestionService: any SuggestionService = SuggestionMock.none  // 要判断 3
+    @Entry var suggestionService: any SuggestionService = SuggestionMock.none  // 決めたこと 3
 }
 ```
 
 `LiveSuggestionService.requestSuggestion` の中：
 
-1. 設定が `nil` なら何もしない（最初の1回だけログ。要判断 2）
-2. 問い合わせ中・待ち行列にある `id` なら何もしない（要判断 4）
+1. 設定が `nil` なら何もしない（最初の1回だけログ。決めたこと 2）
+2. 問い合わせ中・待ち行列にある `id` なら何もしない（決めたこと 4）
 3. 待ち行列に `(id, photoFileName, store)` を足す。処理中でなければ、1件ずつ取り出す `Task` を始める（`Task` はメインスレッドのもの。重い処理は `@concurrent` の関数の中）
 4. 1件の処理：
    1. `photoStorage` から写真の URL を得る（`PhotoStorage` に `photoURL(fileName:)` を足す。画面や Service でファイルの場所を組み立てないため）
    2. `ImageLabeler.labels(ofPhotoAt:)`。throw したら何も保存しない（ログ）
-   3. `SuggestionRequest(labels:)` が `nil` なら `store.saveSuggestion(genre: nil, tags: [], for: id)`（要判断 5）
+   3. `SuggestionRequest(labels:)` が `nil` なら `store.saveSuggestion(genre: nil, tags: [], for: id)`（決めたこと 5）
    4. `SuggestionClient.suggest`。throw したら何も保存しない（ログ。`suggestedAt` は `nil` のまま）
    5. 成功したら `store.saveSuggestion(genre: result.genre, tags: result.tags, for: id)`。提案なし（`genre == nil`・`tags` が空）もそのまま渡す（問い合わせ済みにする）
 - `store`（`RecordStore`）はメインスレッドの `ModelContext` を持つ struct。メインスレッドの `Task` の中だけで使うので、裏のスレッドには渡らない
@@ -171,7 +156,7 @@ struct SuggestionMock: SuggestionService {
 ```
 
 - `requestSuggestion` は `delay` のあとメインスレッドで `store.saveSuggestion` を呼ぶだけ
-- 確認用のビューとプレビュー（要判断 6）もここに置く
+- 確認用のビューとプレビュー（決めたこと 6）もここに置く
 
 ## 問い合わせを始める2か所
 
@@ -193,8 +178,7 @@ struct SuggestionMock: SuggestionService {
 
 ## ステップ
 
-0. **（人の作業）要判断の答えをもらう**。答えに合わせて、この計画の「要判断」を「決めたこと」に書き換えてから実装を始める
-1. `Config/Info.plist`（新規）・`Config/Base.xcconfig` — URL と合言葉の配線（要判断 1 が A のとき）
+1. `Config/Info.plist`（新規）・`Config/Base.xcconfig` — URL と合言葉の配線（決めたこと 1）
    - `Config/Info.plist`：`SuggestionBaseURL` = `$(SUGGESTION_BASE_URL)`、`SuggestionToken` = `$(SUGGESTION_TOKEN)` の2つだけ
    - `Config/Base.xcconfig`：`INFOPLIST_FILE = Config/Info.plist` と、既定値 `SUGGESTION_BASE_URL =`・`SUGGESTION_TOKEN =`（空。`#include? "Local.xcconfig"` より前。Local が無くてもビルドが通るように）。コメントで「独自のキーは `INFOPLIST_KEY_〜` が効かないので Config/Info.plist に書く」「同期フォルダに置かない理由」を書く
    - 確認：ビルドが通る。ビルドしたアプリの Info.plist にキーが2つあり、値が空（`Local.xcconfig` を読まない AI の環境では空になる。AI は値を表示しない。キーの有無だけを `plutil -extract SuggestionBaseURL raw …` の終了コードで見る）
@@ -218,20 +202,18 @@ struct SuggestionMock: SuggestionService {
     - JSON：`makeURLRequest` の URL（`…/suggest`）・メソッド `POST`・2つのヘッダー・本文を `JSONSerialization` で読み直して `labels[].name`・`confidence` が期待どおり
     - 返る形：`decodeResult` が `{"genre":"food","tags":["ramen","noodles"]}` を読む／`{"genre":null,"tags":[]}` を提案なしで読む／知らないジャンル（`"unsorted"`・`"soup"`）は `nil`、知らないタグは捨てる／壊れた JSON は throw
     - 設定：`configurationFromBundle` の判定は、`Bundle` ではなく辞書を受ける小さな関数に分けて、空・`$(SUGGESTION_BASE_URL)` のまま・URL として読めない、で `nil` になることを見る
-11. `docs/architecture.md` — 変わる点だけ直す：フォルダ構成に `Config/Info.plist` を足す。「提案（機能26）の流れ」に「同じ写真は1件ずつ・重ねて問い合わせない」「URL と合言葉が未設定なら問い合わせない」（要判断の答えに合わせて）
+11. `docs/architecture.md` — 変わる点だけ直す：フォルダ構成に `Config/Info.plist` を足す。「提案（機能26）の流れ」に「同じ写真は1件ずつ・重ねて問い合わせない」「URL と合言葉が未設定なら問い合わせない」
 12. `.verification/82/` にプレビューのスクショと `notes.md`（実機の確認の手順と見るところ）
 
 ## 人が Xcode で行う作業
 
-要判断 1 が A のとき（`project.pbxproj` は変わらない）：
+`project.pbxproj` は変わらない（決めたこと 1）。
 
 1. 自分の `Config/Local.xcconfig` に2行を書く（見本は `Config/Local.xcconfig.example`）。URL は本番の Worker の URL を `https:/$()/…` の形で、合言葉は Worker に `wrangler secret put SUGGEST_TOKEN` で入れた本番の値
 2. Xcode を終了（Cmd+Q）して開き直す（xcconfig の変更を読ませるため）
 3. ターゲット `Kouiunodeiindayo` → Build Settings（All・Combined）で「Info.plist File」を検索し、`Config/Info.plist` が**細字**（xcconfig の値が使われている）で出ていることを見る。太字ならターゲット側に値があるので、その行を選んで Delete キーで消す
 4. Product → Clean Build Folder（Shift+Cmd+K）のあと、実機でビルドする
 5. `git status` で `project.pbxproj` が変わっていないことを見る（変わっていたら、その差分を AI に見せて止まる）
-
-要判断 1 が B のときは、ターゲットの Info タブで独自キーを足す手順に差し替える（その場合は計画のステップ 1 を書き直す）。
 
 ## 実機での確認（人が行う）
 
