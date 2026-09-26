@@ -24,7 +24,7 @@ Worker を挟む理由と構成は `docs/adr/0006-suggestion-vision-jev.md`。�
 | `/search` | 3 秒 |
 
 - アプリは、200 以外・時間切れ・通信できない、をどれも同じ「失敗」として扱う
-- `/suggest` が失敗したら、何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる（`docs/architecture.md`）
+- `/suggest` が失敗したら、アプリはその場で 2 秒・5 秒あけて最大 2 回問い合わせ直す。それでもだめなら何も保存しない（`suggestedAt` は `nil` のまま）。次に仕分けの画面を開いたときに、もう一度問い合わせる（`docs/architecture.md`）
 - `/search` が失敗したら、通信できない旨を出して、一覧はそのままにする
 
 ## `POST /suggest`（機能26）
