@@ -20,6 +20,7 @@ Kouiunodeiindayo/
 │   │   ├── RecordPhotoView.swift  ← 記録1件の写真かサムネイルを PhotoStorage から読むビュー。一覧のグリッドでも使う（一覧の「うまい」は枠からはみ出させるので、枠のあとに重ねる）
 │   │   └── HomePreviewData.swift  ← ホームのプレビュー用のサンプルデータ
 │   ├── List/
+│   │   └── RecordListView.swift   ← 一覧。言葉で探す欄と、読み取った条件での絞り込み（機能28）
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
 │   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
@@ -50,7 +51,10 @@ Kouiunodeiindayo/
 │   ├── ImageLabeler.swift     ← Vision で写真からラベルを取り出す（端末の中だけ）
 │   ├── SuggestionClient.swift ← Worker への通信。URL と合言葉は Config/Local.xcconfig から読む
 │   ├── SuggestionService.swift ← まとめ役。プロトコルにして、プレビュー用のモックも用意する
-│   └── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
+│   ├── SuggestionMock.swift   ← 通信せずに決まった提案を返すモック
+│   ├── SearchCondition.swift  ← 言葉で探す（機能28）の条件（タグ・うまい・時期）
+│   ├── LocalSearchParser.swift ← 言葉から条件を端末の中で読み取る（タグの名前・「うまい」・時期の言葉）
+│   └── RecordSearchFilter.swift ← 条件で記録を絞り込む（料理のタグは大分類・系統にも当てはめる）
 ├── Design/
 │   ├── Theme.swift            ← 色・フォント・余白の定義
 │   ├── TitleLogoView.swift    ← 左上の見出しのタイトルロゴ（ホームと一覧で共通。素材は Assets の TitleLogo）
