@@ -60,14 +60,38 @@ enum HomePreviewData {
     }
 
     /// 記録の詳細のプレビュー用。「食べ物」の記録 1 件に `tags` を付けたもの（ほかの記録は入れない）。
-    static func makeTaggedContainer(tags: [Tag]) -> ModelContainer {
+    /// `photoSize` を渡すと、その形の写真にする（横長・正方形の見え方を見るため。形が分かるよう、格子と丸を描く）
+    static func makeTaggedContainer(tags: [Tag], photoSize: CGSize? = nil) -> ModelContainer {
         let container = SampleData.makeContainer()
         let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        let image = photoSize.map(makeShapedImage) ?? SampleData.makeImage(color: .systemOrange)
         // プレビュー用なので、作れなければ落として気づく
-        let record = try! store.add(image: SampleData.makeImage(color: .systemOrange), takenAt: .now)
+        let record = try! store.add(image: image, takenAt: .now)
         store.setGenre(.food, for: record)
         store.setTags(tags, for: record)
         return container
+    }
+
+    /// 形の分かる写真の代わり。橙の地に格子と、真ん中の丸（縦横比が崩れると丸がつぶれる）
+    private static func makeShapedImage(size: CGSize) -> UIImage {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.systemOrange.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.systemBrown.setFill()
+            for x in stride(from: 0, to: size.width, by: 200) {
+                context.fill(CGRect(x: x, y: 0, width: 12, height: size.height))
+            }
+            for y in stride(from: 0, to: size.height, by: 200) {
+                context.fill(CGRect(x: 0, y: y, width: size.width, height: 12))
+            }
+            let side = min(size.width, size.height) * 0.6
+            UIColor.white.setFill()
+            context.cgContext.fillEllipse(
+                in: CGRect(x: (size.width - side) / 2, y: (size.height - side) / 2, width: side, height: side))
+        }
     }
 
     private static let oneDay: TimeInterval = 60 * 60 * 24
