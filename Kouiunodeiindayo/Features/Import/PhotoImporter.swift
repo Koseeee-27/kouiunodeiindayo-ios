@@ -76,7 +76,7 @@ enum PhotoImporter {
 }
 
 /// 選ばれた項目を 1 枚ずつ取り込む（同時に何枚も縮めない。メモリを抑えるため）。
-/// テストのために、データの受け取り・準備・保存をクロージャで差し替えられるようにする。本物は `live(store:)`。
+/// テストのために、データの受け取り・準備・判定・保存をクロージャで差し替えられるようにする。本物は `live(store:)`。
 struct PhotoImportRunner<Item> {
     private static var logger: Logger { Logger(category: "PhotoImport") }
 
@@ -84,6 +84,8 @@ struct PhotoImportRunner<Item> {
     var loadData: (Item) async throws -> Data?
     /// 本物は `PhotoImporter.prepare`
     var prepare: (Data) async -> PreparedPhoto?
+    /// 本物は `ImageLabeler.labels(of:)`。throw したら食事扱いで取り込む（選んだ写真を黙って捨てない）
+    var labels: (CGImage) async throws -> [ImageLabel]
     /// 本物は `RecordStore.add(image:takenAt:)` の id
     var save: (UIImage, Date) throws -> UUID
 
@@ -111,6 +113,15 @@ struct PhotoImportRunner<Item> {
                 continue
             }
             do {
+                // ファイルに書く前に判定するので、除外した写真はファイルを作らない
+                if !FoodPhotoFilter.isFood(try await labels(prepared.image)) {
+                    result.excludedCount += 1
+                    continue
+                }
+            } catch {
+                Self.logger.error("取り込み: 食事らしいかを判定できなかったので取り込む: \(error.localizedDescription, privacy: .public)")
+            }
+            do {
                 let id = try save(UIImage(cgImage: prepared.image), prepared.takenAt ?? now())
                 result.importedIDs.append(id)
             } catch {
@@ -118,9 +129,10 @@ struct PhotoImportRunner<Item> {
                 result.failedCount += 1
             }
         }
-        let seconds = (ContinuousClock.now - start).components.seconds
+        let elapsed = (ContinuousClock.now - start).components
+        let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
         Self.logger.info(
-            "取り込み: \(items.count) 枚 \(seconds) 秒（取り込み \(result.importedIDs.count)・除外 \(result.excludedCount)・読めなかった \(result.failedCount)）"
+            "取り込み: \(items.count) 枚 \(seconds, format: .fixed(precision: 1)) 秒（取り込み \(result.importedIDs.count)・除外 \(result.excludedCount)・読めなかった \(result.failedCount)）"
         )
         return result
     }
@@ -132,6 +144,7 @@ extension PhotoImportRunner where Item == PhotosPickerItem {
         PhotoImportRunner(
             loadData: { item in try await item.loadTransferable(type: Data.self) },
             prepare: { data in await PhotoImporter.prepare(data) },
+            labels: { image in try await ImageLabeler.labels(of: image) },
             save: { image, takenAt in try store.add(image: image, takenAt: takenAt).id }
         )
     }

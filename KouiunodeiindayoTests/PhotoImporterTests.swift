@@ -107,7 +107,34 @@ struct PhotoImporterTests {
         #expect(result.failedCount == 1)
     }
 
+    @Test func 食事でない写真は除外に数えて保存しない() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved)
+        var calls = 0
+        runner.labels = { _ in
+            calls += 1
+            return calls == 2 ? [ImageLabel(name: "keyboard", confidence: 0.8)] : Self.foodLabels
+        }
+        let result = await runner.run([0, 1, 2], onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 2)
+        #expect(saved.ids.count == 2)
+        #expect(result.excludedCount == 1)
+        #expect(result.failedCount == 0)
+    }
+
+    @Test func 判定に失敗した写真は食事扱いで取り込む() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(saved: saved)
+        runner.labels = { _ in throw CocoaError(.featureUnsupported) }
+        let result = await runner.run([0, 1], onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 2)
+        #expect(result.excludedCount == 0)
+        #expect(result.failedCount == 0)
+    }
+
     // MARK: 道具
+
+    static let foodLabels = [ImageLabel(name: "food", confidence: 0.7)]
 
     /// 保存された写真の撮影日時と id を控える。
     final class SavedPhotos {
@@ -130,6 +157,7 @@ struct PhotoImporterTests {
         PhotoImportRunner(
             loadData: loadData,
             prepare: { _ in PreparedPhoto(image: smallImage, takenAt: nil) },
+            labels: { _ in foodLabels },
             save: { _, date in
                 let id = UUID()
                 saved.ids.append(id)
