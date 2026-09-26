@@ -138,6 +138,8 @@ struct PhotoImportRunner<Item> {
     func run(_ items: [Item], now: () -> Date = { .now }, onProgress: (Int, Int) -> Void) async -> PhotoImportResult {
         var result = PhotoImportResult()
         let start = ContinuousClock.now
+        // 本人が選んだ 1 枚は、食事の判定で除かない（#110）。2 枚以上のときだけ判定する
+        let filtersFood = items.count > 1
         for (index, item) in items.enumerated() {
             defer { onProgress(index + 1, items.count) }
             let data: Data?
@@ -159,7 +161,7 @@ struct PhotoImportRunner<Item> {
             }
             do {
                 // ファイルに書く前に判定するので、除外した写真はファイルを作らない
-                if !FoodPhotoFilter.isFood(try await labels(prepared.image)) {
+                if filtersFood, !FoodPhotoFilter.isFood(try await labels(prepared.image)) {
                     result.excludedCount += 1
                     continue
                 }
