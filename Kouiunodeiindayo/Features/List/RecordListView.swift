@@ -19,8 +19,8 @@ struct RecordListView: View {
     @Query(filter: #Predicate<Record> { $0.genre == unsorted })
     private var unsortedRecords: [Record]
 
-    /// 詳細を開いている記録
-    @State private var selectedRecord: Record?
+    /// 詳細を開いているもの（開いた記録と、開いた時点の並び）
+    @State private var detailSelection: DetailSelection?
     @State private var isSortShown = false
     /// 検索の欄の言葉
     @State private var searchText = ""
@@ -29,8 +29,21 @@ struct RecordListView: View {
     /// 読み取れなかったときの知らせ。一覧はそのまま
     @State private var message: String?
     @FocusState private var isSearchFocused: Bool
-    /// 詳細を開いた時点の並び。詳細で「うまい」などを変えて絞り込みから外れても、開いている詳細のページが飛ばないように、開いたときの並びを渡す
-    @State private var detailRecords: [Record] = []
+    /// 詳細を開くときに渡すもの。開いた記録と、開いた時点の並び（記録の id）を 1 つにまとめて sheet の `item` にする
+    /// （別々の `@State` にすると、sheet の中身を作るときに並びがまだ空のまま読まれ、詳細が 1 件だけになった）。
+    /// 詳細で「うまい」などを変えて絞り込みから外れても、開いている詳細のページが飛ばないように、開いたときの並びを渡す。
+    /// 記録そのものではなく id で持ち、渡すときに今の `@Query` から引き直す（詳細で消した記録を読まないように）
+    private struct DetailSelection: Identifiable {
+        let record: Record
+        let ids: [UUID]
+        var id: UUID { record.id }
+    }
+
+    /// 詳細に渡す並び。開いた時点の並びを、今の `@Query`（絞る前）から引き直す。消えた記録だけが抜ける
+    private func detailRecords(_ ids: [UUID]) -> [Record] {
+        let byID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return ids.compactMap { byID[$0] }
+    }
     /// 時期で絞るときの「今」。日付が変わったとき・アプリに戻ったとき・探したときに取り直す
     @State private var now = Date.now
     @Environment(\.scenePhase) private var scenePhase
@@ -90,9 +103,9 @@ struct RecordListView: View {
         }
         .background(Theme.background)
         // sheet で開くので、閉じても一覧のスクロール位置は残る
-        .sheet(item: $selectedRecord) { record in
+        .sheet(item: $detailSelection) { selection in
             // 絞り込み中は、絞り込んだ中で左右にめくる（開いた時点の並び）
-            RecordDetailView(records: detailRecords, initial: record)
+            RecordDetailView(records: detailRecords(selection.ids), initial: selection.record)
         }
         // `SortView` は ✕ と最後の1枚で `dismiss()` するので、カバーはそれで閉じる
         .fullScreenCover(isPresented: $isSortShown) {
@@ -261,8 +274,7 @@ struct RecordListView: View {
 
     private func photoButton(_ record: Record) -> some View {
         Button {
-            detailRecords = displayed
-            selectedRecord = record
+            detailSelection = DetailSelection(record: record, ids: displayed.map(\.id))
         } label: {
             RecordPhotoView(record: record, kind: .thumbnail)
                 .aspectRatio(1, contentMode: .fit)
