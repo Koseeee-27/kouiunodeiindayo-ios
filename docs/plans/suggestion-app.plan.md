@@ -36,10 +36,17 @@
 
 1. **Info.plist への取り込みは、`Config/Info.plist` と `Config/Base.xcconfig` で行う。** `Config/Info.plist` に独自キー2つを書き、`Base.xcconfig` に `INFOPLIST_FILE = Config/Info.plist` を1行足す。どちらもテキストのファイルで、`project.pbxproj` は変わらない（今も `Base.xcconfig` で `INFOPLIST_KEY_〜` を設定している流儀と同じ）。人の作業は、自分の `Local.xcconfig` に値を書くことと、Xcode で設定が効いているかを見ることだけ（下の「人が Xcode で行う作業」）。ターゲットの Info タブで足す案は、`project.pbxproj` に値と同期フォルダの除外が書かれ、手元ごとにずれやすいので採らない
 2. **URL か合言葉が未設定なら、問い合わせない。** Vision も動かさず、何も保存しない（`suggestedAt` は `nil` のまま）。起動後に1回だけログに出す。撮る・仕分けるは変わらない。ビルドは失敗させない（相方がビルドできなくなるため）
-3. **`@Environment` の既定値は、何もしないモック（`SuggestionMock.none`）。** 本物はアプリの入口（`KouiunodeiindayoApp`）で明示して渡す。既存のプレビューが勝手に本物の Worker を呼び、クレジットを使わないようにするため（プレビューのビルドにも Info.plist の値は入る）
+3. **`@Environment` の既定値は、何もしないモック（`SuggestionMock.disabled`）。** 本物はアプリの入口（`KouiunodeiindayoApp`）で明示して渡す。既存のプレビューが勝手に本物の Worker を呼び、クレジットを使わないようにするため（プレビューのビルドにも Info.plist の値は入る）
 4. **同じ写真は重ねて問い合わせず、受け付けた順に1件ずつ行う。** 撮った直後は `CameraFlowView` の「追加」のあとと、すぐ開く `SortView(recordID:)` の両方から同じ写真が来る。仕分け待ちが溜まっていると、開いた瞬間に何十枚も来る。本物の Service が「問い合わせ中・待ちの `id`」を控えて同じ `id` を弾き、1件ずつ処理する（Vision を何十枚も同時に動かさない・Worker に同時に投げない）。仕分けの画面は新しい順に頼むので、画面に先に出る写真から埋まる
 5. **Vision のラベルが（名前の形で絞ったあと）0個なら、Worker に送らず「提案なし」として保存する。** Vision は同じ写真には同じ結果を返すので、問い合わせ直しても変わらないため。Vision 自体が失敗した（throw）ときは、何も保存しない（通信の失敗と同じ扱い）
 6. **プレビューでの確認は、`SuggestionMock.swift` に置く確認用の小さなビューで行う。** 仕分け待ちの記録ごとに `suggestedGenre`・`suggestedTags` を文字で並べるだけ。開くとモックが `saveSuggestion` を呼び、「未問い合わせ」から提案に変わる。#83 の画面ができたら、#83 のプレビューで同じモックを使う
+
+### 実装しながら変えたこと（2026-09-26）
+
+- 名前：何もしないモックは `SuggestionMock.none` ではなく `SuggestionMock.disabled`、提案なしの結果は `SuggestionResult.none` ではなく `SuggestionResult.empty` にした。`Optional` の型のところで `.none` と書くと「値が無い（nil）」と読まれ、黙って意味が変わるため（`Genre.noGenre` と同じ理由）
+- `SuggestionMock` に `immediate`（待たずに、その場で保存する版）を足した。プレビューの静止画は開いた直後に撮られ、裏で保存するのを待たないので、確認用のプレビューではこれを使う
+- テストは `SuggestionClientTests` に加えて `SuggestionServiceTests` を足した（モックが保存すること・何もしないモック・URL と合言葉が未設定の本物が保存しないこと）。Vision と Worker を呼ぶ流れは実機で見る
+- `Config/Base.xcconfig` はプロジェクト全体に割り当てているので、`INFOPLIST_FILE` はテストのターゲットにも効く（テストの束の Info.plist にも2つのキーが入る）。テストの束はアプリに入らないので、そのままにした
 
 ## 型と関数の口
 
@@ -79,7 +86,7 @@ struct SuggestionRequest: Encodable, Equatable {
 struct SuggestionResult: Equatable, Sendable {
     let genre: Genre?
     let tags: [Tag]
-    static let none = SuggestionResult(genre: nil, tags: [])
+    static let empty = SuggestionResult(genre: nil, tags: [])
 }
 
 /// Worker への通信。URL と合言葉は Info.plist（元は `Config/Local.xcconfig`）から読む。
@@ -123,7 +130,7 @@ protocol SuggestionService {
 }
 
 extension EnvironmentValues {
-    @Entry var suggestionService: any SuggestionService = SuggestionMock.none  // 決めたこと 3
+    @Entry var suggestionService: any SuggestionService = SuggestionMock.disabled  // 決めたこと 3
 }
 ```
 
@@ -149,9 +156,9 @@ struct SuggestionMock: SuggestionService {
     let result: SuggestionResult?   // nil は「何もしない」（失敗・未設定と同じ）
     var delay: Duration = .milliseconds(300)   // 出てくる様子を見るため
 
-    static let none = SuggestionMock(result: nil)
+    static let disabled = SuggestionMock(result: nil)
     static let ramen = SuggestionMock(result: SuggestionResult(genre: .food, tags: [.ramen, .noodles, .chinese]))
-    static let noSuggestion = SuggestionMock(result: .none)   // 提案なし（200）
+    static let noSuggestion = SuggestionMock(result: .empty)   // 提案なし（200）
 }
 ```
 
@@ -196,7 +203,7 @@ struct SuggestionMock: SuggestionService {
 7. `Suggestion/SuggestionService.swift` — 上の口のとおり
 8. `Suggestion/SuggestionMock.swift` — 上の口のとおり ＋ 確認用のビューとプレビュー
 9. `App/KouiunodeiindayoApp.swift`・`Features/Camera/CameraFlowView.swift`・`Features/Sort/SortView.swift` — 上の「問い合わせを始める2か所」
-   - 既存の `CameraFlowView`・`SortView` のプレビューは、既定の `SuggestionMock.none` のままでよい（通信しない）
+   - 既存の `CameraFlowView`・`SortView` のプレビューは、既定の `SuggestionMock.disabled` のままでよい（通信しない）
 10. `KouiunodeiindayoTests/SuggestionClientTests.swift`（新規）— ネットは呼ばない
     - 送る形：`SuggestionRequest(labels:)` が、確信度の高い順・最大 20 個・小数第2位に丸める（`0.625` → `0.63` のような境目も）・名前の形に合わないもの（大文字・`-`・空白・65 文字）を捨てる・全部捨てたら `nil`・確信度が同じなら名前の順
     - JSON：`makeURLRequest` の URL（`…/suggest`）・メソッド `POST`・2つのヘッダー・本文を `JSONSerialization` で読み直して `labels[].name`・`confidence` が期待どおり
@@ -245,6 +252,6 @@ struct SuggestionMock: SuggestionService {
 ## 完成の確認方法
 
 - `docs/rules/verification.md` の 1（ビルド）・2（テスト。`SuggestionClientTests` と既存のテストが全部通る）
-- プレビュー：`SuggestionMock.swift` の確認用のプレビューで、`SuggestionMock.ramen` のとき「食べ物・ラーメン・麺類・中華」、`noSuggestion` のとき「提案なし（問い合わせ済み）」、`none` のとき「未問い合わせ」のまま、になることを見る。スクショを `.verification/82/preview-SuggestionCheckView.png` などに残す
+- プレビュー：`SuggestionMock.swift` の確認用のプレビューで、`SuggestionMock.ramen` のとき「食べ物・ラーメン・麺類・中華」、`noSuggestion` のとき「提案なし（問い合わせ済み）」、`disabled` のとき「未問い合わせ」のまま、になることを見る。スクショを `.verification/82/preview-SuggestionCheckView.png` などに残す
 - 実機（人が行う。上の表）。Issue の完成の条件の「数秒以内に提案が保存される」「機内モードでも撮る・仕分けるができる」はここで見る
 - `git status` で `project.pbxproj` と `Config/Local.xcconfig` が差分に出ていない
