@@ -11,7 +11,7 @@ struct TitleLogoView: View {
             .resizable()
             .scaledToFit()
             .frame(height: height)
-            // 見出しの左端より、ほんの少し左に寄せる（レイアウトの幅は変えない）
+            // 見出しの左端より、ほんの少し左に寄せる（レイアウトの幅は変えない）。置く側に 4pt 以上の左の余白が要る
             .offset(x: -4)
             // 読み上げはアプリ名。Info.plist の表示名と同じ文言にそろえる
             .accessibilityLabel("こういうのでいいんだよ")
