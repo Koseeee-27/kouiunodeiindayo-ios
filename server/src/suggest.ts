@@ -54,7 +54,8 @@ export function parseLabels(body: unknown): Label[] {
   return valid;
 }
 
-export async function suggest(ai: Ai, allLabels: Label[]): Promise<Suggestion> {
+// apiKey は Vercel AI Gateway の API キー。しきい値の比較先 confidence は、Jev の probabilities[choice]（ADR 0007）。
+export async function suggest(apiKey: string, allLabels: Label[]): Promise<Suggestion> {
   const labels = allLabels.filter((label) => label.confidence >= LABEL_MIN);
   if (labels.length === 0) {
     return { genre: null, tags: [] };
@@ -62,7 +63,7 @@ export async function suggest(ai: Ai, allLabels: Label[]): Promise<Suggestion> {
 
   const strong = labels.filter((label) => label.confidence >= STRONG_MIN).map((label) => label.name);
   const weak = labels.filter((label) => label.confidence < STRONG_MIN).map((label) => label.name);
-  const answers = await askJev(ai, buildState(strong, weak));
+  const answers = await askJev(apiKey, buildState(strong, weak));
 
   const genre =
     answers.genre.choice === "other" || answers.genre.confidence < GENRE_MIN

@@ -22,7 +22,20 @@
   - **Worker の名前は `kouiunodeiindayo-suggest`。** URL は `https://kouiunodeiindayo-suggest.<アカウント名>.workers.dev`（デプロイして出た URL を、#82 の `Config/Local.xcconfig` に書く）
   - **（実装で足したこと）Jev への `state` に「食べ物でないこともある」の 1 行を入れる**（`The photo may or may not show food or drink.`）。下の「リスク」の「なんでも食べ物に寄る」への先回り。強い・弱いが 0 個の行は `(none)` と書く
   - **（実装で足したこと）合言葉の比較は、両方を SHA-256 にしてから `timingSafeEqual` で比べる。** ステップ 9 の「長さを揃える」のやり方。Worker の secret が空のときは、すべて 401 にする
-  - **（実装で足したこと）しきい値は、仮の値のまま入れている（2026-09-26 時点）。** `wrangler dev` で Jev を呼んだら `2021: Insufficient AI Gateway credits` で失敗した（下の「リスク」の 1 つ目）。クレジットを足してから Issue の例で試して直し、ここと `tags.ts` のコメントに値と理由を書く
+  - **しきい値（2026-09-26 夕方に Vercel AI Gateway 経由で 7 例を流して決定）：`LABEL_MIN` 0.05 ／ `STRONG_MIN` 0.30 ／ `DISH_LABEL_MIN` 0.10 ／ `GENRE_MIN` 0.50 ／ `TAG_MIN` 0.50。仮の値のまま採用。** 根拠：Jev の `probabilities[choice]` は偏りが強く、正しい答えは 0.87〜1.0、迷うときは `none` 側に寄る（うどんの cuisine が none 0.56）。0.5〜0.85 のどこに置いても 7 例の結果は同じなので、「残り全部より高い」意味の 0.5 にした。うどん（最大 0.22 で全部「弱い」）でも food 0.97・noodles 0.87 を返したので `STRONG_MIN` 0.30 のままでよい。料理名のラベルは 0.55 以上で `DISH_LABEL_MIN` は効いていない（実機の分布は #82 で見る）。7 例の結果：
+
+    | 例 | genre | tags | Jev の probabilities[choice]（genre／category／cuisine） |
+    |---|---|---|---|
+    | うどん（弱いだけ） | food | noodles | food 0.97／noodles 0.87／none 0.56 |
+    | 天ぷら | food | tempura, fried, japanese | food 1.0／fried 1.0／japanese 1.0 |
+    | 唐揚げ | food | karaage, fried | food 1.0／fried 1.0／none 0.83 |
+    | コーヒー | drink | coffee | drink 1.0／none 1.0／none 0.97 |
+    | ケーキ | dessert | cake | dessert 1.0／none 1.0／none 0.82 |
+    | 食べ物でない | null | （なし） | other 1.0／none 1.0／none 1.0 |
+    | ラーメン（`Soup!` 混じり） | food | ramen, noodles, chinese, japanese | food 1.0／noodles 1.0／japanese 1.0 |
+
+    ラーメンの系統は、対応表（`chinese`）と Jev（`japanese`）の両方が付く（和集合の決まりどおり）。どちらかに寄せるかは #82 で実機の様子を見て決める
+  - **時間切れ `TIMEOUT_MS` は 1200 ms のまま（2026-09-26 夕方）。** 手元（`wrangler dev`）で測った所要時間は 0.3〜0.9 秒（curl の `time_total`。18 回）。ただし起動直後の最初の 1 回は 1.2 秒を超えて時間切れになった（下の「リスク」）
   - **ログに本文を出さない。** `wrangler.jsonc` に `observability` を書かない（Workers Logs を有効にしない）。`console.error` に出すのは、エラーの種類と Workers AI の例外のメッセージだけ。ラベル・Jev の答えは出さない
 - 用語
   - **binding**：Worker から Cloudflare のサービス（ここでは Workers AI）を `env.AI` のように変数として使えるようにする設定。鍵は要らない
@@ -88,9 +101,36 @@
 13. `docs/suggestion-api.md` — 実装して形が変わったところがあれば直す（`suggestion-api.md` の冒頭の決まり）。変えなければ触らない。しきい値の初期値は API の約束ではないので書かない
 14. 検証：下の「完成の確認方法」
 
+## 変更（2026-09-26 夕方）：Jev の呼び先を Vercel AI Gateway に変える（ADR 0007）
+
+Workers AI の Jev はクレジットの決済が通らず呼べなかった（上の「決めたこと」の 3 つ目の「実装で足したこと」）。ADR 0007 のとおり、呼ぶ経路だけを Vercel AI Gateway の HTTP API に変える。上のステップと「提案の決め方」は、次の点だけ読み替える。
+
+- `server/src/jev.ts` — `env.AI.run` をやめ、`fetch` で `POST https://ai-gateway.vercel.sh/v1/evaluate` を呼ぶ
+  - ヘッダ：`Authorization: Bearer ${env.AI_GATEWAY_API_KEY}`、`Content-Type: application/json`
+  - 本文：`{ model: "typesafe-ai/jev", state, questions }`。`state`・`questions` は今のまま（`choice` の `criteria` は「キー → 説明」で同じ）
+  - 時間切れ：`AbortSignal.timeout(1200)` を付ける（アプリの 1.5 秒より先に切って 502 にする）
+  - 答え：`answers[id]` は `{ type: "choice", choice, probabilities }`。`confidence` は無いので、`probabilities[choice]` を `JevAnswer.confidence` に入れる（`probabilities` が無い・数値でないときは throw → 502）。`choice` が選択肢に無いときの throw は今のまま
+  - HTTP が 200 以外のときは、状態コードと `error.message`（あれば）だけを `Error` に入れて throw。本文（ラベル）は入れない
+  - `askJev(apiKey: string, state: string)` に変える（`Ai` 型は使わない）
+- `server/src/index.ts` — `Env` を `{ SUGGEST_TOKEN: string; AI_GATEWAY_API_KEY: string }` に。`AI_GATEWAY_API_KEY` が空なら、Jev を呼ぶ前に 502（`upstream_failed`。`console.error` に「key not set」）
+- `server/src/suggest.ts` — `suggest(apiKey, labels)` に。しきい値の比較先は `confidence`（＝`probabilities[choice]`）のまま
+- `server/wrangler.jsonc` — `ai` binding を消す。`npm run types` をやり直す（`worker-configuration.d.ts` から `AI` が消える）
+- `server/.dev.vars.example` — `SUGGEST_TOKEN` だけのまま。`AI_GATEWAY_API_KEY` は **書かない**（下の「キーの扱い」）
+- `server/scripts/try-suggest.sh` — 変更なし
+- `docs/setup.md` の「7. Worker」 — 手順を差し替える
+  - Vercel のアカウント・AI Gateway のカード登録・API キー（Budget を付ける）の作り方を 3 行で
+  - **キーの扱い**：`.dev.vars` に書かない。手元は、こうせいが AI の入っていない端末で `npm run dev -- --var AI_GATEWAY_API_KEY:<キー>` と打って起動する（`wrangler dev` はシェルの環境変数を Worker に渡さず、`.dev.vars` があると `CLOUDFLARE_INCLUDE_PROCESS_ENV` も効かない。ダミーのキーで Vercel から 401 が返ることを確認済み）。先頭に半角スペースを入れると zsh の履歴に残らない。`--var` はコマンドの引数なので、同じ Mac の `ps` には見える。AI ツールはキーを読まない・ファイルに書かない
+  - 本番：`npx wrangler secret put AI_GATEWAY_API_KEY`（こうせいが端末で実行）と `SUGGEST_TOKEN`、`npm run deploy`
+  - Cloudflare のクレジット不足の項は消す
+- `docs/rules/verification.md` の「5. Worker の確認」 — 「`npm run dev` は人が起動する（キーを `--var` で渡す）。AI は起動しない」を足す
+- `.verification/80/notes.md` — データの扱いを Vercel の分に書き換える（ADR 0007「影響・注意」の出典）
+- しきい値は、Vercel 経由で 7 例を流して決める。値と根拠を `tags.ts` のコメントと上の「決めたこと」に書く
+
 ## リスク
 
-- **Jev が無料枠で呼べないかもしれない**。`typesafe/jev` は third-party のモデルで、Workers AI の無料枠（Neurons）ではなく $ で課金される。`wrangler dev` の最初の 1 回で呼べるかを確かめ、呼べなければ Workers Paid（月 $5）を有効にしてから進める。金額は 1 回数百トークン × $0.042/100 万トークンなので、デモの間に使っても 1 円に満たない
+- **Vercel 側の Jev が 503（`Service temporarily unavailable`）を返すことがある**。2026-09-26 夕方の 18 回中 6 回。所要 0.3 秒で返るので時間切れではない。Worker は 502 にし、アプリは次に仕分けを開いたときに問い合わせ直す（`docs/architecture.md`）。頻度が気になるなら、Worker で 503 のときに 1 回だけ再試行する（0.3 秒 × 2 で 1.2 秒に収まる）案がある。ADR 0007 の「稼働率 95%」の注意のとおり
+- **起動直後の最初の 1 回が遅い**。`wrangler dev` を起動して最初の呼び出しだけ 1.2 秒を超えて時間切れになった（2 回目以降は 0.3〜0.9 秒）。本番の Worker でも同じ可能性がある。アプリ側は問い合わせ直す作りなので、`TIMEOUT_MS` は上げずに 1200 のまま
+- **（解決済み）Jev が無料枠で呼べないかもしれない**。Workers AI 経由はクレジットの決済が通らず、ADR 0007 で Vercel AI Gateway 経由に変えた。以下は当時の記録。`typesafe/jev` は third-party のモデルで、Workers AI の無料枠（Neurons）ではなく $ で課金される。`wrangler dev` の最初の 1 回で呼べるかを確かめ、呼べなければ Workers Paid（月 $5）を有効にしてから進める。金額は 1 回数百トークン × $0.042/100 万トークンなので、デモの間に使っても 1 円に満たない
 - **`wrangler dev` でも Workers AI は本物を呼ぶ**（手元では動かない）。ネットが要り、課金もされる。試すときはスクリプトで回数を絞る
 - **`worker-configuration.d.ts` の `Ai` 型に `typesafe/jev` の入出力が無いかもしれない**。無ければ `jev.ts` の型で受ける（`as` で 1 か所だけ変換し、コメントに理由を書く）。`any` にはしない
 - **Vision のラベル名が対応表と一致しない**（`fried_chicken` か `fried_chicken_dish` かなど）。Worker 側で決めきれないので、#82 で実機のラベルを見て、表（`docs/data-model.md` と `tags.ts`）を両方直す。この Issue では表を data-model.md のとおりに入れる

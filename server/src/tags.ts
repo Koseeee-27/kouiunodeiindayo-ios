@@ -75,16 +75,21 @@ export const CUISINES: Record<CuisineKey, string> = {
   ethnic: "other Asian or ethnic cuisine (Thai, Indian, Vietnamese, Mexican)",
 };
 
-// しきい値。すべて Vision の確信度か Jev の confidence（0〜1）と比べる。
-// 今は仮の値。wrangler dev で Issue #80 の例を試して直す（試した例と結果は PR に書く）。
+// しきい値。LABEL_MIN・STRONG_MIN・DISH_LABEL_MIN は Vision の確信度、GENRE_MIN・TAG_MIN は Jev の probabilities[choice]（0〜1）と比べる。
+// 2026-09-26 に Issue #80 の 7 例を Vercel AI Gateway 経由で流して決めた。例と結果は docs/plans/suggestion-worker.plan.md「決めたこと」。
 
 // これ未満のラベルは捨てて Jev に見せない。雑多な低いラベル（机・食器など）で判断がぶれないように。
+// 0.05：うどんの例の chopsticks 0.08 のような弱い手がかりは残したい。0.03 の table だけの例は Jev を呼ばずに提案なしにできた。
 export const LABEL_MIN = 0.05;
 // これ以上を「強い」、未満を「弱い」として Jev に伝える。
+// 0.30：うどんの例（最大 0.22、全部「弱い」）でも Jev は food 0.97・noodles 0.87 を返したので、弱い扱いでも推せる。料理名のラベル（0.55〜0.8）は「強い」に入る。
 export const STRONG_MIN = 0.3;
 // 料理のタグを付けるのに要る、対応するラベルの確信度。弱すぎる料理名で決めつけないように。
+// 0.10：7 例の料理名のラベルは 0.55 以上で、この値では結果が変わらない。実機のラベルの分布は #82 で見て直す。
 export const DISH_LABEL_MIN = 0.1;
-// Jev のジャンルの confidence がこれ未満なら提案しない。
+// Jev のジャンルの probabilities[choice] がこれ未満なら提案しない。
+// 0.50：7 例の答えは 0.97〜1.0（食べ物でない例は other 1.0）と偏っていて、0.5〜0.9 のどこでも結果は同じ。4 択で「残り全部より高い」意味の 0.5 にした。
 export const GENRE_MIN = 0.5;
-// Jev の大分類・系統の confidence がこれ未満なら足さない。
+// Jev の大分類・系統の probabilities[choice] がこれ未満なら足さない。
+// 0.50：正しい答えは 0.87〜1.0、迷ったときは none 側に寄る（うどんの cuisine：none 0.56）ので、none 以外で 0.5 を超えたものだけ足せば十分。
 export const TAG_MIN = 0.5;

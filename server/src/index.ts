@@ -1,11 +1,12 @@
 // Worker の入口。受け渡しの形とエラーの決まりは docs/suggestion-api.md。
-// 受け取った内容（ラベル・Jev の答え）はログに出さない（ADR 0006）。console.error はエラーの種類と例外のメッセージだけ。
+// 受け取った内容（ラベル・Jev の答え・API キー）はログに出さない（ADR 0006・0007）。console.error はエラーの種類と例外のメッセージだけ。
 
 import { BadRequestError, parseLabels, suggest } from "./suggest";
 
 interface Env {
-  AI: Ai;
   SUGGEST_TOKEN: string;
+  // Vercel AI Gateway の API キー（ADR 0007）。本番は wrangler secret put、手元は人が wrangler dev の --var で渡す（docs/setup.md）。
+  AI_GATEWAY_API_KEY: string;
 }
 
 type ErrorCode = "bad_request" | "unauthorized" | "not_found" | "method_not_allowed" | "upstream_failed";
@@ -66,8 +67,13 @@ export default {
       throw error;
     }
 
+    if (!env.AI_GATEWAY_API_KEY) {
+      console.error("upstream_failed", "AI_GATEWAY_API_KEY not set");
+      return errorResponse(502, "upstream_failed", "model call failed");
+    }
+
     try {
-      return json(await suggest(env.AI, labels));
+      return json(await suggest(env.AI_GATEWAY_API_KEY, labels));
     } catch (error) {
       console.error("upstream_failed", error instanceof Error ? error.message : String(error));
       return errorResponse(502, "upstream_failed", "model call failed");

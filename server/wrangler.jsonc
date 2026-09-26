@@ -1,12 +1,9 @@
-// 中継サーバー（Worker）の設定。アプリから写真のラベルを受け取り、Workers AI の Jev に聞いて提案を返す。
+// 中継サーバー（Worker）の設定。アプリから写真のラベルを受け取り、Vercel AI Gateway 経由の Jev に聞いて提案を返す（ADR 0007）。
 // 受け渡しの形は docs/suggestion-api.md、手順は docs/setup.md。
 // observability（Workers Logs）は書かない。受け取った内容をログに残さないため（ADR 0006）。
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "kouiunodeiindayo-suggest",
   "main": "src/index.ts",
-  "compatibility_date": "2026-09-26",
-  "ai": {
-    "binding": "AI"
-  }
+  "compatibility_date": "2026-09-26"
 }

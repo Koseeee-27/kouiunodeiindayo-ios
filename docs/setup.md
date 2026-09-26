@@ -126,7 +126,7 @@ Xcode 本体が持つ連携。ビルドに加えて、**Apple の公式ドキュ
 ## 7. Worker（中継サーバー）
 
 ジャンルとタグの提案（機能26）のための Cloudflare Worker。コードは `server/`、受け渡しの形は `docs/suggestion-api.md`。
-Cloudflare のアカウントはこうせいのもの。本番へのデプロイも、こうせいが手で行う。
+Jev は Vercel AI Gateway の HTTP API 経由で呼ぶ（理由は `docs/adr/0007`）。Cloudflare と Vercel のアカウントはこうせいのもの。本番へのデプロイも、こうせいが手で行う。
 
 1. 道具を入れる
 
@@ -141,28 +141,37 @@ Cloudflare のアカウントはこうせいのもの。本番へのデプロイ
    openssl rand -base64 32   # 出た長いランダムな文字列を、.dev.vars の SUGGEST_TOKEN に書く
    ```
 
-3. 型の定義を作る（`wrangler.jsonc` を変えたときもやり直す）
+3. Vercel AI Gateway の API キーを用意する（こうせいが行う。1 回だけ）
+   - Vercel のアカウントを作り、AI Gateway の画面でカードを登録する（決済ではなく有効性の確認。無料クレジット $5 が使える）
+   - AI Gateway → API Keys でキーを作る。キーには Budget（使える上限）を付け、ハッカソンが終わったら無効にする
+   - 使うモデルは `typesafe-ai/jev`。ダッシュボードの Models で扱われていることを確かめる
+
+4. 型の定義を作る（`wrangler.jsonc` を変えたときもやり直す）
 
    ```bash
    npm run types
    ```
 
-4. 手元で動かして、確認用のスクリプトで叩く。Workers AI は手元で動かしても本物を呼ぶので、ネットが要り、料金もかかる（`wrangler login` でログインしておく）
+5. 手元で動かして、確認用のスクリプトで叩く。Jev は手元で動かしても Vercel の本物を呼ぶので、ネットが要り、クレジットを使う
+
+   **キーの扱い**：`AI_GATEWAY_API_KEY` は `.dev.vars` に書かない。人が、AI ツールの入っていないターミナルで、`wrangler dev` の `--var` で渡して起動する（`wrangler dev` はシェルの環境変数を Worker に渡さない。`.dev.vars` があると `CLOUDFLARE_INCLUDE_PROCESS_ENV` も効かない）。行の先頭に半角スペースを入れると zsh の履歴に残らない。ただし `--var` はコマンドの引数なので、起動中は同じ Mac の `ps` には見える。AI ツールはキーを読まない・ファイルに書かない・表示しない。AI ツールが行うのは、起動済みの `localhost:8787` に `SUGGEST_TOKEN` で叩くことだけ
 
    ```bash
-   npm run dev
+    npm run dev -- --var AI_GATEWAY_API_KEY:<キー>   # 先頭に半角スペース
    # 別のターミナルで
    SUGGEST_URL=http://localhost:8787 SUGGEST_TOKEN=<.dev.vars の値> scripts/try-suggest.sh
    ```
 
-5. 本番に出す（こうせいが行う）
+6. 本番に出す（こうせいが行う）
 
    ```bash
-   npx wrangler secret put SUGGEST_TOKEN   # 本番の合言葉。手元とは別の値にする
+   npx wrangler secret put AI_GATEWAY_API_KEY   # Vercel の API キー。端末で入力する
+   npx wrangler secret put SUGGEST_TOKEN        # 本番の合言葉。手元とは別の値にする
    npm run deploy
    ```
 
-- Jev の呼び出しが `2021: Insufficient AI Gateway credits` で 502 になる：Jev は third-party のモデルで、Cloudflare の AI Gateway のクレジットから払う。ダッシュボードの AI Gateway の画面の「Credits Available」から足す
+- 提案が全部 502 になる（`wrangler dev` のログに `AI_GATEWAY_API_KEY not set`）：キーを `--var` で渡さずに起動している（環境変数で渡しても届かない）。上の 5 のとおり起動し直す
+- `wrangler dev` のログに `jev http 402` が出る：Vercel のクレジットが尽きている。AI Gateway の画面で残高を足す（自動チャージは初期設定でオフ）
 
 ## 付録：プロジェクトを作る人が、最初に1回だけやること
 
