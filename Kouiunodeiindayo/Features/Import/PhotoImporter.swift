@@ -120,7 +120,7 @@ enum PhotoImporter {
     }
 }
 
-/// 選ばれた項目を 1 枚ずつ取り込む（同時に何枚も縮めない。メモリを抑えるため）。
+/// 選ばれた項目を 1 枚ずつ取り込む（同時に何枚も縮めない。メモリを抑えるため）。データの受け取りだけは先に始めておく（`prefetchCount`）。
 /// テストのために、データの受け取り・準備・判定・保存をクロージャで差し替えられるようにする。本物は `live(store:)`。
 struct PhotoImportRunner<Item> {
     private static var logger: Logger { Logger(category: "PhotoImport") }
@@ -134,42 +134,69 @@ struct PhotoImportRunner<Item> {
     /// 本物は `RecordStore.add(image:takenAt:)` の id
     var save: (UIImage, Date) throws -> UUID
 
+    /// データの受け取りを、今の 1 枚より何枚先まで先に始めるか（同時に動く受け取りは最大 `prefetchCount + 1` 本）。
+    /// 受け取り（iCloud からのダウンロードを含む）は待ちが長く、縮小・判定・保存と重ねられるため（#120）。
+    /// 縮小・判定・保存は今までどおり 1 枚ずつ、選んだ順に行う。汎用の型なので `static let` は置けない
+    static var prefetchCount: Int { 2 }
+
     /// 進み具合は `onProgress(済んだ枚数, 全体)` で 1 枚ごとに知らせる。撮影日時が無い写真は `now()` で保存する
     func run(_ items: [Item], now: () -> Date = { .now }, onProgress: (Int, Int) -> Void) async -> PhotoImportResult {
         var result = PhotoImportResult()
         let start = ContinuousClock.now
+        var timings = StageTimings()
         // 本人が選んだ 1 枚は、食事の判定で除かない（#110）。2 枚以上のときだけ判定する
         let filtersFood = items.count > 1
-        for (index, item) in items.enumerated() {
+        // 受け取りのタスク。受け取ったらすぐ nil にしてデータを手放す（持つのは最大 `prefetchCount + 1` 枚）
+        var loads: [Task<Data?, Error>?] = Array(repeating: nil, count: items.count)
+        func startLoad(_ index: Int) {
+            guard index < items.count else { return }
+            let item = items[index]
+            loads[index] = Task { try await loadData(item) }
+        }
+        for index in 0..<min(Self.prefetchCount + 1, items.count) {
+            startLoad(index)
+        }
+        for index in items.indices {
             defer { onProgress(index + 1, items.count) }
+            let loadStart = ContinuousClock.now
             let data: Data?
             do {
-                data = try await loadData(item)
+                data = try await loads[index]?.value
             } catch {
                 // ファイルの場所などは出さず、種類だけ残す
                 Self.logger.error("取り込み: データを受け取れなかった: \(String(describing: type(of: error)), privacy: .public)")
                 data = nil
             }
+            loads[index] = nil
+            startLoad(index + Self.prefetchCount + 1)
+            timings.addLoad(ContinuousClock.now - loadStart)
             guard let data else {
                 result.failedCount += 1
                 continue
             }
-            guard let prepared = await prepare(data) else {
+            let prepareStart = ContinuousClock.now
+            let prepared = await prepare(data)
+            timings.prepare += ContinuousClock.now - prepareStart
+            guard let prepared else {
                 Self.logger.error("取り込み: 画像として読めなかった")
                 result.failedCount += 1
                 continue
             }
+            let labelStart = ContinuousClock.now
             do {
                 // ファイルに書く前に判定するので、除外した写真はファイルを作らない
                 if filtersFood, !FoodPhotoFilter.isFood(try await labels(prepared.image)) {
+                    timings.label += ContinuousClock.now - labelStart
                     result.excludedCount += 1
                     continue
                 }
             } catch {
                 Self.logger.error("取り込み: 食事らしいかを判定できなかったので取り込む: \(error.localizedDescription, privacy: .public)")
             }
+            timings.label += ContinuousClock.now - labelStart
             // 保存（JPEG の書き出し）はメインで重いので、先に幕の描き直しに譲る
             await Task.yield()
+            let saveStart = ContinuousClock.now
             do {
                 let id = try save(UIImage(cgImage: prepared.image), prepared.takenAt ?? now())
                 result.importedIDs.append(id)
@@ -177,13 +204,37 @@ struct PhotoImportRunner<Item> {
                 Self.logger.error("取り込み: 保存できなかった: \(error.localizedDescription, privacy: .public)")
                 result.failedCount += 1
             }
+            timings.save += ContinuousClock.now - saveStart
         }
-        let elapsed = (ContinuousClock.now - start).components
-        let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
+        // 写真の場所・ラベル・中身は出さない。秒数と枚数だけ
         Self.logger.info(
-            "取り込み: \(items.count) 枚 \(seconds, format: .fixed(precision: 1)) 秒（取り込み \(result.importedIDs.count)・除外 \(result.excludedCount)・読めなかった \(result.failedCount)）"
+            "取り込み: \(items.count) 枚 \(StageTimings.seconds(ContinuousClock.now - start), privacy: .public) 秒（取り込み \(result.importedIDs.count)・除外 \(result.excludedCount)・読めなかった \(result.failedCount)）\(timings.summary, privacy: .public)"
         )
         return result
+    }
+}
+
+/// 取り込みの段ごとの時間の合計（ログ用。#120）。受け取りは、先読みで待たずに済んだぶんは短くなる
+private struct StageTimings {
+    var load: Duration = .zero
+    /// 受け取りを一番長く待った 1 枚（iCloud にしか無い写真の見当に使う）
+    var longestLoad: Duration = .zero
+    var prepare: Duration = .zero
+    var label: Duration = .zero
+    var save: Duration = .zero
+
+    mutating func addLoad(_ duration: Duration) {
+        load += duration
+        longestLoad = max(longestLoad, duration)
+    }
+
+    var summary: String {
+        "受け取り 合計 \(Self.seconds(load)) 秒（最大 \(Self.seconds(longestLoad)) 秒）・縮小 \(Self.seconds(prepare)) 秒・判定 \(Self.seconds(label)) 秒・保存 \(Self.seconds(save)) 秒"
+    }
+
+    static func seconds(_ duration: Duration) -> String {
+        let components = duration.components
+        return String(format: "%.2f", Double(components.seconds) + Double(components.attoseconds) / 1e18)
     }
 }
 
