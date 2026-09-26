@@ -14,6 +14,8 @@ struct RootView: View {
     /// ホームでアルバムから取り込んでいる間の進み具合。ページャーと下タブの上に幕を重ね、どちらも触れなくする
     /// （取り込み中は触れない。終わったときにホームが仕分けのカバーを出すので、カメラ・一覧の仕分けのカバーと重ならないように）
     @State private var importProgress: PhotoImportProgress?
+    /// 一覧で記録を選んでいる間（まとめて消す。#118）。下タブを隠し（一覧が同じ場所に消すの操作を出す）、ホームへめくれなくする
+    @State private var isListSelecting = false
 
     private var isImporting: Bool { importProgress != nil }
 
@@ -31,7 +33,7 @@ struct RootView: View {
             TabView(selection: $page) {
                 HomeView(onTakePhoto: { select(.camera) }, onImportProgressChange: { importProgress = $0 })
                     .tag(RootTab.home)
-                RecordListView()
+                RecordListView(onSelectingChange: { isListSelecting = $0 })
                     .tag(RootTab.list)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -40,6 +42,7 @@ struct RootView: View {
             .contentMargins(.bottom, tabBarHeight + bottomSafeArea, for: .scrollContent)
             // `contentMargins` はスクロールする中身にしか効かない。スクロールしない版のホームは、この値で下を空ける
             .environment(\.tabBarInset, tabBarHeight + bottomSafeArea)
+            .environment(\.rootBottomSafeArea, bottomSafeArea)
             // 取り込み中は、幕の下のホーム・一覧を読み上げの対象から外す（幕の `isModal` と二重に）
             .accessibilityHidden(isImporting)
             // `onSelect: select` と関数名だけを渡すと、Xcode 27 のプレビューがビルドに失敗する
@@ -49,7 +52,10 @@ struct RootView: View {
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.height) { tabBarHeight = $0 }
             // 取り込み中は、幕の下で押せなくする（読み上げからも）
-            .disabled(isImporting)
+            .disabled(isImporting || isListSelecting)
+            // 一覧で選んでいる間は隠す。高さは測り続けるよう、消さずに透明にする
+            .opacity(isListSelecting ? 0 : 1)
+            .accessibilityHidden(isListSelecting)
         }
         .overlay {
             if let importProgress {
@@ -66,6 +72,12 @@ struct RootView: View {
         }
         // キャンセルと仕分け終了は、どちらもホームへ（`docs/screen-design.md` の「画面のつながり」）。
         // `onDismiss` だと閉じ終わってから切り替わり、一覧から開いたときに一覧が一瞬見える
+        // 一覧で選んでいる間は、ホームへ横にめくっても一覧に戻す（ページャーの横スワイプは、#102 で `scrollDisabled` が効かなかった）
+        .onChange(of: page) { _, newPage in
+            if isListSelecting && newPage != .list {
+                page = .list
+            }
+        }
         .onChange(of: isCameraShown) { _, isShown in
             if !isShown {
                 page = .home
@@ -76,8 +88,8 @@ struct RootView: View {
     /// カメラのカバーが出ている間はバーが隠れるので、ここに来るのはカバーが閉じているときだけ。
     /// カバーを閉じたあとホームへ戻すのは `onChange(of: isCameraShown)` の1か所に任せる。
     private func select(_ tab: RootTab) {
-        // 取り込み中は動かない（読み上げの操作からも）
-        guard !isImporting else { return }
+        // 取り込み中・一覧で選んでいる間は動かない（読み上げの操作からも）
+        guard !isImporting && !isListSelecting else { return }
         withAnimation {
             if tab == .camera {
                 isCameraShown = true
@@ -105,4 +117,7 @@ extension EnvironmentValues {
     /// 画面の下から、下タブの上端までの高さ（下タブ ＋ 下のセーフエリア）。
     /// ページャーは下タブの裏まで広がるので、スクロールしない中身はこの分だけ下を空ける（`RootView` が入れる）
     @Entry var tabBarInset: CGFloat = 0
+    /// 画面の下のセーフエリア（ホームインジケーター）の高さ。一覧の選ぶモードで、消すの操作を下タブと同じ位置に置くのに使う
+    /// （`RootView` が入れる。`nil` は `RootView` の外＝プレビューなど）
+    @Entry var rootBottomSafeArea: CGFloat? = nil
 }

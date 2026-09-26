@@ -112,6 +112,28 @@ struct RecordStore {
         deletePhotos(id: id, photoFileName: photoFileName)
     }
 
+    /// まとめて消す（一覧の選ぶモード）。記録を全部消してから 1 回だけ保存し、そのあと写真とサムネイルのファイルを消す。
+    /// 保存に失敗したら全部取り消して投げ直す（一部だけ消えた状態にしない）。ファイルの削除に失敗しても記録は戻さない（ログに残す）。
+    func delete(_ records: [Record]) throws {
+        guard !records.isEmpty else { return }
+        // 記録を消したあとでは読めないので、先に控える
+        let files = records.map { (id: $0.id, photoFileName: $0.photoFileName) }
+        for record in records {
+            modelContext.delete(record)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            // 削除が「予定」のまま残ると、あとの自動保存で記録だけ消えて写真ファイルが残る。削除を取り消してから投げ直す
+            Self.logger.error("記録をまとめて消せなかった: \(error.localizedDescription, privacy: .public)")
+            modelContext.rollback()
+            throw error
+        }
+        for file in files {
+            deletePhotos(id: file.id, photoFileName: file.photoFileName)
+        }
+    }
+
     /// すべての記録と、写真・サムネイルのファイルを消す。
     func deleteAll() throws {
         // `modelContext.delete(model:)` はバッチ削除で `@Query` の画面が更新されないので、1 件ずつ消す
