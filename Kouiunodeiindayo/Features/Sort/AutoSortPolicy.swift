@@ -19,6 +19,15 @@ enum AutoSortPolicy {
         records.first(where: isEligible)
     }
 
+    /// `id` の写真を先頭に出した並び（おまかせで次に飛ばす写真を先頭に出す）。`id` が nil・並びに無いときはそのまま。
+    /// ほかの写真の順は変えない
+    static func movingToFront<Item: Identifiable>(_ items: [Item], id: Item.ID?) -> [Item] {
+        guard let id, let index = items.firstIndex(where: { $0.id == id }) else { return items }
+        var reordered = items
+        reordered.insert(reordered.remove(at: index), at: 0)
+        return reordered
+    }
+
     /// 任せられる写真の枚数（ボタンに添える数）。
     static func eligibleCount(in records: [Record]) -> Int {
         records.count(where: isEligible)

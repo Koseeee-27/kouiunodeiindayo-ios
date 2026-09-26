@@ -60,6 +60,29 @@ struct AutoSortPolicyTests {
         #expect(AutoSortPolicy.eligibleCount(in: records) == 0)
     }
 
+    // MARK: 先頭に出す
+
+    private struct Item: Identifiable, Equatable {
+        let id: Int
+    }
+
+    @Test func 途中の写真を先頭に出しほかの順は変えない() {
+        let items = [1, 2, 3, 4].map(Item.init)
+        #expect(AutoSortPolicy.movingToFront(items, id: 3).map(\.id) == [3, 1, 2, 4])
+    }
+
+    @Test func 先頭にあればそのまま() {
+        let items = [1, 2, 3].map(Item.init)
+        #expect(AutoSortPolicy.movingToFront(items, id: 1).map(\.id) == [1, 2, 3])
+    }
+
+    @Test func idがnilか並びに無ければそのまま() {
+        let items = [1, 2, 3].map(Item.init)
+        #expect(AutoSortPolicy.movingToFront(items, id: nil).map(\.id) == [1, 2, 3])
+        #expect(AutoSortPolicy.movingToFront(items, id: 9).map(\.id) == [1, 2, 3])
+        #expect(AutoSortPolicy.movingToFront([Item](), id: 1).isEmpty)
+    }
+
     @Test func 提案のジャンルから向きを引く() {
         #expect(SwipeDirection(suggestedGenre: .food) == .up)
         #expect(SwipeDirection(suggestedGenre: .drink) == .left)
