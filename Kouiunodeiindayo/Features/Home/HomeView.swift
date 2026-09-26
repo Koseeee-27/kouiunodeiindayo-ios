@@ -68,6 +68,9 @@ struct HomeView: View {
         }
     }
 
+    /// 「今日の一枚」の見出しと写真の間、写真と「最近の写真」の見出しの間の最小の余白（pt）
+    private static let todayPhotoGap: CGFloat = 12
+
     /// 1画面に収める版で、今日の一枚をこれより小さくしない（pt）。これを取れないときはスクロールする版にする
     private static let todayPhotoMinHeight: CGFloat = 200
 
@@ -84,17 +87,17 @@ struct HomeView: View {
                     .padding(.horizontal, -Self.contentPadding)
                     .accessibilityHidden(true)
             }
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 0) {
                 if !unsortedRecords.isEmpty {
                     sortEntry
+                        .padding(.bottom, 16)
                 }
+                // 残りの高さを全部受け取る。写真は「今日の一枚」と「最近の写真」の見出しの真ん中に置き、最近の写真は一番下に置く
+                // （今日の一枚が無いときも同じ位置）
                 todaySection(fillsHeight: fillsHeight)
+                    .frame(maxHeight: fillsHeight ? .infinity : nil)
                     // ほかの要素より先に、残りの高さを受け取る
                     .layoutPriority(1)
-                // 余りは、今日の一枚と最近の写真の間に空けて、最近の写真を一番下に置く（今日の一枚が無いときも同じ位置）
-                if fillsHeight {
-                    Spacer(minLength: 0)
-                }
                 if !recentRecords.isEmpty {
                     recentSection
                 }
@@ -119,7 +122,7 @@ struct HomeView: View {
             } label: {
                 Image(systemName: "gearshape")
                     // ロゴより小さく、目立たない色にする（押せる範囲は 44pt のまま）
-                    .font(Theme.font(.body))
+                    .font(Theme.font(.title3))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
@@ -139,23 +142,33 @@ struct HomeView: View {
         Group {
             if let record = todayRecord {
                 // 見出しは、写真の左端にそろえる。写真が高さで決まって横幅より細いときは、見出しごと左右の真ん中に置く
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
                     todayHeading
+                    // 写真の上下の余白。余りは上下に半分ずつ入る
+                    Spacer(minLength: Self.todayPhotoGap)
                     Button {
                         selectedRecord = record
                     } label: {
                         // 3:4 の枠いっぱいに広げて切り抜く（横長の写真は左右が切れる）。大きさは横幅いっぱいが上限
-                        RecordPhotoView(record: record, kind: .photo, showsFavoriteLabel: true)
+                        RecordPhotoView(record: record, kind: .photo)
                             .aspectRatio(Theme.photoAspectRatio, contentMode: .fit)
                             .photoFrame(.main)
+                            // 「うまい」は、一覧・最近の写真と同じ、枠から少しはみ出す右肩下がりの形（枠のあとに重ねる）
+                            .listFavoriteBadge(
+                                isFavorite: record.isFavorite, relativeWidth: Theme.todayFavoriteBadgeWidthRatio)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("今日の一枚\(Self.favoriteSuffix(record))。記録の詳細を開く")
+                    // 大きさは、デザインの画像の比率に合わせて、画面の横幅に対する割合で決める（高さは 3:4 で決まる）
+                    .containerRelativeFrame(.horizontal) { length, _ in length * Theme.todayPhotoWidthRatio }
                     // 1画面に収まるかを測るときは、最小の高さで測る（`ViewThatFits` は理想の大きさで比べる）
                     .frame(
                         minHeight: fillsHeight ? Self.todayPhotoMinHeight : nil,
                         idealHeight: fillsHeight ? Self.todayPhotoMinHeight : nil
                     )
+                    // 写真は余白より先に、高さを受け取る
+                    .layoutPriority(1)
+                    Spacer(minLength: Self.todayPhotoGap)
                 }
                 .frame(maxWidth: .infinity)
             } else {

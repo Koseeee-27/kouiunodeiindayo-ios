@@ -77,19 +77,31 @@ extension View {
     /// 一覧のサムネイルの右上に、お気に入りの「うまい」の絵を、写真の枠から少しはみ出るように重ねる。
     /// 枠（`photoFrame`）は中身を切り抜くので、枠を付けたあとに呼ぶ。絵は右下がりに傾ける。
     /// 右隣の写真より手前に描くには、呼ぶ側で、グリッドの直下の `Button` に `zIndex` を付ける（`Button` の中の `zIndex` は、グリッドの並びに効かない）
-    func listFavoriteBadge(isFavorite: Bool) -> some View {
+    /// 絵の幅は、`relativeWidth` があれば、画面（外側の入れ物）の横幅に対する割合、無ければ一覧の幅（`Theme.listFavoriteBadgeWidth`）。
+    /// ずらす量は、絵の幅に対する、一覧と同じ割合。
+    func listFavoriteBadge(isFavorite: Bool, relativeWidth: CGFloat? = nil) -> some View {
         overlay(alignment: .topTrailing) {
             if isFavorite {
-                Image(.umaiBadge)
+                let offsetXRatio = Theme.listFavoriteBadgeOffsetX / Theme.listFavoriteBadgeWidth
+                let offsetYRatio = Theme.listFavoriteBadgeOffsetY / Theme.listFavoriteBadgeWidth
+                let badge = Image(.umaiBadge)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: Theme.listFavoriteBadgeWidth)
-                    .rotationEffect(Theme.listFavoriteTilt)
-                    // 右上の角から、右と下へずらす（傾きで、上と右の枠を少し越える）
-                    .offset(x: Theme.listFavoriteBadgeOffsetX, y: Theme.listFavoriteBadgeOffsetY)
-                    // 隣の写真のタップを奪わない。読み上げは呼ぶ側の `Button` のラベルに含める
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                Group {
+                    if let relativeWidth {
+                        badge.containerRelativeFrame(.horizontal) { length, _ in length * relativeWidth }
+                    } else {
+                        badge.frame(width: Theme.listFavoriteBadgeWidth)
+                    }
+                }
+                .rotationEffect(Theme.listFavoriteTilt)
+                // 右上の角から、右と下へずらす（傾きで、上と右の枠を少し越える）。ずらす量は絵の幅に比例させる
+                .visualEffect { content, proxy in
+                    content.offset(x: proxy.size.width * offsetXRatio, y: proxy.size.width * offsetYRatio)
+                }
+                // 隣の写真のタップを奪わない。読み上げは呼ぶ側の `Button` のラベルに含める
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
         }
     }
