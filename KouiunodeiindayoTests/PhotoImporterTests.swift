@@ -293,33 +293,39 @@ struct PhotoImporterTests {
 
     // MARK: 件数の文言
 
+    @Test func 件数の1行は2桁以上の数字も全角にする() {
+        let result = PhotoImportResult(importedIDs: (0..<12).map { _ in UUID() }, excludedCount: 30)
+        #expect(result.summaryText == "取り込み１２枚 / 除外３０枚")
+        #expect(result.summaryAccessibilityLabel == "取り込み12枚、除外30枚")
+    }
+
     @Test func 件数の1行と読み上げ() {
         let result = PhotoImportResult(importedIDs: [UUID(), UUID()], excludedCount: 1)
-        #expect(result.summaryText == "取り込み 2 枚 ／ 除外 1 枚")
-        #expect(result.summaryAccessibilityLabel == "取り込み 2 枚、除外 1 枚")
+        #expect(result.summaryText == "取り込み２枚 / 除外１枚")
+        #expect(result.summaryAccessibilityLabel == "取り込み2枚、除外1枚")
         let failed = PhotoImportResult(importedIDs: [UUID()], excludedCount: 0, failedCount: 2)
-        #expect(failed.summaryText == "取り込み 1 枚 ／ 除外 0 枚 ／ 読めなかった 2 枚")
-        #expect(failed.summaryAccessibilityLabel == "取り込み 1 枚、除外 0 枚、読めなかった 2 枚")
+        #expect(failed.summaryText == "取り込み１枚 / 除外０枚 / 読めなかった２枚")
+        #expect(failed.summaryAccessibilityLabel == "取り込み1枚、除外0枚、読めなかった2枚")
     }
 
     @Test func 全部除外のアラート() {
         let result = PhotoImportResult(excludedCount: 3)
         #expect(result.emptyAlertTitle == "食事の写真が見つかりませんでした")
-        #expect(result.emptyAlertMessage == "除外 3 枚")
-        #expect(result.emptyAlertAccessibilityLabel == "除外 3 枚")
+        #expect(result.emptyAlertMessage == "除外３枚")
+        #expect(result.emptyAlertAccessibilityLabel == "除外3枚")
     }
 
     @Test func 全部読めなかったときのアラートは題を分ける() {
         let result = PhotoImportResult(excludedCount: 0, failedCount: 2)
         #expect(result.emptyAlertTitle == "写真を読み込めませんでした")
-        #expect(result.emptyAlertMessage == "除外 0 枚 ／ 読めなかった 2 枚")
-        #expect(result.emptyAlertAccessibilityLabel == "除外 0 枚、読めなかった 2 枚")
+        #expect(result.emptyAlertMessage == "除外０枚 / 読めなかった２枚")
+        #expect(result.emptyAlertAccessibilityLabel == "除外0枚、読めなかった2枚")
     }
 
     @Test func 除外と読めなかったが混ざったアラートは食事の題() {
         let result = PhotoImportResult(excludedCount: 1, failedCount: 1)
         #expect(result.emptyAlertTitle == "食事の写真が見つかりませんでした")
-        #expect(result.emptyAlertMessage == "除外 1 枚 ／ 読めなかった 1 枚")
+        #expect(result.emptyAlertMessage == "除外１枚 / 読めなかった１枚")
     }
 
     // MARK: 道具
