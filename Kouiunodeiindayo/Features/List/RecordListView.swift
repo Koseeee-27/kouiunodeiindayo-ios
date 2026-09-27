@@ -43,6 +43,10 @@ struct RecordListView: View {
     @State private var selectedIDs: Set<UUID> = []
     @State private var isDeleteConfirmationShown = false
     @State private var isDeleteFailureShown = false
+    /// 写真アプリに保存している間は、ボタンを押せなくする
+    @State private var isSavingToPhotos = false
+    /// 写真アプリに保存した結果の知らせ
+    @State private var saveMessage: String?
     @Environment(\.modelContext) private var modelContext
     @Environment(\.photoStorage) private var photoStorage
     /// 画面の下のセーフエリア（`RootView` が入れる）。消すの操作を下タブと同じ位置に出すのに使う。`nil` はプレビューなど `RootView` の外
@@ -175,6 +179,11 @@ struct RecordListView: View {
         .alert("消せませんでした", isPresented: $isDeleteFailureShown) {
             Button("OK", role: .cancel) {}
         }
+        .alert(
+            saveMessage ?? "", isPresented: Binding(get: { saveMessage != nil }, set: { if !$0 { saveMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        }
         .onChange(of: isSelecting) { _, selecting in
             // 選んでいる間に結果が届いて一覧が変わり、選んだ写真が外れないように、聞いている途中の検索はやめる
             if selecting {
@@ -291,14 +300,34 @@ struct RecordListView: View {
         }
     }
 
-    /// 下タブの代わりに出す操作のバー（今は「消す」だけ）。下タブと同じ位置・同じガラスの見た目・同じ高さにする
+    /// 下タブの代わりに出す操作のバー（「保存」と「消す」）。下タブと同じ位置・同じガラスの見た目・同じ高さにする
     private var actionBar: some View {
-        Button {
-            isDeleteConfirmationShown = true
-        } label: {
+        HStack(spacing: 0) {
+            actionButton("保存", systemImage: "square.and.arrow.down", tint: Theme.textPrimary) {
+                saveSelectedToPhotos()
+            }
+            .disabled(selectedIDs.isEmpty || isSavingToPhotos)
+            .accessibilityLabel("選んだ記録の写真を写真アプリに保存する")
+            actionButton("消す", systemImage: "trash", tint: Theme.accent) {
+                isDeleteConfirmationShown = true
+            }
+            .disabled(selectedIDs.isEmpty || isSavingToPhotos)
+            .accessibilityLabel("選んだ記録を消す")
+        }
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 16)
+        // `RootView` の中では、ページャーが画面の下まで広がっているので、下タブと同じくセーフエリアの上に置く
+        .padding(.bottom, rootBottomSafeArea ?? 0)
+        .ignoresSafeArea(edges: rootBottomSafeArea == nil ? [] : .bottom)
+    }
+
+    private func actionButton(_ title: String, systemImage: String, tint: Color, action: @escaping () -> Void)
+        -> some View
+    {
+        Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: "trash")
-                Text("消す")
+                Image(systemName: systemImage)
+                Text(title)
                     .font(Theme.font(.caption2))
             }
             .frame(maxWidth: .infinity)
@@ -306,14 +335,21 @@ struct RecordListView: View {
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selectedIDs.isEmpty ? Theme.textSecondary : Theme.accent)
-        .disabled(selectedIDs.isEmpty)
-        .glassEffect(.regular, in: .capsule)
-        .padding(.horizontal, 16)
-        // `RootView` の中では、ページャーが画面の下まで広がっているので、下タブと同じくセーフエリアの上に置く
-        .padding(.bottom, rootBottomSafeArea ?? 0)
-        .ignoresSafeArea(edges: rootBottomSafeArea == nil ? [] : .bottom)
-        .accessibilityLabel("選んだ記録を消す")
+        .foregroundStyle(selectedIDs.isEmpty ? Theme.textSecondary : tint)
+    }
+
+    /// 選んだ記録の写真を写真アプリに保存する（設定のスイッチとは関係なく保存する）。1 枚でも保存できたら選ぶモードを抜ける
+    private func saveSelectedToPhotos() {
+        let urls = displayed.filter { selectedIDs.contains($0.id) }.map { store.photoURL(fileName: $0.photoFileName) }
+        isSavingToPhotos = true
+        Task {
+            let outcome = await PhotoLibrarySaver.save(fileURLs: urls)
+            isSavingToPhotos = false
+            if case .finished(let saved, _) = outcome, saved > 0 {
+                endSelecting()
+            }
+            saveMessage = PhotoLibrarySaver.message(for: outcome)
+        }
     }
 
     private func toggleSelection(_ record: Record) {

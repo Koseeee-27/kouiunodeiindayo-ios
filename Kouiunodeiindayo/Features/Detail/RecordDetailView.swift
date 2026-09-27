@@ -77,6 +77,10 @@ struct RecordDetailPageView: View {
     @State private var isDeleted = false
     /// タグの一覧（シート）を開いているか
     @State private var isTagPickerShown = false
+    /// 写真アプリに保存している間は、ボタンを押せなくする
+    @State private var isSavingToPhotos = false
+    /// 写真アプリに保存した結果の知らせ
+    @State private var saveMessage: String?
 
     private var store: RecordStore {
         RecordStore(modelContext: modelContext, photoStorage: photoStorage)
@@ -115,6 +119,11 @@ struct RecordDetailPageView: View {
         .alert("消せませんでした", isPresented: $isDeleteFailureShown) {
             Button("OK", role: .cancel) {}
         }
+        .alert(
+            saveMessage ?? "", isPresented: Binding(get: { saveMessage != nil }, set: { if !$0 { saveMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        }
         .sheet(isPresented: $isTagPickerShown) {
             TagPickerView(record: record)
         }
@@ -127,6 +136,7 @@ struct RecordDetailPageView: View {
             HStack {
                 closeButton
                 Spacer()
+                saveButton
                 moreMenu
             }
             Spacer(minLength: Self.blockGap)
@@ -291,6 +301,27 @@ struct RecordDetailPageView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("閉じる")
+    }
+
+    /// 右上の「…」の左。この記録の写真を写真アプリに保存する（設定のスイッチとは関係なく保存する）
+    private var saveButton: some View {
+        Button {
+            let url = store.photoURL(fileName: record.photoFileName)
+            isSavingToPhotos = true
+            Task {
+                let outcome = await PhotoLibrarySaver.save(fileURLs: [url])
+                isSavingToPhotos = false
+                saveMessage = PhotoLibrarySaver.message(for: outcome)
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.down")
+                .font(Theme.font(.title2))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(isSavingToPhotos)
+        .accessibilityLabel("写真アプリに保存")
     }
 
     /// 右上の「…」。中に「記録を消す」を置く（日付を直す（機能13）を作ったら、ここに足す）。押すと確認が出る
