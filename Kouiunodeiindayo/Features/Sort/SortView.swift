@@ -620,3 +620,55 @@ struct SortView: View {
         .environment(\.photoStorage, SampleData.photoStorage)
         .environment(\.suggestionService, SuggestionMock.ramen.immediate)
 }
+
+// 写真の形の見比べ（#108）。手前の写真を縦長・横長・正方形にして、ふつうの幅と SE 相当で並べる。提案（ラーメン）あり。
+// 後ろは縦長の写真（青緑）
+private func shapedSortPreview(front: CGSize, back: CGSize = SortPreviewData.portraitSize, dragOffset: CGSize = .zero)
+    -> some View
+{
+    SortView(dragOffset: dragOffset)
+        .modelContainer(SortPreviewData.makeShapedContainer(front: front, back: back))
+        .environment(\.photoStorage, SampleData.photoStorage)
+        .environment(\.suggestionService, SuggestionMock.ramen.immediate)
+}
+
+#Preview("縦長・ふつう") {
+    shapedSortPreview(front: SortPreviewData.portraitSize)
+}
+
+#Preview("横長・ふつう") {
+    shapedSortPreview(front: SortPreviewData.landscapeSize)
+}
+
+#Preview("正方形・ふつう") {
+    shapedSortPreview(front: SortPreviewData.squareSize)
+}
+
+#Preview("縦長・SE 相当") {
+    shapedSortPreview(front: SortPreviewData.portraitSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("横長・SE 相当") {
+    shapedSortPreview(front: SortPreviewData.landscapeSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("正方形・SE 相当") {
+    shapedSortPreview(front: SortPreviewData.squareSize)
+        .frame(width: 375, height: 667)
+}
+
+#Preview("横長・ドラッグ途中") {
+    shapedSortPreview(front: SortPreviewData.landscapeSize, dragOffset: CGSize(width: 85, height: -10))
+}
+
+/// 手前と後ろの形が違うときの重なり。後ろの横長のカードが、手前の縦長のカードの下からどうのぞくか
+#Preview("縦長の後ろに横長") {
+    shapedSortPreview(front: SortPreviewData.portraitSize, back: SortPreviewData.landscapeSize)
+}
+
+/// 手前が横長・後ろが横長（アルバムから横長の写真を続けて取り込んだとき）
+#Preview("横長の後ろに横長") {
+    shapedSortPreview(front: SortPreviewData.landscapeSize, back: SortPreviewData.landscapeSize)
+}

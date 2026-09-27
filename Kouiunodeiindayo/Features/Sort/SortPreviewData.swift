@@ -96,6 +96,28 @@ enum SortPreviewData {
         return container
     }
 
+    /// 写真の形の見比べ用（#108）。手前が `front`、後ろが `back` の形の写真の仕分け待ち 2 件に、ラーメンの提案を付けたもの。
+    /// 形が分かるよう、格子と丸を描いた写真にする（後ろは色を変えて、手前と見分けられるようにする）
+    static func makeShapedContainer(front: CGSize, back: CGSize) -> ModelContainer {
+        let container = SampleData.makeContainer()
+        let store = RecordStore(modelContext: container.mainContext, photoStorage: SampleData.photoStorage)
+        let images = [
+            HomePreviewData.makeShapedImage(size: front),
+            HomePreviewData.makeShapedImage(size: back, color: .systemTeal),
+        ]
+        for (index, image) in images.enumerated() {
+            // 手前を一番新しくする。プレビュー用なので、作れなければ落として気づく
+            let record = try! store.add(image: image, takenAt: .now.addingTimeInterval(-60 * Double(index)))
+            store.saveSuggestion(genre: .food, tags: [.ramen, .noodles, .chinese], for: record.id)
+        }
+        return container
+    }
+
+    /// 写真の形の見比べで使う大きさ（縦長 3:4・横長 4:3・正方形）
+    static let portraitSize = CGSize(width: 1200, height: 1600)
+    static let landscapeSize = CGSize(width: 1600, height: 1200)
+    static let squareSize = CGSize(width: 1400, height: 1400)
+
     private static func makeLandscapeImage() -> UIImage {
         let size = CGSize(width: 1600, height: 1200)
         let format = UIGraphicsImageRendererFormat.default()

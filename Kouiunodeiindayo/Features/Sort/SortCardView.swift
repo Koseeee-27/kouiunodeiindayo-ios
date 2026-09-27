@@ -2,20 +2,50 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 仕分けの写真 1 枚のカード。3:4 のカード（大きさは `SortCardStackView` が決める）。縦の写真はいっぱい、横長は上下が無地。
+/// 仕分けの写真 1 枚のカード。渡された 3:4 の場所（大きさは `SortCardStackView` が決める）の真ん中に、写真の形のカードを置く。
+/// 縦長・横長・正方形のどれでも、写真を切らずに全体を出し、枠と右上の「う、うまい」は写真の形のカードに付ける。場所の余りは透明。
 /// 右上の「う、うまい」でお気に入りを付け外しする（写真は次に進まない）。ドラッグと仕分けは `SortCardStackView` が持つ。
 struct SortCardView: View {
     let record: Record
     /// カードが飛んでいる間は false にして、「う、うまい」を押せなくする
     let isFavoriteEnabled: Bool
     let onToggleFavorite: () -> Void
+    /// 写真を読み込んだとき、その縦横比（幅 ÷ 高さ）を知らせる。`SortCardStackView` が縁のラベルをカードの形に合わせるのに使う
+    var onPhotoAspect: (CGFloat) -> Void = { _ in }
+    /// カードを収める枠の縦横比。nil なら渡された場所（3:4）いっぱいに収める。
+    /// 後ろのカードは手前のカードの形を渡し、その中に収めて、手前の縁からはみ出さないようにする（`SortCardStackView`）
+    var boxAspectRatio: CGFloat? = nil
 
     @Environment(\.photoStorage) private var photoStorage
     @State private var photo: UIImage?
 
+    /// カードの縦横比。読み込む前は 3:4（今までのカードと同じ形）
+    private var aspectRatio: CGFloat {
+        photo.flatMap(Self.aspectRatio(of:)) ?? Theme.photoAspectRatio
+    }
+
     var body: some View {
-        // 写真の縦横比は崩さない。全体が見えるよう `scaledToFit` で真ん中に置き、余り（横長の写真の上下）はカードの地のまま。
-        // 写真が大きさを決めないよう、地の上に重ねる
+        // 場所いっぱいを取り、その真ん中に写真の形のカードを置く。余りは透明で、押しても何も起きない（ドラッグも始まらない）
+        // 枠は、あり・なしで別のビューにせず、いつも同じ形のビューで比だけを変える。後ろのカードが手前に来て枠が外れるとき、
+        // 別のビューだと 2 枚が薄く重なって切り替わるが、同じビューなら大きさがバネで広がる（`SortCardStackView` の `withAnimation`）。
+        // 枠なしは場所と同じ 3:4 なので、今までと同じ大きさになる
+        Color.clear
+            .overlay {
+                Color.clear
+                    .aspectRatio(boxAspectRatio ?? Theme.photoAspectRatio, contentMode: .fit)
+                    .overlay { card }
+            }
+            // ドラッグ中は毎フレーム `body` が呼ばれるので、ファイルは記録が変わったときだけ読む
+            .task(id: record.id) {
+                photo = photoStorage.photo(fileName: record.photoFileName)
+                if let photo, let aspect = Self.aspectRatio(of: photo) {
+                    onPhotoAspect(aspect)
+                }
+            }
+    }
+
+    /// 写真の形のカード。地は読み込む前の見た目と、ドラッグを受ける面を兼ねる（写真は押す判定から外している）
+    private var card: some View {
         Theme.surface
             .overlay {
                 if let photo {
@@ -26,14 +56,17 @@ struct SortCardView: View {
                         .accessibilityLabel("仕分ける写真")
                 }
             }
+            .aspectRatio(aspectRatio, contentMode: .fit)
             .photoFrame(.main)
             .overlay(alignment: .topTrailing) {
                 favoriteButton
             }
-            // ドラッグ中は毎フレーム `body` が呼ばれるので、ファイルは記録が変わったときだけ読む
-            .task(id: record.id) {
-                photo = photoStorage.photo(fileName: record.photoFileName)
-            }
+    }
+
+    /// 写真の縦横比（幅 ÷ 高さ）。大きさが 0 の壊れた写真では nil（3:4 のままにする）
+    static func aspectRatio(of photo: UIImage) -> CGFloat? {
+        guard photo.size.width > 0, photo.size.height > 0 else { return nil }
+        return photo.size.width / photo.size.height
     }
 
     /// 「う、うまい」の絵の幅（pt）
