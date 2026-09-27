@@ -18,9 +18,9 @@ struct PhotoImportResult: Identifiable {
 }
 
 extension PhotoImportResult {
-    /// 仕分けの上の 1 行。「取り込み n 枚 ／ 除外 m 枚」。読めなかった写真があるときだけ「／ 読めなかった k 枚」を足す
+    /// 仕分けの上の 1 行。「取り込みn枚／除外m枚」。読めなかった写真があるときだけ「／読めなかったk枚」を足す。詰めて見せるため、空白は入れない
     var summaryText: String {
-        countTexts(includesImported: true).joined(separator: " ／ ")
+        countTexts(includesImported: true).joined(separator: "／")
     }
 
     /// `summaryText` の読み上げ。「／」を読ませず、読点でつなぐ
@@ -33,9 +33,9 @@ extension PhotoImportResult {
         excludedCount == 0 && failedCount > 0 ? "写真を読み込めませんでした" : "食事の写真が見つかりませんでした"
     }
 
-    /// 1 枚も取り込めなかったときのアラートの本文。「除外 m 枚」（読めなかった写真があるときだけ、その枚数も足す）
+    /// 1 枚も取り込めなかったときのアラートの本文。「除外m枚」（読めなかった写真があるときだけ、その枚数も足す）
     var emptyAlertMessage: String {
-        countTexts(includesImported: false).joined(separator: " ／ ")
+        countTexts(includesImported: false).joined(separator: "／")
     }
 
     /// `emptyAlertMessage` の読み上げ
@@ -46,11 +46,11 @@ extension PhotoImportResult {
     private func countTexts(includesImported: Bool) -> [String] {
         var texts: [String] = []
         if includesImported {
-            texts.append("取り込み \(importedIDs.count) 枚")
+            texts.append("取り込み\(importedIDs.count)枚")
         }
-        texts.append("除外 \(excludedCount) 枚")
+        texts.append("除外\(excludedCount)枚")
         if failedCount > 0 {
-            texts.append("読めなかった \(failedCount) 枚")
+            texts.append("読めなかった\(failedCount)枚")
         }
         return texts
     }
