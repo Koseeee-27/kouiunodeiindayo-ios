@@ -38,7 +38,7 @@ main から `feat/120-import-speed` を切って作る。**提案を待ってい
 - 定数 `static var prefetchCount: Int { 2 }`（汎用の型なので `static let` は置けない）
 - ループの前に `var loads: [Task<Data?, Error>?]` を用意し、先頭から `prefetchCount + 1` 枚ぶん `Task { try await loadData(item) }` を作る
 - 1 枚ごとに `try await loads[index]!.value` で受け取り、受け取ったらすぐ `loads[index] = nil`（データを手放す）にして、`index + prefetchCount + 1` 番目があればそのタスクを作る（同時に動く受け取りは最大 3 本）
-- 縮小・判定・保存と、数え方（`failedCount`・`excludedCount`・`importedIDs` の順番）・`onProgress` は今のまま（処理は選んだ順）
+- 縮小・判定・保存と、数え方（`failedCount`・`excludedCount`・`importedIDs` の順番）・`onProgress` は今のまま（処理は選んだ順）。**仕分けの画面に出る順は、選んだ順ではなく撮影日時の新しい順**（`SortView` の `@Query`。ほかの仕分け待ちと同じで、この Issue では変えない。シミュレータの確認で、報告の「選んだ順で出る」の書き方が誤りと分かった）
 - 受け取りの失敗（throw・nil）は今と同じく「読めなかった」に数える
 - テスト（`KouiunodeiindayoTests/PhotoImporterTests.swift` に足す）
   - 1 枚目の `loadData` だけ遅らせても、`importedIDs` が選んだ順になる
