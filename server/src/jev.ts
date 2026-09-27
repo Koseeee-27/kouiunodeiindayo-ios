@@ -7,7 +7,7 @@ const ENDPOINT = "https://ai-gateway.vercel.sh/v1/evaluate";
 const MODEL = "typesafe-ai/jev";
 // アプリ側の時間切れ（1.5 秒）より先に切って 502 にする。手元で測った所要時間は 0.3〜0.9 秒（wrangler dev、2026-09-26。docs/plans/suggestion-worker.plan.md「決めたこと」）。
 // 起動直後の最初の 1 回だけ 1.2 秒を超えることがあるが、その場合はアプリが次に仕分けを開いたときに問い合わせ直す（docs/architecture.md）。
-const TIMEOUT_MS = 1200;
+const SUGGEST_TIMEOUT_MS = 1200;
 
 export type Genre = "food" | "drink" | "dessert";
 const GENRE_CHOICES = {
@@ -19,7 +19,7 @@ const GENRE_CHOICES = {
 
 const NONE_CHOICE = "none";
 
-type JevQuestion = {
+export type JevQuestion = {
   type: "choice";
   instructions: string;
   criteria: Record<string, string>;
@@ -75,8 +75,12 @@ export function buildQuestions(): Record<string, JevQuestion> {
 
 // HTTP が 200 以外のときの Error。状態コードと Vercel の error.message だけを入れる（送った本文＝ラベルは入れない）。
 // error.message は上流が送った state（ラベル）を含めて返す可能性があるので、先頭 80 文字で切ってログに乗る量を抑える。
-async function upstreamError(response: Response): Promise<Error> {
+// withDetail が false なら状態コードだけにする（/search は state に検索の言葉が入るので、上流の文を 1 文字もログに乗せない）。
+async function upstreamError(response: Response, withDetail: boolean): Promise<Error> {
   let detail = "";
+  if (!withDetail) {
+    return new Error(`jev http ${response.status}`);
+  }
   try {
     const body = (await response.json()) as { error?: { message?: unknown } };
     if (typeof body?.error?.message === "string") {
@@ -105,15 +109,33 @@ async function postToJev(apiKey: string, body: string, timeoutMs: number): Promi
   });
 }
 
-// 答えの形が想定と違うときは throw する。呼ぶ側で 502 にする（200 の提案なしにしない。suggestion-api.md「エラー」）。
-// 全体の締め切りは TIMEOUT_MS に固定し、1 回目も 2 回目も残り時間で AbortSignal.timeout を作る。
+// /suggest の問い合わせ。質問は buildQuestions() の 3 つ、締め切りは SUGGEST_TIMEOUT_MS。
 export async function askJev(apiKey: string, state: string): Promise<JevResult> {
-  const questions = buildQuestions();
+  const answers = await askJevQuestions(apiKey, state, buildQuestions(), SUGGEST_TIMEOUT_MS);
+  // askJevQuestions が選択肢のキーであることを確かめているので、ここでの型の絞り込みは安全。
+  return {
+    genre: answers.genre as JevResult["genre"],
+    category: answers.category as JevResult["category"],
+    cuisine: answers.cuisine as JevResult["cuisine"],
+  };
+}
+
+// 質問ごとの答え（選んだキーと、その確率）を、渡した questions のキーで返す。/suggest と /search（search.ts）で共通。
+// 答えの形が想定と違うときは throw する。呼ぶ側で 502 にする（200 の提案なしにしない。suggestion-api.md「エラー」）。
+// 全体の締め切りは timeoutMs に固定し、1 回目も 2 回目も残り時間で AbortSignal.timeout を作る。
+// upstreamDetail が false なら、200 以外のときの Error に上流の error.message を入れない（upstreamError）。
+export async function askJevQuestions(
+  apiKey: string,
+  state: string,
+  questions: Record<string, JevQuestion>,
+  timeoutMs: number,
+  upstreamDetail = true,
+): Promise<Record<string, JevAnswer>> {
   const request: JevRequest = { model: MODEL, state, questions };
   const payload = JSON.stringify(request);
-  const deadline = Date.now() + TIMEOUT_MS;
+  const deadline = Date.now() + timeoutMs;
 
-  let response = await postToJev(apiKey, payload, TIMEOUT_MS);
+  let response = await postToJev(apiKey, payload, timeoutMs);
   if (response.status === 503) {
     const remaining = deadline - Date.now();
     if (remaining >= RETRY_MIN_MS) {
@@ -121,7 +143,7 @@ export async function askJev(apiKey: string, state: string): Promise<JevResult> 
     }
   }
   if (!response.ok) {
-    throw await upstreamError(response);
+    throw await upstreamError(response, upstreamDetail);
   }
   const body = (await response.json()) as { answers?: unknown };
   const answers = body.answers;
@@ -146,10 +168,5 @@ export async function askJev(apiKey: string, state: string): Promise<JevResult> 
     }
     return { choice, confidence };
   };
-  // read が選択肢のキーであることを確かめているので、ここでの型の絞り込みは安全。
-  return {
-    genre: read("genre") as JevResult["genre"],
-    category: read("category") as JevResult["category"],
-    cuisine: read("cuisine") as JevResult["cuisine"],
-  };
+  return Object.fromEntries(Object.keys(questions).map((id) => [id, read(id)]));
 }

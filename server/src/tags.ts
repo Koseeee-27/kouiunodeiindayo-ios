@@ -128,3 +128,42 @@ export const GENRE_MIN = 0.5;
 // Jev の大分類・系統の probabilities[choice] がこれ未満なら足さない。
 // 0.50：正しい答えは 0.87〜1.0、迷ったときは none 側に寄る（うどんの cuisine：none 0.56）ので、none 以外で 0.5 を超えたものだけ足せば十分。
 export const TAG_MIN = 0.5;
+
+// /search（search.ts）で Jev に見せるタグの選択肢。キーは docs/data-model.md「タグの値」の全 34 個（料理・大分類・系統）。
+// 説明は「日本語名 / 英語」。日本語名は docs/requirements.md「タグの一覧」の名前。表を変えたら data-model.md も同じに直す。
+export const SEARCH_TAGS: Record<string, string> = {
+  ramen: "ラーメン / ramen",
+  pasta: "パスタ / pasta, spaghetti",
+  sushi: "寿司 / sushi",
+  curry: "カレー / curry",
+  gyoza: "餃子 / gyoza, dumplings",
+  tempura: "天ぷら / tempura",
+  karaage: "唐揚げ / Japanese fried chicken",
+  pizza: "ピザ / pizza",
+  hamburger: "ハンバーガー / hamburger",
+  steak: "ステーキ / steak",
+  sandwich: "サンドイッチ / sandwich",
+  coffee: "コーヒー / coffee",
+  tea: "お茶 / tea",
+  alcohol: "お酒 / alcohol such as beer, wine, sake",
+  juice: "ジュース / juice, smoothie",
+  bubble_tea: "タピオカ / bubble tea",
+  cake: "ケーキ / cake",
+  ice_cream: "アイス / ice cream",
+  donut: "ドーナツ / donut",
+  baked_sweets: "焼き菓子 / baked sweets such as cookies, muffins, pies",
+  noodles: "麺類 / noodle dishes",
+  rice_dish: "ご飯もの / rice dishes",
+  bread: "パン / bread",
+  meat: "肉料理 / meat dishes",
+  seafood: "魚介 / fish and seafood dishes",
+  fried: "揚げ物 / deep-fried food",
+  egg: "卵料理 / egg dishes",
+  vegetables: "野菜・サラダ / vegetables, salad",
+  soup: "汁物 / soups",
+  japanese: "和食 / Japanese cuisine",
+  western: "洋食 / Western cuisine",
+  chinese: "中華 / Chinese cuisine",
+  korean: "韓国 / Korean cuisine",
+  ethnic: "エスニック / ethnic cuisine (Thai, Indian, Vietnamese, Mexican)",
+};

@@ -47,7 +47,7 @@ curl -sS -w '\n   HTTP %{http_code}\n' -X POST "${SUGGEST_URL}/suggest" \
   -d '{"labels":[{"name":"ramen","confidence":0.6}]}'
 echo "== GET（405）"
 curl -sS -w '\n   HTTP %{http_code}\n' "${SUGGEST_URL}/suggest" -H "Authorization: Bearer ${SUGGEST_TOKEN}"
-echo "== /search（404）"
-curl -sS -w '\n   HTTP %{http_code}\n' -X POST "${SUGGEST_URL}/search" \
+echo "== 知らない入口（404）"
+curl -sS -w '\n   HTTP %{http_code}\n' -X POST "${SUGGEST_URL}/unknown" \
   -H "Content-Type: application/json" -H "Authorization: Bearer ${SUGGEST_TOKEN}" \
   -d '{"query":"ラーメン"}'
