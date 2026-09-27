@@ -195,6 +195,18 @@ Jev は Vercel AI Gateway の HTTP API 経由で呼ぶ（理由は `docs/adr/000
 - 合言葉はアプリの中（Info.plist）に入るので、抜き取れる。デモの間だけの簡易的な対策（`docs/adr/0006-suggestion-vision-jev.md`）。ハッカソンが終わったら、Worker の `SUGGEST_TOKEN` を変える
 - 提案が保存されたかは、Xcode のコンソールで `SuggestionService` のログを見る。URL・合言葉は、ログにもコミットにも出さない
 
+## 8. 効果音の音源（人ごとに1回）
+
+「う、うまい」「うまい」を付けたときのハンコの音（機能24）は、OpenTracks（旧 DOVA-SYNDROME）の素材「判子を押す」Track1（written by 稿屋 隆、https://opentracks.com/se/detail/231 ）を使っている。
+この素材はライセンスで「音源を配布すること（インターネット上での公開を含む）」が禁じられているので、公開しているこのリポジトリには入れていない（`.gitignore` 済み）。
+
+1. 音のファイル `stamp-press.caf` を、チームの人から直接もらう（git・公開の場所には置かない）
+2. `Kouiunodeiindayo/Resources/stamp-press.caf` に置く。同期フォルダなので、置くだけでアプリに入る
+
+置かなくてもビルドは通り、音が鳴らないだけで、ほかはいつもどおり動く（`SoundPlayer` がログを残して何もしない）。
+
+元の mp3 から作り直すときは、頭の約 0.5 秒の無音を切って、非圧縮の caf にする（無音があると、押してから鳴るまで遅れる）。
+
 ## 付録：プロジェクトを作る人が、最初に1回だけやること
 
 Xcode でプロジェクトを新規作成した直後は、Bundle ID と Team ID がプロジェクトファイル（`project.pbxproj`）のターゲット側に書かれている。ターゲット側の値は xcconfig より優先されるので、そのままでは `Config/Local.xcconfig` が効かない。
