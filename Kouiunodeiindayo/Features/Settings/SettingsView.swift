@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// 設定。ホーム右上のアイコンから `sheet` で開く。
-/// 要素は `docs/screen-design.md` の「設定」が正。今は機能19（写真アプリにも保存する）と機能22（プライバシーポリシー・お問い合わせ・バージョン）を置く
+/// 要素は `docs/screen-design.md` の「設定」が正。今は機能19（写真アプリにも保存する）・機能24（効果音の音量）・
+/// 機能22（プライバシーポリシー・お問い合わせ・バージョン）を置く
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(PhotoLibrarySaver.storageKey) private var savesToPhotoLibrary = PhotoLibrarySaver.defaultValue
+    @AppStorage(SoundPlayer.volumeStorageKey) private var soundVolume = SoundPlayer.defaultVolume
 
     var body: some View {
         NavigationStack {
@@ -17,6 +19,31 @@ struct SettingsView: View {
                         .font(Theme.font(.footnote))
                 } footer: {
                     Text("アプリのカメラで撮った写真を、写真アプリにも保存します。アルバムから取り込んだ写真は保存しません。")
+                        .font(Theme.font(.footnote))
+                }
+                Section {
+                    HStack(spacing: 12) {
+                        Image(systemName: "speaker.fill")
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityHidden(true)
+                        // 指を離したときに、選んだ音量でハンコの音を 1 回鳴らす（試し聞き）
+                        Slider(value: $soundVolume, in: 0...1) { isEditing in
+                            if !isEditing {
+                                SoundPlayer.play(.stampPress)
+                            }
+                        }
+                        .tint(Theme.accent)
+                        .accessibilityLabel("効果音の音量")
+                        .accessibilityValue(Text(verbatim: "\(Int((soundVolume * 100).rounded()))%"))
+                        Image(systemName: "speaker.wave.3.fill")
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityHidden(true)
+                    }
+                } header: {
+                    Text("効果音の音量")
+                        .font(Theme.font(.footnote))
+                } footer: {
+                    Text("「う、うまい」を付けたときのハンコの音の大きさです。いちばん左にすると鳴りません。マナーモードのときは鳴りません。")
                         .font(Theme.font(.footnote))
                 }
                 Section {

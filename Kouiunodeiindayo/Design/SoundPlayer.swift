@@ -13,6 +13,11 @@ enum SoundPlayer {
         case stampPress = "stamp-press"
     }
 
+    /// 音量の設定値のキー（`docs/data-model.md` の「設定値」）
+    static let volumeStorageKey = "soundVolume"
+    /// 音量の初期値（最大）
+    static let defaultVolume = 1.0
+
     private static let logger = Logger(category: "SoundPlayer")
     /// 音源の拡張子
     static let fileExtension = "caf"
@@ -26,12 +31,21 @@ enum SoundPlayer {
         _ = player(for: sound)
     }
 
-    /// 頭から鳴らす。鳴っている途中でも、もう一度頭から鳴らす
+    /// 頭から鳴らす。鳴っている途中でも、もう一度頭から鳴らす。音量は設定（`soundVolume`）に従い、0 なら鳴らさない
     static func play(_ sound: Sound) {
+        let volume = currentVolume
+        guard volume > 0 else { return }
         prepareSessionIfNeeded()
         guard let player = player(for: sound) else { return }
+        player.volume = Float(volume)
         player.currentTime = 0
         player.play()
+    }
+
+    /// 設定の音量（0〜1）。まだ設定していなければ初期値
+    private static var currentVolume: Double {
+        let stored = UserDefaults.standard.object(forKey: volumeStorageKey) as? Double ?? defaultVolume
+        return min(max(stored, 0), 1)
     }
 
     private static func player(for sound: Sound) -> AVAudioPlayer? {
