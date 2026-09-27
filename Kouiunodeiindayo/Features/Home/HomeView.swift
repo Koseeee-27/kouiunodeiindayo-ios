@@ -148,12 +148,14 @@ struct HomeView: View {
         importProgress = PhotoImportProgress(done: 0, total: items.count)
         let runner = PhotoImportRunner.live(store: store)
         Task {
-            // 選んだ直後は、ピッカーがまだ閉じる途中。1 枚だけだと取り込みがすぐ終わり、閉じきる前に仕分けのカバーを出すと
-            // カバーの中身が上のセーフエリアにずれて ✕ が押せなくなる（シミュレータで確認）。閉じ終わるのを待ってから始める
-            try? await Task.sleep(for: Self.pickerDismissDelay)
+            // 取り込みは、ピッカーが閉じる途中から始める（#120）
+            let started = ContinuousClock.now
             let result = await runner.run(items) { done, total in
                 importProgress = PhotoImportProgress(done: done, total: total)
             }
+            // ピッカーが閉じきる前に仕分けのカバーを出すと、カバーの中身が上のセーフエリアにずれて ✕ が押せなくなる
+            // （1 枚だけだと取り込みがすぐ終わる。シミュレータで確認）。カバーを出す前に、始めてから 0.6 秒たつまで待つ（#102）
+            try? await Task.sleep(until: started + Self.pickerDismissDelay, clock: .continuous)
             importProgress = nil
             if result.importedIDs.isEmpty {
                 emptyImportResult = result

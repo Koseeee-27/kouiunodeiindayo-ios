@@ -96,6 +96,46 @@ struct SuggestionServiceTests {
         #expect(record.suggestedGenreValue == .food)
     }
 
+    @Test func 頼んだ写真は保存するまで待っているになる() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let probe = SuggesterProbe(delay: .milliseconds(30))
+        let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest)
+        #expect(!service.isPending(record.id))
+
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(service.isPending(record.id))
+        try await waitUntil { record.suggestedAt != nil }
+        try await waitUntil { !service.isPending(record.id) }
+    }
+
+    @Test func 問い合わせをやめたら待っているでなくなる() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let probe = SuggesterProbe(failuresBeforeSuccess: 10)
+        let service = LiveSuggestionService(
+            labels: Self.fixedLabels, suggest: probe.suggest, policy: Self.fastPolicy(retries: 2))
+
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(service.isPending(record.id))
+        // 問い合わせ直しを待っている間も待っているのまま。3 回とも失敗したら外れる
+        try await waitUntil(tries: 500) { !service.isPending(record.id) }
+        #expect(probe.callCount == 3)
+        #expect(record.suggestedAt == nil)
+    }
+
+    @Test func モックは届くまで待っているになり待ち続けるモックはずっと待っている() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let mock = SuggestionMock.ramen
+        mock.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(mock.isPending(record.id))
+        try await waitUntil { record.suggestedAt != nil }
+        #expect(!mock.isPending(record.id))
+        #expect(!SuggestionMock.disabled.isPending(record.id))
+        #expect(SuggestionMock.waiting.isPending(record.id))
+    }
+
     @Test func 写真の場所は頼んだRecordStoreの置き場所から作る() async throws {
         let context = TestStore()
         let record = try context.addRecord()
