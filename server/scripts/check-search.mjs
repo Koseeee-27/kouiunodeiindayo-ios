@@ -173,6 +173,26 @@ await check("Jev が 429（上流の文に検索の言葉が入っている）�
   }
 });
 
+await check("Jev が 503 → 200 なら 1 回だけ送り直して 200", async () => {
+  sent = [];
+  const ok = jevAnswers({ tag: ["ramen", 0.9] });
+  let calls = 0;
+  jev = () => (++calls === 1 ? new Response("{}", { status: 503 }) : ok());
+  const { status, body } = await callSearch({ query: "ラーメン" });
+  assert.equal(status, 200);
+  assert.equal(body.tag, "ramen");
+  assert.equal(sent.length, 2);
+});
+
+await check("Jev が 503 → 503 なら 2 回で止めて 502", async () => {
+  sent = [];
+  jev = () => new Response("{}", { status: 503 });
+  const { status, body } = await callSearch({ query: "ラーメン" });
+  assert.equal(status, 502);
+  assert.equal(body.error.code, "upstream_failed");
+  assert.equal(sent.length, 2);
+});
+
 await check("/suggest は今までどおり（Jev の質問は genre・category・cuisine）", async () => {
   sent = [];
   const answer = (choice) => ({ choice, probabilities: { [choice]: 0.9 } });

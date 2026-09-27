@@ -34,6 +34,8 @@ struct RecordListView: View {
     @State private var message: String?
     /// 端末で読み取れなかった言葉を Worker に聞いている間（M2）。新しく探す・やめるときは取り消す
     @State private var workerSearch: Task<Void, Never>?
+    /// Worker に聞いている語（聞いていないときは nil）。欄を書き換えたかを見るため
+    @State private var workerQuery: String?
     @Environment(\.wordSearchService) private var wordSearchService
     @FocusState private var isSearchFocused: Bool
     /// 選ぶモード（まとめて消す）
@@ -174,6 +176,10 @@ struct RecordListView: View {
             Button("OK", role: .cancel) {}
         }
         .onChange(of: isSelecting) { _, selecting in
+            // 選んでいる間に結果が届いて一覧が変わり、選んだ写真が外れないように、聞いている途中の検索はやめる
+            if selecting {
+                cancelWorkerSearch()
+            }
             onSelectingChange(selecting)
         }
         // 絞り込みが変わった・記録が消えたときは、画面に無い記録を選んだままにしない
@@ -202,7 +208,13 @@ struct RecordListView: View {
                 cancelWorkerSearch()
                 condition = nil
                 message = nil
+            } else if let workerQuery, !WordSearchFlow.shouldApply(searchedQuery: workerQuery, currentText: text) {
+                // Worker に聞いている間に書き換えたら、古い語の問い合わせはやめる（一覧はそのまま）
+                cancelWorkerSearch()
             }
+        }
+        .onDisappear {
+            cancelWorkerSearch()
         }
         // 「今日」「今週」「今月」で絞ったまま日付をまたいでも、古い結果が残らないように取り直す
         .onChange(of: scenePhase) { _, phase in
@@ -441,9 +453,14 @@ struct RecordListView: View {
             show(parsed, message: nil)
             return
         }
+        guard !WordSearchFlow.isTooLong(text) else {
+            show(condition, message: WordSearchFlow.tooLongMessage)
+            return
+        }
         // 聞いている間は、前の結果（絞り込み中なら、その一覧）をそのまま出しておく
         message = nil
         let service = wordSearchService
+        workerQuery = text
         workerSearch = Task {
             let result: SearchCondition?
             do {
@@ -453,28 +470,26 @@ struct RecordListView: View {
                 Self.logger.notice("言葉で探す：Worker に聞けなかった（\(String(describing: type(of: error)))）")
                 result = nil
             }
-            // 取り消された（新しく探した・やめた）なら、あとから届いた結果で上書きしない
-            guard !Task.isCancelled else { return }
-            workerSearch = nil
-            if let result, !result.isEmpty {
-                show(result, message: nil)
-            } else if result != nil {
-                show(nil, message: Self.unreadableMessage)
-            } else {
-                show(nil, message: "通信できませんでした。タグの名前や『うまい』『今月』なら通信なしで探せます")
+            // 取り消された（新しく探した・やめた・欄を書き換えた）なら、あとから届いた結果で上書きしない
+            guard !Task.isCancelled, WordSearchFlow.shouldApply(searchedQuery: text, currentText: searchText) else {
+                return
             }
+            workerSearch = nil
+            workerQuery = nil
+            let outcome = WordSearchFlow.outcome(result: result, previous: condition)
+            show(outcome.condition, message: outcome.message)
         }
     }
 
-    private static let unreadableMessage = "条件を読み取れませんでした。タグの名前や『うまい』『今月』で探せます"
     private static let logger = Logger(category: "RecordListView")
 
     private func cancelWorkerSearch() {
         workerSearch?.cancel()
         workerSearch = nil
+        workerQuery = nil
     }
 
-    /// 探した結果を出す。`condition` が `nil` なら一覧はそのまま（絞り込みもやめる）
+    /// 探した結果を出す。`condition` が `nil` なら絞り込みをやめる
     private func show(_ newCondition: SearchCondition?, message newMessage: String?) {
         condition = newCondition
         message = newMessage

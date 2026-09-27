@@ -66,4 +66,41 @@ struct WordSearchTests {
             try await WordSearchMock.disabled.search("何でも")
         }
     }
+
+    // MARK: 画面が決めること（`WordSearchFlow`）
+
+    @Test func 通信できない・読み取れないときはそれまでの絞り込みを残す() {
+        let previous = SearchCondition(tag: Kouiunodeiindayo.Tag.ramen, favoriteOnly: false, period: nil)
+        let offline = WordSearchFlow.outcome(result: nil, previous: previous)
+        #expect(offline.condition == previous)
+        #expect(offline.message == WordSearchFlow.offlineMessage)
+        let unreadable = WordSearchFlow.outcome(result: SearchCondition(), previous: previous)
+        #expect(unreadable.condition == previous)
+        #expect(unreadable.message == WordSearchFlow.unreadableMessage)
+        // 絞り込んでいないときは、絞り込まないまま
+        #expect(WordSearchFlow.outcome(result: nil, previous: nil).condition == nil)
+        #expect(WordSearchFlow.outcome(result: SearchCondition(), previous: nil).condition == nil)
+    }
+
+    @Test func 読み取れたらその条件で絞る() {
+        let previous = SearchCondition(tag: Kouiunodeiindayo.Tag.ramen, favoriteOnly: false, period: nil)
+        let result = SearchCondition(tag: nil, favoriteOnly: true, period: .thisMonth)
+        let outcome = WordSearchFlow.outcome(result: result, previous: previous)
+        #expect(outcome.condition == result)
+        #expect(outcome.message == nil)
+    }
+
+    @Test func 聞いている間に欄を書き換えたら結果を出さない() {
+        #expect(WordSearchFlow.shouldApply(searchedQuery: "こってり", currentText: "こってり"))
+        #expect(WordSearchFlow.shouldApply(searchedQuery: "こってり", currentText: " こってり\n"))
+        #expect(!WordSearchFlow.shouldApply(searchedQuery: "こってり", currentText: "あっさり"))
+        #expect(!WordSearchFlow.shouldApply(searchedQuery: "こってり", currentText: "こってりし"))
+    }
+
+    @Test func 長さの上限はWorkerと同じくコードポイントで100まで() {
+        #expect(!WordSearchFlow.isTooLong(String(repeating: "あ", count: 100)))
+        #expect(WordSearchFlow.isTooLong(String(repeating: "あ", count: 101)))
+        // 絵文字 1 つを 2 文字に数えない
+        #expect(!WordSearchFlow.isTooLong(String(repeating: "🍜", count: 100)))
+    }
 }
