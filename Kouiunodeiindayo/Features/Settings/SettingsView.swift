@@ -1,13 +1,24 @@
 import SwiftUI
 
 /// 設定。ホーム右上のアイコンから `sheet` で開く。
-/// 要素は `docs/screen-design.md` の「設定」が正。今は機能22（プライバシーポリシー・お問い合わせ・バージョン）だけを置く
+/// 要素は `docs/screen-design.md` の「設定」が正。今は機能19（写真アプリにも保存する）と機能22（プライバシーポリシー・お問い合わせ・バージョン）を置く
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(PhotoLibrarySaver.storageKey) private var savesToPhotoLibrary = PhotoLibrarySaver.defaultValue
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Toggle("撮った写真を写真アプリにも保存する", isOn: $savesToPhotoLibrary)
+                        .tint(Theme.accent)
+                } header: {
+                    Text("撮った写真")
+                        .font(Theme.font(.footnote))
+                } footer: {
+                    Text("アプリのカメラで撮った写真を、写真アプリにも保存します。アルバムから取り込んだ写真は保存しません。")
+                        .font(Theme.font(.footnote))
+                }
                 Section {
                     // 外部ページは Safari に渡す（アプリ内ブラウザは使わない）
                     if let url = AppLinks.privacyPolicy {
