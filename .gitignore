@@ -43,6 +43,3 @@ server/.wrangler/
 server/.dev.vars
 server/worker-configuration.d.ts
 server/.check/
-
-# 効果音の音源（OpenTracks の素材。ライセンスで配布が禁じられているので、公開リポジトリには入れない。docs/setup.md の 8）
-Kouiunodeiindayo/Resources/stamp-press.caf

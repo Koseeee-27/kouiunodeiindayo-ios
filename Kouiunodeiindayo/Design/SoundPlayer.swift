@@ -7,16 +7,15 @@ import OSLog
 enum SoundPlayer {
     enum Sound: String {
         /// ハンコを押す音（「う、うまい」「うまい」を付けたとき）。
-        /// 出典：OpenTracks（旧 DOVA-SYNDROME）「判子を押す」Track1（written by 稿屋 隆）https://opentracks.com/se/detail/231
-        /// サイトのライセンス・利用規約と、制作者の利用条件に従って使う。
-        /// 元の mp3 は頭に 0.5 秒の無音があり、押してから鳴るまで遅れるので、無音を切って caf にしている。
-        /// ライセンスで配布が禁じられているので、音のファイルは git に入れていない（置き方は docs/setup.md の 8）
+        /// 出典：Freesound「traditional stamp.wav」by I.fekry https://freesound.org/people/I.fekry/sounds/470710/
+        /// ライセンスは Creative Commons 0（CC0。複製・加工・配布・商用利用が自由で、表記も要らない）なので、公開リポジトリに置いている。
+        /// 元の wav は頭に 0.5 秒・後ろに 0.5 秒の無音があり、押してから鳴るまで遅れるので、0.495〜1.1 秒を切り出して caf にしている
         case stampPress = "stamp-press"
     }
 
     private static let logger = Logger(category: "SoundPlayer")
     /// 音源の拡張子
-    private static let fileExtension = "caf"
+    static let fileExtension = "caf"
     /// 読み込んだ音。同じ音は使い回す（押すたびにファイルを読まない）
     private static var players: [Sound: AVAudioPlayer] = [:]
     private static var isSessionReady = false
