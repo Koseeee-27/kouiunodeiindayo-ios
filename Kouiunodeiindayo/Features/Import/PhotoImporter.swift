@@ -120,6 +120,54 @@ enum PhotoImporter {
     }
 }
 
+/// 受け取りの時間切れ
+enum PhotoImportError: Error {
+    case timedOut
+}
+
+extension PhotoImporter {
+    /// 1 枚ぶんのデータの受け取りを待つ上限。iCloud にしか無い写真を遅い回線で選んでも、取り込み中の幕が出たままにならないように
+    static let loadTimeout: Duration = .seconds(20)
+
+    /// `operation` を `timeout` まで待つ。過ぎたら `PhotoImportError.timedOut` を投げ、`operation` には取り消しを伝える。
+    /// 取り消しに応じない処理でも待たずに戻るように、タスクグループ（子が全部終わるまで抜けない）は使わない
+    static func withTimeout<T: Sendable>(_ timeout: Duration, _ operation: @escaping () async throws -> T) async throws
+        -> T
+    {
+        let gate = TimeoutGate<T>()
+        return try await withCheckedThrowingContinuation { continuation in
+            gate.continuation = continuation
+            gate.work = Task {
+                do {
+                    gate.finish(.success(try await operation()))
+                } catch {
+                    gate.finish(.failure(error))
+                }
+            }
+            gate.timer = Task {
+                try? await Task.sleep(for: timeout)
+                guard !Task.isCancelled else { return }
+                gate.finish(.failure(PhotoImportError.timedOut))
+            }
+        }
+    }
+}
+
+/// `withTimeout` で、先に終わったほうだけが結果を返すための入れ物。もう片方は取り消す
+private final class TimeoutGate<T: Sendable> {
+    var continuation: CheckedContinuation<T, Error>?
+    var work: Task<Void, Never>?
+    var timer: Task<Void, Never>?
+
+    func finish(_ result: Result<T, Error>) {
+        guard let continuation else { return }
+        self.continuation = nil
+        work?.cancel()
+        timer?.cancel()
+        continuation.resume(with: result)
+    }
+}
+
 /// 選ばれた項目を 1 枚ずつ取り込む（同時に何枚も縮めない。メモリを抑えるため）。データの受け取りだけは先に始めておく（`prefetchCount`）。
 /// テストのために、データの受け取り・準備・判定・保存をクロージャで差し替えられるようにする。本物は `live(store:)`。
 struct PhotoImportRunner<Item> {
@@ -242,7 +290,11 @@ extension PhotoImportRunner where Item == PhotosPickerItem {
     /// ホームの入口から使う本物。
     static func live(store: RecordStore) -> Self {
         PhotoImportRunner(
-            loadData: { item in try await item.loadTransferable(type: Data.self) },
+            loadData: { item in
+                try await PhotoImporter.withTimeout(PhotoImporter.loadTimeout) {
+                    try await item.loadTransferable(type: Data.self)
+                }
+            },
             prepare: { data in await PhotoImporter.prepare(data) },
             labels: { image in try await ImageLabeler.labels(of: image) },
             save: { image, takenAt in try store.add(image: image, takenAt: takenAt).id }

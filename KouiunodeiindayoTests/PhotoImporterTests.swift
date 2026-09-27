@@ -94,6 +94,42 @@ struct PhotoImporterTests {
         #expect(result.excludedCount == 0)
     }
 
+    @Test func 受け取りが時間切れになった写真は読めなかったに数えて次へ進む() async {
+        let saved = SavedPhotos()
+        let runner = Self.makeRunner(
+            saved: saved,
+            loadData: { index in
+                try await PhotoImporter.withTimeout(.milliseconds(100)) {
+                    if index == 1 { await Self.waitIgnoringCancellation(.seconds(5)) }
+                    return Data([UInt8(index)])
+                }
+            })
+        let start = ContinuousClock.now
+        let result = await runner.run([0, 1, 2], onProgress: { _, _ in })
+        #expect(ContinuousClock.now - start < .seconds(3))
+        #expect(result.importedIDs.count == 2)
+        #expect(result.failedCount == 1)
+    }
+
+    @Test func 時間切れは取り消しに応じない処理でも待たずに投げる() async {
+        let start = ContinuousClock.now
+        await #expect(throws: PhotoImportError.timedOut) {
+            try await PhotoImporter.withTimeout(.milliseconds(100)) {
+                await Self.waitIgnoringCancellation(.seconds(5))
+                return 1
+            }
+        }
+        #expect(ContinuousClock.now - start < .seconds(3))
+    }
+
+    @Test func 時間内に終われば結果とエラーをそのまま返す() async throws {
+        let value = try await PhotoImporter.withTimeout(.seconds(5)) { 42 }
+        #expect(value == 42)
+        await #expect(throws: CocoaError.self) {
+            try await PhotoImporter.withTimeout(.seconds(5)) { () -> Int in throw CocoaError(.fileReadUnknown) }
+        }
+    }
+
     @Test func 撮影日時の無い写真は今の時刻で保存する() async {
         let saved = SavedPhotos()
         let taken = Date(timeIntervalSince1970: 1_000)
@@ -309,6 +345,12 @@ struct PhotoImporterTests {
             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
         return context.makeImage()!
     }()
+
+    /// 取り消しを伝えても `duration` まで戻らない処理（iCloud からの受け取りが止まった場面の代わり）。
+    /// 切り離したタスクの値を待つと、取り消しが伝わらない
+    static func waitIgnoringCancellation(_ duration: Duration) async {
+        await Task.detached { try? await Task.sleep(for: duration) }.value
+    }
 
     static func makeRunner(
         saved: SavedPhotos,
