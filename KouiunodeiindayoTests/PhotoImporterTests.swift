@@ -116,6 +116,40 @@ struct PhotoImporterTests {
         #expect(progress == ["1/3", "2/3", "3/3"])
     }
 
+    @Test func 先に受け取りを始めても選んだ順に保存する() async {
+        let saved = SavedPhotos()
+        var runner = Self.makeRunner(
+            saved: saved,
+            loadData: { index in
+                // 1 枚目の受け取りだけ遅らせる（2・3 枚目は先に受け取り終わる）
+                if index == 0 { try await Task.sleep(for: .milliseconds(100)) }
+                return Data([UInt8(index)])
+            })
+        runner.prepare = { data in
+            PreparedPhoto(image: Self.smallImage, takenAt: Date(timeIntervalSince1970: Double(data.first ?? 0)))
+        }
+        let result = await runner.run([0, 1, 2, 3, 4], onProgress: { _, _ in })
+        #expect(result.importedIDs == saved.ids)
+        #expect(saved.dates == (0..<5).map { Date(timeIntervalSince1970: Double($0)) })
+    }
+
+    @Test func 同時に動く受け取りは3本まで() async {
+        let loads = LoadCounter()
+        let runner = Self.makeRunner(
+            saved: SavedPhotos(),
+            loadData: { index in
+                loads.running += 1
+                loads.maxRunning = max(loads.maxRunning, loads.running)
+                defer { loads.running -= 1 }
+                try await Task.sleep(for: .milliseconds(20))
+                return Data([UInt8(index)])
+            })
+        let result = await runner.run(Array(0..<8), onProgress: { _, _ in })
+        #expect(result.importedIDs.count == 8)
+        // 2 枚先まで先に始めるので、今の 1 枚と合わせてちょうど 3 本
+        #expect(loads.maxRunning == PhotoImportRunner<Int>.prefetchCount + 1)
+    }
+
     @Test func 保存できなかった写真は読めなかったに数える() async {
         var runner = Self.makeRunner(saved: SavedPhotos())
         runner.save = { _, _ in throw CocoaError(.fileWriteUnknown) }
@@ -260,6 +294,12 @@ struct PhotoImporterTests {
     final class SavedPhotos {
         var ids: [UUID] = []
         var dates: [Date] = []
+    }
+
+    /// 同時に動いている受け取りの数を数える。
+    final class LoadCounter {
+        var running = 0
+        var maxRunning = 0
     }
 
     static let smallImage: CGImage = {

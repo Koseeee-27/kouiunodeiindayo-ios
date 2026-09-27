@@ -8,6 +8,16 @@ protocol SuggestionService {
     /// 写真1枚の提案を問い合わせる。すぐ戻る（結果を待たない）。結果はメインスレッドで `store.saveSuggestion` に渡す。
     /// `@Model` はスレッドをまたげないので、`Record` ではなく `id` と `photoFileName` を受け取る。
     func requestSuggestion(for id: UUID, photoFileName: String, store: RecordStore)
+    /// 写真の提案を待っている（待っている・問い合わせ中・問い合わせ直しの待ち）なら true。保存したら・問い合わせをやめたら false。
+    /// 仕分けで「提案を待っています…」を出すのに使う（#120）。画面が変化を追えるよう、`@Observable` の値から読む
+    func isPending(_ id: UUID) -> Bool
+}
+
+/// 提案を待っている写真の id の控え。画面が変化を追えるよう、これだけを `@Observable` にする
+/// （Service 全体を `@Observable` にすると、待ち行列などの変化でも仕分けの画面が描き直されるため。#120）
+@Observable
+final class SuggestionPendingIDs {
+    var ids: Set<UUID> = []
 }
 
 /// 本物。Vision（`ImageLabeler`）→ Worker（`SuggestionClient`）→ `RecordStore.saveSuggestion`。
@@ -67,8 +77,12 @@ final class LiveSuggestionService: SuggestionService {
     private let policy: RetryPolicy
 
     private var jobs: [Job] = []
+    private let pending = SuggestionPendingIDs()
     /// 待っている・問い合わせ中・問い合わせ直しを待っている写真。同じ写真を重ねて頼まれたら弾く
-    private var pendingIDs: Set<UUID> = []
+    private var pendingIDs: Set<UUID> {
+        get { pending.ids }
+        set { pending.ids = newValue }
+    }
     private var isRunning = false
     private var hasLoggedMissingConfiguration = false
     /// 今の問い合わせの間。ふだんは 0。失敗したら広げ、成功が続いたら戻す（テストで読む）
@@ -107,6 +121,10 @@ final class LiveSuggestionService: SuggestionService {
         Task {
             await runJobs(suggest: suggest)
         }
+    }
+
+    func isPending(_ id: UUID) -> Bool {
+        pending.ids.contains(id)
     }
 
     /// 問い合わせ直しを待っている写真があるとき、新しく頼まれた写真を見落とさないよう、この間隔で見直す

@@ -13,6 +13,7 @@ enum SearchPeriod: String, CaseIterable {
     case today
     case thisWeek = "this_week"
     case thisMonth = "this_month"
+    case thisYear = "this_year"
     case earlier
 
     /// 条件を見せるときの文字（M1）
@@ -21,6 +22,7 @@ enum SearchPeriod: String, CaseIterable {
         case .today: "今日"
         case .thisWeek: "今週"
         case .thisMonth: "今月"
+        case .thisYear: "今年"
         case .earlier: "今月より前"
         }
     }

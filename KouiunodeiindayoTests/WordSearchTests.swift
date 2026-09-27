@@ -35,7 +35,12 @@ struct WordSearchTests {
         #expect(try SuggestionClient.decodeSearchCondition(from: data).isEmpty)
     }
 
-    /// `this_year` は M1（未マージ）でアプリに入る。それまでは、知らない時期として指定なしになる
+    /// `this_year` は M1 でアプリに入った
+    @Test func 今年を読む() throws {
+        let data = Data(#"{"tag":null,"favoriteOnly":false,"period":"this_year"}"#.utf8)
+        #expect(try SuggestionClient.decodeSearchCondition(from: data) == SearchCondition(period: .thisYear))
+    }
+
     @Test func 知らないタグと知らない時期は指定なし() throws {
         let data = Data(#"{"tag":"udon","favoriteOnly":true,"period":"last_decade"}"#.utf8)
         #expect(try SuggestionClient.decodeSearchCondition(from: data) == SearchCondition(favoriteOnly: true))

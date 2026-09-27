@@ -94,6 +94,25 @@ enum Theme {
     /// 仕分けの画面の「う、うまい」のハンコの傾き。右肩下がり（SwiftUI は右回りがプラス）
     static let sortFavoriteTilt = Angle.degrees(18)
 
+    // 「うまい」を付けたときのハンコを押す演出（機能24。`Design/StampPressEffect.swift`）。値は実機で見て直す
+    /// 押した瞬間の大きさ（そこから縮んで 1 倍に止まる）
+    static let stampPressScale: CGFloat = 1.4
+    /// 縮みきったときの大きさ（1 倍より少し小さくして、ドンと押した弾みを出す）
+    static let stampPressUndershoot: CGFloat = 0.95
+    /// 押した瞬間の傾き（元の傾きに足す。そこから 0 に戻る）
+    static let stampPressTilt = Angle.degrees(8)
+    /// 縮んで止まるまでの時間（秒）
+    static let stampPressDuration: Double = 0.25
+    /// 周りに広がる輪の、広がりきったときの大きさ（絵に対する倍率）
+    static let stampPressRingScale: CGFloat = 1.3
+    /// 輪の最初の濃さ（そこから消える）
+    static let stampPressRingOpacity: Double = 0.6
+    /// 輪が広がって消えるまでの時間（秒）
+    static let stampPressRingDuration: Double = 0.35
+    /// 輪の線の太さと角の丸み。色はハンコの赤（`accent`）
+    static let stampPressRingLineWidth: CGFloat = 2
+    static let stampPressRingCornerRadius: CGFloat = 12
+
     /// 文字。游ゴシックは iOS に入っていないので、見た目の近いヒラギノ角ゴで代わりにする。
     /// 文字サイズの設定に追従させるため、`relativeTo:` で標準の文字の種類に合わせる
     static func font(_ style: Font.TextStyle, bold: Bool = false) -> Font {

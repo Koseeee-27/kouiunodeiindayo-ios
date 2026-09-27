@@ -235,6 +235,8 @@ struct RecordDetailPageView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: Theme.detailFavoriteBadgeWidth)
+                // 付けたときのハンコを押す演出（機能24。仕分けと同じ。絵の大きさだけ違う）
+                .stampPress(isOn: record.isFavorite)
                 .frame(minHeight: Theme.minTapHeight)
                 .contentShape(.rect)
         }

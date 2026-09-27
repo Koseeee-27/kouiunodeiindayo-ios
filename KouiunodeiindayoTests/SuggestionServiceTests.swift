@@ -96,6 +96,46 @@ struct SuggestionServiceTests {
         #expect(record.suggestedGenreValue == .food)
     }
 
+    @Test func 頼んだ写真は保存するまで待っているになる() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let probe = SuggesterProbe(delay: .milliseconds(30))
+        let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest)
+        #expect(!service.isPending(record.id))
+
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(service.isPending(record.id))
+        try await waitUntil { record.suggestedAt != nil }
+        try await waitUntil { !service.isPending(record.id) }
+    }
+
+    @Test func 問い合わせをやめたら待っているでなくなる() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let probe = SuggesterProbe(failuresBeforeSuccess: 10)
+        let service = LiveSuggestionService(
+            labels: Self.fixedLabels, suggest: probe.suggest, policy: Self.fastPolicy(retries: 2))
+
+        service.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(service.isPending(record.id))
+        // 問い合わせ直しを待っている間も待っているのまま。3 回とも失敗したら外れる
+        try await waitUntil(tries: 500) { !service.isPending(record.id) }
+        #expect(probe.callCount == 3)
+        #expect(record.suggestedAt == nil)
+    }
+
+    @Test func モックは届くまで待っているになり待ち続けるモックはずっと待っている() async throws {
+        let context = TestStore()
+        let record = try context.addRecord()
+        let mock = SuggestionMock.ramen
+        mock.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: context.store)
+        #expect(mock.isPending(record.id))
+        try await waitUntil { record.suggestedAt != nil }
+        #expect(!mock.isPending(record.id))
+        #expect(!SuggestionMock.disabled.isPending(record.id))
+        #expect(SuggestionMock.waiting.isPending(record.id))
+    }
+
     @Test func 写真の場所は頼んだRecordStoreの置き場所から作る() async throws {
         let context = TestStore()
         let record = try context.addRecord()
@@ -249,7 +289,9 @@ struct SuggestionServiceTests {
         let other = try context.addRecord()
         let probe = SuggesterProbe(failuresBeforeSuccess: 1)
         var policy = Self.fastPolicy(backoffStart: .milliseconds(10), backoffMax: .milliseconds(10))
-        policy.retryDelays = [.seconds(1)]
+        // 問い合わせ直しの待ちは、全体を回して main actor が混んでも、ほかの写真の保存より先に来ないよう長めにする
+        // （1 秒だと、全体を回したときに先に来て落ちることがあった）
+        policy.retryDelays = [.seconds(3)]
         let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest, policy: policy)
         service.requestSuggestion(for: waiting.id, photoFileName: waiting.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { probe.callCount == 1 }
@@ -258,7 +300,7 @@ struct SuggestionServiceTests {
         service.requestSuggestion(for: waiting.id, photoFileName: waiting.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { other.suggestedAt != nil }
         #expect(waiting.suggestedAt == nil)
-        try await waitUntil(tries: 500) { waiting.suggestedAt != nil }
+        try await waitUntil(tries: 1000) { waiting.suggestedAt != nil }
         #expect(probe.callCount == 3)
     }
 
@@ -288,15 +330,16 @@ struct SuggestionServiceTests {
         let later = try context.addRecord()
         let probe = SuggesterProbe(failuresBeforeSuccess: 1)
         // 戻す境目は、負荷で問い合わせ直しが遅れても当たらないよう、間（100ms）より十分長くする
+        // （1 秒だと、全体を回して main actor が混んだときに、問い合わせ直しの前に戻ってしまい落ちることがあった）
         var policy = Self.fastPolicy(backoffStart: .milliseconds(100), backoffMax: .milliseconds(100))
-        policy.idleReset = .seconds(1)
+        policy.idleReset = .seconds(3)
         let service = LiveSuggestionService(labels: Self.fixedLabels, suggest: probe.suggest, policy: policy)
         service.requestSuggestion(for: first.id, photoFileName: first.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { first.suggestedAt != nil }
         // 失敗 1 回で広がり、成功 1 回ではまだ戻らない
         #expect(service.interval == .milliseconds(100))
 
-        try await Task.sleep(for: .milliseconds(1200))
+        try await Task.sleep(for: .milliseconds(3200))
         service.requestSuggestion(for: later.id, photoFileName: later.photoFileName, store: context.store)
         try await waitUntil(tries: 500) { later.suggestedAt != nil }
         #expect(service.interval == .zero)
