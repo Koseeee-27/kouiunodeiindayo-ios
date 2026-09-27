@@ -100,6 +100,8 @@ struct RecordStore {
         // 記録を消したあとでは読めないので、先に控える
         let id = record.id
         let photoFileName = record.photoFileName
+        // 失敗したときの取り消しに、まだ保存していない仕分けなどを巻き込まないように、先に保存しておく
+        try modelContext.save()
         modelContext.delete(record)
         do {
             try modelContext.save()
@@ -118,6 +120,8 @@ struct RecordStore {
         guard !records.isEmpty else { return }
         // 記録を消したあとでは読めないので、先に控える
         let files = records.map { (id: $0.id, photoFileName: $0.photoFileName) }
+        // 失敗したときの取り消しに、まだ保存していない仕分けなどを巻き込まないように、先に保存しておく
+        try modelContext.save()
         for record in records {
             modelContext.delete(record)
         }
