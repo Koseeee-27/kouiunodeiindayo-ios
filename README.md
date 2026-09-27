@@ -8,15 +8,21 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/readme/screen-sort.jpg" alt="仕分け" width="170"></td>
-    <td align="center"><img src="docs/images/readme/screen-home.jpg" alt="ホーム" width="170"></td>
-    <td align="center"><img src="docs/images/readme/screen-list.jpg" alt="一覧" width="170"></td>
-    <td align="center"><img src="docs/images/readme/screen-detail.jpg" alt="記録の詳細" width="170"></td>
-    <td align="center"><img src="docs/images/readme/screen-tags.jpg" alt="タグの一覧" width="170"></td>
+    <td align="center"><img src="docs/images/readme/screen-launch.png" alt="起動画面" width="220"></td>
+    <td align="center"><img src="docs/images/readme/screen-sort.jpg" alt="仕分け" width="220"></td>
+    <td align="center"><img src="docs/images/readme/screen-home.jpg" alt="ホーム" width="220"></td>
   </tr>
   <tr>
+    <td align="center">起動画面</td>
     <td align="center">払って仕分け</td>
     <td align="center">ホーム</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/readme/screen-list.jpg" alt="一覧" width="220"></td>
+    <td align="center"><img src="docs/images/readme/screen-detail.jpg" alt="記録の詳細" width="220"></td>
+    <td align="center"><img src="docs/images/readme/screen-tags.jpg" alt="タグの一覧" width="220"></td>
+  </tr>
+  <tr>
     <td align="center">一覧</td>
     <td align="center">記録の詳細</td>
     <td align="center">タグ</td>
