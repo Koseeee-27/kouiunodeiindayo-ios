@@ -18,14 +18,15 @@ struct PhotoImportResult: Identifiable {
 }
 
 extension PhotoImportResult {
-    /// 仕分けの上の 1 行。「取り込みn枚／除外m枚」。読めなかった写真があるときだけ「／読めなかったk枚」を足す。詰めて見せるため、空白は入れない
+    /// 仕分けの上の 1 行。「取り込み１枚 / 除外０枚」（数字は全角、区切りは前後に空白のある半角の「/」）。
+    /// 読めなかった写真があるときだけ「 / 読めなかった２枚」を足す
     var summaryText: String {
-        countTexts(includesImported: true).joined(separator: "／")
+        countTexts(includesImported: true, fullWidthDigits: true).joined(separator: " / ")
     }
 
     /// `summaryText` の読み上げ。「／」を読ませず、読点でつなぐ
     var summaryAccessibilityLabel: String {
-        countTexts(includesImported: true).joined(separator: "、")
+        countTexts(includesImported: true, fullWidthDigits: false).joined(separator: "、")
     }
 
     /// 1 枚も取り込めなかったときのアラートの題。全部読めなかった（除外が 0）ときだけ分ける
@@ -33,26 +34,39 @@ extension PhotoImportResult {
         excludedCount == 0 && failedCount > 0 ? "写真を読み込めませんでした" : "食事の写真が見つかりませんでした"
     }
 
-    /// 1 枚も取り込めなかったときのアラートの本文。「除外m枚」（読めなかった写真があるときだけ、その枚数も足す）
+    /// 1 枚も取り込めなかったときのアラートの本文。「除外３枚」（読めなかった写真があるときだけ、その枚数も足す）。書き方は `summaryText` と同じ
     var emptyAlertMessage: String {
-        countTexts(includesImported: false).joined(separator: "／")
+        countTexts(includesImported: false, fullWidthDigits: true).joined(separator: " / ")
     }
 
     /// `emptyAlertMessage` の読み上げ
     var emptyAlertAccessibilityLabel: String {
-        countTexts(includesImported: false).joined(separator: "、")
+        countTexts(includesImported: false, fullWidthDigits: false).joined(separator: "、")
     }
 
-    private func countTexts(includesImported: Bool) -> [String] {
+    /// 枚数の文。`fullWidthDigits` が true なら数字を全角にする（画面に出す文。読み上げ用は半角のまま）
+    private func countTexts(includesImported: Bool, fullWidthDigits: Bool) -> [String] {
+        let number: (Int) -> String = { fullWidthDigits ? Self.fullWidth($0) : String($0) }
         var texts: [String] = []
         if includesImported {
-            texts.append("取り込み\(importedIDs.count)枚")
+            texts.append("取り込み\(number(importedIDs.count))枚")
         }
-        texts.append("除外\(excludedCount)枚")
+        texts.append("除外\(number(excludedCount))枚")
         if failedCount > 0 {
-            texts.append("読めなかった\(failedCount)枚")
+            texts.append("読めなかった\(number(failedCount))枚")
         }
         return texts
+    }
+
+    /// 数字を全角にする（12 → "１２"）
+    private static func fullWidth(_ value: Int) -> String {
+        String(
+            String(value).unicodeScalars.map { scalar in
+                guard ("0"..."9").contains(scalar), let full = Unicode.Scalar(scalar.value + 0xFEE0) else {
+                    return Character(scalar)
+                }
+                return Character(full)
+            })
     }
 }
 

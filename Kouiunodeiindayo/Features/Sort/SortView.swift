@@ -433,12 +433,10 @@ struct SortView: View {
             .padding(.top, 4)
     }
 
-    /// 「取り込みn枚／除外m枚」。読めなかった写真があるときだけ「／読めなかったk枚」を足す
+    /// 「取り込み１枚 / 除外０枚」。読めなかった写真があるときだけ「 / 読めなかった２枚」を足す
     private func importSummaryLine(_ summary: PhotoImportResult) -> some View {
         Text(verbatim: summary.summaryText)
             .font(Theme.font(.caption, bold: true))
-            // 文字間を少し詰める（大きさは変えず、まとまりで目に留まるように）
-            .tracking(-0.5)
             .foregroundStyle(Theme.textSecondaryStrong)
             // 文字が大きくて折り返したときも真ん中にそろえる
             .multilineTextAlignment(.center)
