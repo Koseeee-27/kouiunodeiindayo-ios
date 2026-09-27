@@ -2,9 +2,10 @@ import SwiftUI
 
 extension View {
     /// 「うまい」のハンコを押したときの演出（機能24）。`isOn` が false → true に変わった瞬間だけ、
-    /// 大きく少し傾いた状態からドンと縮んで止まり、同じ形の輪が外に広がって消え、振動する。true → false では何もしない。
+    /// 大きく少し傾いた状態からドンと縮んで止まり、同じ形の輪が外に広がって消え、振動して、ハンコを押す音が鳴る。true → false では何もしない。
+    /// 音はマナーモードでは鳴らない（`SoundPlayer`）。
     /// 最初に表示したとき（すでに付いている記録を開いたとき）は出さない（`onChange` は最初の表示では呼ばれない）。
-    /// 「視差効果を減らす」がオンのときは、動きと輪を出さず、振動だけにする。
+    /// 「視差効果を減らす」がオンのときは、動きと輪を出さず、振動と音だけにする。
     /// 押せるかどうかは見ない（おまかせ中などに押せなくするのは、呼ぶ側のボタンの決まりのまま）。
     func stampPress(isOn: Bool) -> some View {
         modifier(StampPressModifier(isOn: isOn))
@@ -78,10 +79,14 @@ private struct StampPressModifier: ViewModifier {
                 StampPressKeyframes.tracks
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: pressID)
+            .onAppear {
+                SoundPlayer.prepare(.stampPress)
+            }
             .onChange(of: isOn) { old, new in
                 // 付けたときだけ。外すときは何もしない
                 guard !old && new else { return }
                 pressID += 1
+                SoundPlayer.play(.stampPress)
                 if !reduceMotion {
                     motionID += 1
                 }
