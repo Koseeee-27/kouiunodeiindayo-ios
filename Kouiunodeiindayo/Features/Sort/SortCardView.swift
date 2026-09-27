@@ -52,6 +52,8 @@ struct SortCardView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: Self.favoriteStampWidth)
+                // 付けたときのハンコを押す演出（機能24）。元の傾きより先に付けて、輪も絵と一緒に傾ける
+                .stampPress(isOn: record.isFavorite)
                 // 色なしの絵は中が透けるので、線の上だけでなく四角全体を押せるようにする
                 .contentShape(.rect)
                 .rotationEffect(Theme.sortFavoriteTilt)
