@@ -68,6 +68,17 @@ struct SortCardStackView<BelowCard: View>: View {
         records.first.flatMap { photoAspects[$0.id] } ?? Theme.photoAspectRatio
     }
 
+    /// 縁のラベルを付ける枠の縦横比。ふだんは手前のカードの形。
+    /// 仕分けが決まって後ろのカードがせり上がっている間は、そのカード（飛ばしている記録の次）の形にする。
+    /// `isNextRising` と同じバネの中で変わるので、ラベルもカードが広がるのと一緒に新しい縁へ動く。
+    /// `@Query` が更新されて先頭が入れ替わっても同じ記録を指すので、`resetAfterCommit` で戻したときに跳ばない
+    private var labelAspectRatio: CGFloat {
+        guard isNextRising, let next = records.first(where: { $0.id != flyingRecordID }) else {
+            return frontAspectRatio
+        }
+        return photoAspects[next.id] ?? Theme.photoAspectRatio
+    }
+
     /// 指で動かしていて、離せば仕分けになる向き。超えた瞬間（戻して超え直したときも）に軽く振動させる
     private var pendingCommit: SwipeDirection? {
         isCommitting ? nil : SwipeDirection.pendingCommit(for: cardOffset)
@@ -114,7 +125,7 @@ struct SortCardStackView<BelowCard: View>: View {
                 // カードは 3:4 の場所の真ん中に写真の形で置かれる（`SortCardView`）ので、ラベルも同じ形・同じ位置の枠に付ける。
                 // 透明なので、ドラッグはその下のカードに届く
                 Color.clear
-                    .aspectRatio(frontAspectRatio, contentMode: .fit)
+                    .aspectRatio(labelAspectRatio, contentMode: .fit)
                     .overlay { edgeLabels(screenSize: screenSize) }
             }
             // 手前のカードの下を空け、後ろのカードの下端が見える隙間にする。ラベルは手前のカードの縁に合わせるので、この外側で空ける
