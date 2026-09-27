@@ -293,6 +293,12 @@ struct PhotoImporterTests {
 
     // MARK: 件数の文言
 
+    @Test func 件数の1行は2桁以上の数字も全角にする() {
+        let result = PhotoImportResult(importedIDs: (0..<12).map { _ in UUID() }, excludedCount: 30)
+        #expect(result.summaryText == "取り込み１２枚 / 除外３０枚")
+        #expect(result.summaryAccessibilityLabel == "取り込み12枚、除外30枚")
+    }
+
     @Test func 件数の1行と読み上げ() {
         let result = PhotoImportResult(importedIDs: [UUID(), UUID()], excludedCount: 1)
         #expect(result.summaryText == "取り込み２枚 / 除外１枚")

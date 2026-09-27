@@ -24,7 +24,7 @@ extension PhotoImportResult {
         countTexts(includesImported: true, fullWidthDigits: true).joined(separator: " / ")
     }
 
-    /// `summaryText` の読み上げ。「／」を読ませず、読点でつなぐ
+    /// `summaryText` の読み上げ。区切りの「/」を読ませず、読点でつなぐ
     var summaryAccessibilityLabel: String {
         countTexts(includesImported: true, fullWidthDigits: false).joined(separator: "、")
     }
