@@ -24,6 +24,8 @@ enum Theme {
     static let textPrimary = ink
     /// 文字（副）
     static let textSecondary = Color(hex: 0x6E6862)
+    /// 文字（副）より濃く、墨（文字（主））ほどは濃くない文字。副の文字のうち、目に留めたいもの（取り込みの枚数の行など）に使う
+    static let textSecondaryStrong = Color(hex: 0x4A4540)
     /// 線・区切り
     static let line = ink
 
