@@ -73,7 +73,7 @@ Kouiunodeiindayo/
 │   ├── TagChipView.swift      ← タグのチップ（付いている：− ／ 外した：点線と ＋）と、タグを足す入口のチップ。仕分け・詳細・タグの一覧で共通
 │   ├── FlowLayout.swift       ← 子を左から並べて、入らなければ次の行に送るレイアウト（タグのチップの折り返し）
 │   └── SoundPlayer.swift      ← 効果音の再生
-└── Resources/                 ← フォント、効果音、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
+└── Resources/                 ← フォント、効果音（音源は git に入れない。置き方は docs/setup.md の 8）、画像（Assets）、起動画面（LaunchTitleV2.storyboard。絵は Assets の LaunchTitleV2）
 Config/
 ├── Base.xcconfig              ← 全員共通のビルド設定（対応 OS、縦画面のみ、カメラの文言など）
 ├── Info.plist                 ← 独自のキー（Worker の URL と合言葉）だけの Info.plist。値は Local.xcconfig から入る（docs/setup.md の 7）

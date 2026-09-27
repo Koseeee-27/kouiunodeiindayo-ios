@@ -16,7 +16,7 @@ enum SoundPlayer {
 
     private static let logger = Logger(category: "SoundPlayer")
     /// 音源の拡張子
-    static let fileExtension = "caf"
+    private static let fileExtension = "caf"
     /// 読み込んだ音。同じ音は使い回す（押すたびにファイルを読まない）
     private static var players: [Sound: AVAudioPlayer] = [:]
     private static var isSessionReady = false
