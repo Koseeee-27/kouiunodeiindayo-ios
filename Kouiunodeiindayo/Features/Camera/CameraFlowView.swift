@@ -27,6 +27,8 @@ struct CameraFlowView: View {
     @Environment(\.suggestionService) private var suggestionService
 
     @State private var step: Step
+    /// 撮った写真を写真アプリにも保存するか（機能19）
+    @AppStorage(PhotoLibrarySaver.storageKey) private var savesToPhotoLibrary = PhotoLibrarySaver.defaultValue
     @State private var isSaveFailed = false
 
     /// `step` はプレビューで仕分けや案内から始めるためだけに渡す。`nil` ならカメラの許可の状態で決める。
@@ -60,7 +62,7 @@ struct CameraFlowView: View {
                     .task { await requestAccess() }
             case .camera:
                 CameraView(
-                    onPick: { image in save(image) },
+                    onPick: { image in save(image, source: .camera) },
                     onCancel: { dismiss() }
                 )
                 .ignoresSafeArea()
@@ -73,7 +75,7 @@ struct CameraFlowView: View {
             case .library(let isRestricted):
                 CameraView(
                     forcesPhotoLibrary: true,
-                    onPick: { image in save(image) },
+                    onPick: { image in save(image, source: .photoLibrary) },
                     onCancel: { step = .accessGuide(isRestricted: isRestricted) }
                 )
                 .ignoresSafeArea()
@@ -93,13 +95,17 @@ struct CameraFlowView: View {
         step = granted ? .camera : .accessGuide(isRestricted: false)
     }
 
-    private func save(_ image: UIImage) {
+    private func save(_ image: UIImage, source: PhotoLibrarySaver.Source) {
         do {
             // 撮影日時は常に今。アルバムから選んだ写真も、写真の撮影日時ではなく選んだ時刻にする（`docs/data-model.md`）
             let store = RecordStore(modelContext: modelContext, photoStorage: photoStorage)
             let record = try store.add(image: image, takenAt: .now)
             // 提案は裏で問い合わせる。仕分けの画面は待たずに出す（`docs/architecture.md`「提案（機能26）の流れ」）
             suggestionService.requestSuggestion(for: record.id, photoFileName: record.photoFileName, store: store)
+            // 写真アプリへの保存も裏で行う。仕分けの画面は待たずに出し、断られた・失敗したときも止めない（機能19）
+            if PhotoLibrarySaver.shouldSave(source: source, isEnabled: savesToPhotoLibrary) {
+                Task { await PhotoLibrarySaver.save(image) }
+            }
             step = .sort(recordID: record.id)
         } catch {
             Self.logger.error("撮った写真を保存できなかった: \(error.localizedDescription, privacy: .public)")

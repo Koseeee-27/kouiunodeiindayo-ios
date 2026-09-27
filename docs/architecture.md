@@ -26,7 +26,8 @@ Kouiunodeiindayo/
 │   │   └── RecordListView.swift   ← 一覧。言葉で探す欄と、読み取った条件での絞り込み（機能28。読み取れない言葉だけ `WordSearchService` で Worker に聞く）。選ぶモード（まとめて消す。機能11）
 │   ├── Camera/
 │   │   ├── CameraView.swift       ← 標準カメラの包み。口は onPick / onCancel
-│   │   └── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
+│   │   ├── CameraFlowView.swift   ← 撮る → 保存 → 仕分けの切り替え。カメラのカバーの中身。許可の状態で、カメラか案内かを振り分ける
+│   │   └── PhotoLibrarySaver.swift ← 撮った写真を写真アプリにも保存する（機能19）。追加だけの許可・保存するかの判定・設定値のキー
 │   ├── Sort/                  ← 仕分け
 │   │   ├── SortView.swift         ← 仕分けの画面。上の行・残り枚数・抜ける手段。`recordID` を渡すと、撮った直後の1枚だけを出す。`importedIDs` を渡すと、アルバムから取り込んだ写真だけを出す。右上の「おまかせ」（任せられる写真を先頭に出して、`SortCardStackView` に 1 枚ずつ飛ばしてもらう）
 │   │   ├── SortCardStackView.swift ← カードの重なり・縁のラベル・ドラッグと飛ばす処理。下のラベルの下に、提案されたタグの行を置く
