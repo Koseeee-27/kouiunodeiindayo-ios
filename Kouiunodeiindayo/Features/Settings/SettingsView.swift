@@ -43,7 +43,7 @@ struct SettingsView: View {
                     Text("効果音の音量")
                         .font(Theme.font(.footnote))
                 } footer: {
-                    Text("「う、うまい」を付けたときのハンコの音の大きさです。いちばん左にすると鳴りません。マナーモードのときは鳴りません。")
+                    Text("「うまい」を付けたときのハンコの音の大きさです。いちばん左にすると鳴りません。マナーモードのときは鳴りません。")
                         .font(Theme.font(.footnote))
                 }
                 Section {
@@ -67,6 +67,10 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .navigationTitle("設定")
+            // 試し聞きで初めて鳴らすときに遅れないよう、音を先に読み込んでおく
+            .onAppear {
+                SoundPlayer.prepare(.stampPress)
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
